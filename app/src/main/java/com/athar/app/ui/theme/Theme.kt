@@ -5,23 +5,32 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = AtharGold,
     onPrimary = AtharBlack,
+    primaryContainer = AtharMutedGold,
+    onPrimaryContainer = AtharGold,
     secondary = AtharMutedGold,
     onSecondary = AtharWhite,
+    secondaryContainer = AtharCardGray,
+    onSecondaryContainer = AtharGold,
     tertiary = AtharGreen,
     background = AtharBlack,
-    surface = AtharCardGray,
+    surface = AtharDarkGray,
+    surfaceVariant = AtharCardGray,
     onBackground = AtharWhite,
-    onSurface = AtharWhite
+    onSurface = AtharWhite,
+    onSurfaceVariant = Color(0xFFB0B0B0),
+    outline = Color(0xFF2A2A2A),
+    outlineVariant = Color(0xFF1E1E1E)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -38,19 +47,21 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun AtharTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true, // Athar is a dark-first app
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    // Set status bar color to match the dark theme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = AtharBlack.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+        }
     }
 
     MaterialTheme(

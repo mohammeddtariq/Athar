@@ -42,8 +42,9 @@ fun ServicesScreen() {
         Text(
             "ركن المسلم",
             color = Color.White,
-            fontSize = 24.sp,
+            fontFamily = ThmanyahSerifDisplay,
             fontWeight = FontWeight.Bold,
+            fontSize = 24.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
 
@@ -58,7 +59,14 @@ fun ServicesScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("أدوات", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Text(
+            "أدوات",
+            color = Color.Gray,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             tools.forEach { tool ->
@@ -89,7 +97,13 @@ fun ServiceCard(service: ServiceItem, modifier: Modifier = Modifier, small: Bool
                 Icon(service.icon, contentDescription = null, tint = service.color, modifier = Modifier.size(if (small) 20.dp else 24.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(service.name, color = Color.White, fontSize = if (small) 12.sp else 14.sp, fontWeight = FontWeight.Medium)
+            Text(
+                service.name,
+                color = Color.White,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = if (small) 12.sp else 14.sp
+            )
         }
     }
 }

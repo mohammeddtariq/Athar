@@ -1,32 +1,46 @@
 package com.athar.app.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -37,11 +51,28 @@ import com.athar.app.ui.home.HomeScreen
 import com.athar.app.ui.services.ServicesScreen
 import com.athar.app.ui.theme.AtharBlack
 import com.athar.app.ui.theme.AtharGold
+import com.athar.app.ui.theme.AtharWhite
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Settings : Screen("settings", "الإعدادات", Icons.Default.Settings)
-    object Home : Screen("home", "اليوم", Icons.Default.Home)
-    object Services : Screen("services", "ركن المسلم", Icons.Default.Favorite)
+sealed class Screen(
+    val route: String,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+) {
+    object Settings : Screen(
+        "settings", "الإعدادات",
+        Icons.Rounded.Settings, Icons.Outlined.Settings
+    )
+
+    object Home : Screen(
+        "home", "اليوم",
+        Icons.Rounded.Home, Icons.Outlined.Home
+    )
+
+    object Services : Screen(
+        "services", "ركن المسلم",
+        Icons.Rounded.Explore, Icons.Outlined.Explore
+    )
 }
 
 val items = listOf(
@@ -55,7 +86,7 @@ fun MainScreen() {
     val navController = rememberNavController()
     Scaffold(
         bottomBar = {
-            AtharBottomNavigation(navController)
+            FrostedGlassBottomBar(navController)
         },
         containerColor = AtharBlack
     ) { innerPadding ->
@@ -64,7 +95,9 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Settings.route) { Text("Settings Screen", color = AtharGold) }
+            composable(Screen.Settings.route) {
+                Text("Settings Screen", color = AtharGold, modifier = Modifier.padding(16.dp))
+            }
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Services.route) { ServicesScreen() }
         }
@@ -72,36 +105,43 @@ fun MainScreen() {
 }
 
 @Composable
-fun AtharBottomNavigation(navController: androidx.navigation.NavHostController) {
+fun FrostedGlassBottomBar(navController: androidx.navigation.NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    Surface(
+    Box(
         modifier = Modifier
-            .padding(24.dp)
             .fillMaxWidth()
-            .height(80.dp),
-        shape = RoundedCornerShape(40.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        // Frosted glass container
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                .clip(RoundedCornerShape(34.dp))
+                .background(
+                    Color(0xFF1A1A1A).copy(alpha = 0.85f)
+                )
         ) {
-            items.forEach { screen ->
-                val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(if (selected) 64.dp else 56.dp)
-                        .background(
-                            color = if (selected) AtharGold.copy(alpha = 0.2f) else androidx.compose.ui.graphics.Color.Transparent,
-                            shape = CircleShape
-                        )
-                        .clickable {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { screen ->
+                    val selected =
+                        currentDestination?.hierarchy?.any { it.route == screen.route } == true
+
+                    NavBarItem(
+                        screen = screen,
+                        selected = selected,
+                        onClick = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
@@ -109,30 +149,74 @@ fun AtharBottomNavigation(navController: androidx.navigation.NavHostController) 
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                        },
-                    contentAlignment = androidx.compose.ui.Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = screen.icon,
-                            contentDescription = null,
-                            tint = if (selected) AtharGold else androidx.compose.ui.graphics.Color.Gray,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        if (selected) {
-                            Text(
-                                text = screen.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AtharGold
-                            )
                         }
-                    }
+                    )
                 }
             }
         }
     }
 }
 
+@Composable
+private fun NavBarItem(
+    screen: Screen,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val iconTint by animateColorAsState(
+        targetValue = if (selected) AtharWhite else Color(0xFF8E8E93),
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "iconTint"
+    )
+
+    val labelColor by animateColorAsState(
+        targetValue = if (selected) AtharWhite else Color(0xFF8E8E93),
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "labelColor"
+    )
+
+    val bgColor by animateColorAsState(
+        targetValue = if (selected) Color(0xFF2C2C2E) else Color.Transparent,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "bgColor"
+    )
+
+    val itemPadding by animateDpAsState(
+        targetValue = if (selected) 14.dp else 10.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "itemPadding"
+    )
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(bgColor)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = itemPadding, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
+                contentDescription = screen.label,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
+            if (selected) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = screen.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = labelColor
+                )
+            }
+        }
+    }
+}

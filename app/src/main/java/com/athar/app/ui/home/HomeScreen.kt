@@ -24,6 +24,8 @@ import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.ui.theme.AtharBlack
 import com.athar.app.ui.theme.AtharCardGray
 import com.athar.app.ui.theme.AtharGold
+import com.athar.app.ui.theme.ThmanyahSans
+import com.athar.app.ui.theme.ThmanyahSerifDisplay
 
 data class PrayerTime(val name: String, val time: String, val isCurrent: Boolean = false)
 
@@ -58,7 +60,13 @@ fun HomeScreen() {
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("العبور", color = AtharGold, fontSize = 14.sp)
+                    Text(
+                        "العبور",
+                        color = AtharGold,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = AtharGold, modifier = Modifier.size(16.dp))
                 }
@@ -92,9 +100,27 @@ fun HomeScreen() {
             }
             
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("إقامة المغرب", color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
-                Text("المغرب", color = AtharGold, style = MaterialTheme.typography.titleLarge)
-                Text("7:06 م", color = AtharGold, style = MaterialTheme.typography.displayLarge)
+                Text(
+                    "إقامة المغرب",
+                    color = Color.Gray,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Normal,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "المغرب",
+                    color = AtharGold,
+                    fontFamily = ThmanyahSerifDisplay,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    "7:06 م",
+                    color = AtharGold,
+                    fontFamily = ThmanyahSerifDisplay,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displayLarge
+                )
             }
         }
 
@@ -129,9 +155,21 @@ fun PrayerItem(prayer: PrayerTime) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Notifications, contentDescription = null, tint = if (prayer.isCurrent) AtharGold else Color.Gray)
                 Spacer(modifier = Modifier.width(16.dp))
-                Text(prayer.time, color = if (prayer.isCurrent) AtharGold else Color.White, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    prayer.time,
+                    color = if (prayer.isCurrent) AtharGold else Color.White,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Normal,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
-            Text(prayer.name, color = if (prayer.isCurrent) AtharGold else Color.White, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(
+                prayer.name,
+                color = if (prayer.isCurrent) AtharGold else Color.White,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
