@@ -3,7 +3,6 @@ package com.athar.app.ui.theme
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
@@ -11,12 +10,12 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+private val AtharDarkScheme = darkColorScheme(
     primary = AtharPrimary,
     onPrimary = AtharTextOnPrimary,
-    primaryContainer = AtharPrimaryDark,
+    primaryContainer = AtharPrimarySubtle,
     onPrimaryContainer = AtharPrimaryLight,
-    secondary = AtharPrimaryDark,
+    secondary = AtharPrimaryMuted,
     onSecondary = AtharTextPrimary,
     secondaryContainer = AtharCardSurface,
     onSecondaryContainer = AtharPrimary,
@@ -29,46 +28,31 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = AtharCardSurface,
     onSurfaceVariant = AtharTextSecondary,
     outline = AtharOutline,
-    outlineVariant = AtharOutlineVariant
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = AtharPrimaryDark,
-    onPrimary = Color.White,
-    primaryContainer = AtharPrimaryLight,
-    onPrimaryContainer = AtharTextOnPrimary,
-    secondary = AtharPrimaryDark,
-    onSecondary = Color.White,
-    tertiary = AtharEmerald,
-    background = Color(0xFFF2F7F4),
-    onBackground = Color(0xFF1A2723),
-    surface = Color(0xFFEAF0EC),
-    onSurface = Color(0xFF1A2723),
-    surfaceVariant = Color(0xFFDDE6E0),
-    onSurfaceVariant = Color(0xFF4A5B52)
+    outlineVariant = AtharOutlineVariant,
+    surfaceContainerLowest = AtharBackground,
+    surfaceContainerLow = AtharSurface,
+    surfaceContainer = AtharCardSurface,
+    surfaceContainerHigh = AtharCardGlow,
+    surfaceContainerHighest = AtharCardBorder
 )
 
 @Composable
 fun AtharTheme(
-    darkTheme: Boolean = true, // Athar is a dark-first app
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
-    // Set system bars to match the theme
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = AtharDarkScheme,
         typography = Typography,
         content = content
     )

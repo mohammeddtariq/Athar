@@ -1,14 +1,17 @@
 <resources>
-    <string name="app_name">Athar</string>
+    <string name="app_name">Athar - أَثَر</string>
 
     <!-- Navigation -->
     <string name="nav_home">Today</string>
     <string name="nav_services">Muslim\'s Corner</string>
     <string name="nav_settings">Settings</string>
+    <string name="nav_explore">Explore</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">Al Obour</string>
+    <string name="home_next_prayer">Next Prayer</string>
     <string name="home_prayer_iqamah">Iqamah for %s</string>
+    <string name="home_time_remaining">Time Remaining</string>
     <string name="home_prayer_fajr">Fajr</string>
     <string name="home_prayer_sunrise">Sunrise</string>
     <string name="home_prayer_dhuhr">Dhuhr</string>
@@ -16,6 +19,8 @@
     <string name="home_prayer_maghrib">Maghrib</string>
     <string name="home_prayer_isha">Isha</string>
     <string name="home_friday_prayer">Jumu\'ah</string>
+    <string name="home_prayers_title">Prayer Times</string>
+    <string name="home_view_details">View Details</string>
 
     <!-- Services Screen -->
     <string name="services_title">Muslim\'s Corner</string>
@@ -25,6 +30,8 @@
     <string name="services_agenda">Agenda</string>
     <string name="services_calendar">Islamic Calendar</string>
     <string name="services_tasbih">Tasbih</string>
+    <string name="services_featured">Featured</string>
+    <string name="services_explore_categories">Explore Categories</string>
 
     <!-- Language Selection -->
     <string name="language_select_title">Choose Your Language</string>

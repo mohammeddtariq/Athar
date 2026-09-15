@@ -11,10 +11,10 @@ import com.athar.app.R
 /**
  * THMANYAH FONT FAMILY
  *
- * Three font families from the Thmanyah typeface:
- * - ThmanyahSans: Primary UI font for body text, labels, and buttons
- * - ThmanyahSerifDisplay: For large display titles and headings
- * - ThmanyahSerifText: For readable body serif text (Quran references, etc.)
+ * Refined, slightly more compact typography sizing:
+ * - ThmanyahSans: Primary UI font — used BOLD/BLACK for wide, authoritative feel
+ * - ThmanyahSerifDisplay: Large display titles and headings
+ * - ThmanyahSerifText: Readable serif body (Quran, etc.)
  */
 
 val ThmanyahSans = FontFamily(
@@ -42,118 +42,118 @@ val ThmanyahSerifText = FontFamily(
 )
 
 val Typography = Typography(
-    // ─── Display styles (Serif Display) ───
+    // ─── Display styles — Refined Sizes ───
     displayLarge = TextStyle(
         fontFamily = ThmanyahSerifDisplay,
-        fontWeight = FontWeight.Bold,
-        fontSize = 48.sp,
-        lineHeight = 56.sp,
+        fontWeight = FontWeight.Black,
+        fontSize = 40.sp,
+        lineHeight = 48.sp,
         letterSpacing = (-0.5).sp
     ),
     displayMedium = TextStyle(
         fontFamily = ThmanyahSerifDisplay,
-        fontWeight = FontWeight.Medium,
-        fontSize = 36.sp,
-        lineHeight = 44.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 32.sp,
+        lineHeight = 40.sp,
         letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
         fontFamily = ThmanyahSerifDisplay,
-        fontWeight = FontWeight.Normal,
-        fontSize = 30.sp,
-        lineHeight = 38.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 34.sp,
         letterSpacing = 0.sp
     ),
 
-    // ─── Headline styles (Serif Display) ───
+    // ─── Headline styles ───
     headlineLarge = TextStyle(
         fontFamily = ThmanyahSerifDisplay,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
-        letterSpacing = 0.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = ThmanyahSerifDisplay,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Black,
         fontSize = 24.sp,
         lineHeight = 32.sp,
         letterSpacing = 0.sp
     ),
-    headlineSmall = TextStyle(
-        fontFamily = ThmanyahSans,
+    headlineMedium = TextStyle(
+        fontFamily = ThmanyahSerifDisplay,
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
+        fontSize = 21.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
+    headlineSmall = TextStyle(
+        fontFamily = ThmanyahSans,
+        fontWeight = FontWeight.Black,
+        fontSize = 19.sp,
+        lineHeight = 25.sp,
+        letterSpacing = 0.sp
+    ),
 
-    // ─── Title styles (Sans) ───
+    // ─── Title styles ───
     titleLarge = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
+        fontWeight = FontWeight.Black,
+        fontSize = 19.sp,
+        lineHeight = 25.sp,
         letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 18.sp,
-        lineHeight = 24.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
         letterSpacing = 0.1.sp
     ),
     titleSmall = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.1.sp
     ),
 
-    // ─── Body styles (Sans) ───
+    // ─── Body styles ───
     bodyLarge = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.3.sp
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.2.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.2.sp
     ),
     bodySmall = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
         letterSpacing = 0.3.sp
     ),
 
-    // ─── Label styles (Sans) ───
+    // ─── Label styles ───
     labelLarge = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
+        letterSpacing = 0.3.sp
     ),
     labelSmall = TextStyle(
         fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
+        fontWeight = FontWeight.Bold,
+        fontSize = 10.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.3.sp
     )
 )

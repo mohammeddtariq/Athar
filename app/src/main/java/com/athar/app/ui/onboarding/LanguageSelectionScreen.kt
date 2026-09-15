@@ -2,7 +2,7 @@ package com.athar.app.ui.onboarding
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,15 +37,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharOutline
 import com.athar.app.ui.theme.AtharPrimary
-import com.athar.app.ui.theme.AtharPrimaryDark
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
@@ -57,7 +56,7 @@ import com.athar.app.ui.theme.ThmanyahSerifDisplay
 
 /**
  * First-launch language selection screen.
- * Minimal, elegant, dark green-grey backdrop with two language cards.
+ * Darker Sage Green ambiance with refined, compact typography and fluid interaction.
  */
 @Composable
 fun LanguageSelectionScreen(
@@ -72,7 +71,7 @@ fun LanguageSelectionScreen(
                 Brush.verticalGradient(
                     colors = listOf(
                         AtharBackground,
-                        AtharCardSurface.copy(alpha = 0.5f),
+                        AtharCardSurface.copy(alpha = 0.40f),
                         AtharBackground
                     )
                 )
@@ -82,7 +81,7 @@ fun LanguageSelectionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -90,20 +89,20 @@ fun LanguageSelectionScreen(
             Text(
                 text = "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
                 fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Normal,
-                fontSize = 18.sp,
-                color = AtharPrimary.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                color = AtharPrimary.copy(alpha = 0.75f),
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
-            // App name
+            // App name — refined size & authoritative weight
             Text(
                 text = "أَثَر",
                 fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Bold,
-                fontSize = 56.sp,
+                fontWeight = FontWeight.Black,
+                fontSize = 46.sp,
                 color = AtharPrimaryLight,
                 textAlign = TextAlign.Center
             )
@@ -111,40 +110,40 @@ fun LanguageSelectionScreen(
             Text(
                 text = "Athar",
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Light,
-                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center,
                 letterSpacing = 4.sp
             )
 
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-            // "Choose Your Language" — shown in both languages
+            // "Choose Your Language" header
             Text(
                 text = "اختر لغتك",
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Medium,
-                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                fontSize = 18.sp,
                 color = AtharTextPrimary,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = "Choose Your Language",
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Normal,
-                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
-            // Language Cards
+            // Language Cards Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 LanguageCard(
                     languageName = "العربية",
@@ -162,21 +161,21 @@ fun LanguageSelectionScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Subtitle
+            // Subtitle note
             Text(
                 text = "يمكنك تغييرها لاحقاً  •  You can change this later",
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                color = AtharTextSecondary.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                color = AtharTextSecondary.copy(alpha = 0.65f),
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
-            // Continue Button
+            // Continue Pill Button
             val buttonEnabled = selectedLanguage != null
             val buttonBg by animateColorAsState(
                 targetValue = if (buttonEnabled) AtharPrimary else AtharOutline,
@@ -184,9 +183,14 @@ fun LanguageSelectionScreen(
                 label = "buttonBg"
             )
             val buttonTextColor by animateColorAsState(
-                targetValue = if (buttonEnabled) AtharTextOnPrimary else AtharTextSecondary,
+                targetValue = if (buttonEnabled) AtharTextOnPrimary else AtharTextSecondary.copy(alpha = 0.4f),
                 animationSpec = spring(stiffness = Spring.StiffnessLow),
                 label = "buttonText"
+            )
+            val buttonScale by animateFloatAsState(
+                targetValue = if (buttonEnabled) 1f else 0.98f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                label = "buttonScale"
             )
 
             Button(
@@ -194,8 +198,12 @@ fun LanguageSelectionScreen(
                 enabled = buttonEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .height(50.dp)
+                    .graphicsLayer {
+                        scaleX = buttonScale
+                        scaleY = buttonScale
+                    },
+                shape = RoundedCornerShape(25.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = buttonBg,
                     contentColor = buttonTextColor,
@@ -206,8 +214,8 @@ fun LanguageSelectionScreen(
                 Text(
                     text = if (selectedLanguage == "ar") "متابعة" else "Continue",
                     fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp
                 )
             }
         }
@@ -223,26 +231,30 @@ private fun LanguageCard(
     modifier: Modifier = Modifier
 ) {
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) AtharPrimary else AtharOutline,
+        targetValue = if (isSelected) AtharPrimary else AtharCardBorder,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "borderColor"
     )
     val bgColor by animateColorAsState(
-        targetValue = if (isSelected) AtharPrimary.copy(alpha = 0.08f) else Color.Transparent,
+        targetValue = if (isSelected) AtharPrimary.copy(alpha = 0.12f) else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "bgColor"
     )
-    val elevation by animateDpAsState(
-        targetValue = if (isSelected) 2.dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "elevation"
+    val cardScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.02f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "cardScale"
     )
 
     Box(
         modifier = modifier
-            .height(140.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(20.dp))
+            .height(125.dp)
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.2.dp, borderColor, RoundedCornerShape(18.dp))
             .background(bgColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -254,7 +266,7 @@ private fun LanguageCard(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(14.dp)
         ) {
             // Check indicator
             if (isSelected) {
@@ -268,28 +280,28 @@ private fun LanguageCard(
                         Icons.Rounded.Check,
                         contentDescription = null,
                         tint = AtharTextOnPrimary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             } else {
-                Spacer(modifier = Modifier.height(36.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
 
             Text(
                 text = languageName,
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                fontSize = 17.sp,
                 color = if (isSelected) AtharPrimaryLight else AtharTextPrimary,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = languageSubtitle,
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Normal,
-                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center
             )
