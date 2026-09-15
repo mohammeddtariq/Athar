@@ -13,29 +13,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
-import com.athar.app.ui.theme.AtharTheme
-import com.athar.app.ui.theme.AtharBlack
-import com.athar.app.ui.theme.AtharCardGray
-import com.athar.app.ui.theme.AtharGold
-import com.athar.app.ui.theme.ThmanyahSans
-import com.athar.app.ui.theme.ThmanyahSerifDisplay
+import com.athar.app.R
+import com.athar.app.ui.theme.*
 
-data class PrayerTime(val name: String, val time: String, val isCurrent: Boolean = false)
+data class PrayerTime(val nameResId: Int, val time: String, val isCurrent: Boolean = false)
 
 val samplePrayers = listOf(
-    PrayerTime("الفجر", "5:08 ص"),
-    PrayerTime("الشروق", "6:36 ص"),
-    PrayerTime("الجمعة", "13:52 م"),
-    PrayerTime("العصر", "4:32 م"),
-    PrayerTime("المغرب", "7:06 م", true),
-    PrayerTime("العشاء", "8:33 م")
+    PrayerTime(R.string.home_prayer_fajr, "5:08 AM"),
+    PrayerTime(R.string.home_prayer_sunrise, "6:36 AM"),
+    PrayerTime(R.string.home_friday_prayer, "1:52 PM"),
+    PrayerTime(R.string.home_prayer_asr, "4:32 PM"),
+    PrayerTime(R.string.home_prayer_maghrib, "7:06 PM", true),
+    PrayerTime(R.string.home_prayer_isha, "8:33 PM")
 )
 
 @Composable
@@ -43,7 +39,7 @@ fun HomeScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(AtharBlack)
+            .background(AtharBackground)
             .padding(16.dp)
     ) {
         // Top Bar
@@ -53,7 +49,7 @@ fun HomeScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = AtharCardGray,
+                color = AtharCardSurface,
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Row(
@@ -61,14 +57,19 @@ fun HomeScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "العبور",
-                        color = AtharGold,
+                        stringResource(R.string.home_location_label),
+                        color = AtharPrimary,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = AtharGold, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = AtharPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
@@ -83,40 +84,43 @@ fun HomeScreen() {
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.size(280.dp)) {
+                // Background arc
                 drawArc(
-                    color = Color.DarkGray,
+                    color = AtharCardSurface,
                     startAngle = 180f,
                     sweepAngle = 180f,
                     useCenter = false,
                     style = Stroke(width = 40.dp.toPx(), cap = StrokeCap.Round)
                 )
+                // Progress arc — sage accent
                 drawArc(
-                    color = AtharGold,
+                    color = AtharPrimary,
                     startAngle = 180f,
                     sweepAngle = 120f, // Progress to current prayer
                     useCenter = false,
                     style = Stroke(width = 40.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
-            
+
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                val maghribName = stringResource(R.string.home_prayer_maghrib)
                 Text(
-                    "إقامة المغرب",
-                    color = Color.Gray,
+                    stringResource(R.string.home_prayer_iqamah, maghribName),
+                    color = AtharTextSecondary,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Normal,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    "المغرب",
-                    color = AtharGold,
+                    maghribName,
+                    color = AtharPrimary,
                     fontFamily = ThmanyahSerifDisplay,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    "7:06 م",
-                    color = AtharGold,
+                    "7:06 PM",
+                    color = AtharPrimaryLight,
                     fontFamily = ThmanyahSerifDisplay,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayLarge
@@ -140,10 +144,12 @@ fun HomeScreen() {
 
 @Composable
 fun PrayerItem(prayer: PrayerTime) {
+    val prayerName = stringResource(prayer.nameResId)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (prayer.isCurrent) AtharGold.copy(alpha = 0.1f) else Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
+        color = if (prayer.isCurrent) AtharPrimary.copy(alpha = 0.08f) else AtharCardSurface.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
@@ -153,19 +159,23 @@ fun PrayerItem(prayer: PrayerTime) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Notifications, contentDescription = null, tint = if (prayer.isCurrent) AtharGold else Color.Gray)
+                Icon(
+                    Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = if (prayer.isCurrent) AtharPrimary else AtharNavIconInactive
+                )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     prayer.time,
-                    color = if (prayer.isCurrent) AtharGold else Color.White,
+                    color = if (prayer.isCurrent) AtharPrimary else AtharTextPrimary,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Normal,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
             Text(
-                prayer.name,
-                color = if (prayer.isCurrent) AtharGold else Color.White,
+                prayerName,
+                color = if (prayer.isCurrent) AtharPrimary else AtharTextPrimary,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyLarge

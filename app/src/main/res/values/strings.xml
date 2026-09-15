@@ -1,3 +1,36 @@
 <resources>
-    <string name="app_name">Athar - أَثَر</string>
+    <string name="app_name">Athar</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Today</string>
+    <string name="nav_services">Muslim\'s Corner</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home Screen -->
+    <string name="home_location_label">Al Obour</string>
+    <string name="home_prayer_iqamah">Iqamah for %s</string>
+    <string name="home_prayer_fajr">Fajr</string>
+    <string name="home_prayer_sunrise">Sunrise</string>
+    <string name="home_prayer_dhuhr">Dhuhr</string>
+    <string name="home_prayer_asr">Asr</string>
+    <string name="home_prayer_maghrib">Maghrib</string>
+    <string name="home_prayer_isha">Isha</string>
+    <string name="home_friday_prayer">Jumu\'ah</string>
+
+    <!-- Services Screen -->
+    <string name="services_title">Muslim\'s Corner</string>
+    <string name="services_quran">Holy Quran</string>
+    <string name="services_books">Books Encyclopedia</string>
+    <string name="services_tools">Tools</string>
+    <string name="services_agenda">Agenda</string>
+    <string name="services_calendar">Islamic Calendar</string>
+    <string name="services_tasbih">Tasbih</string>
+
+    <!-- Language Selection -->
+    <string name="language_select_title">Choose Your Language</string>
+    <string name="language_select_subtitle">You can change this later in settings</string>
+    <string name="language_arabic">العربية</string>
+    <string name="language_english">English</string>
+    <string name="language_continue">Continue</string>
+    <string name="language_bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</string>
 </resources>

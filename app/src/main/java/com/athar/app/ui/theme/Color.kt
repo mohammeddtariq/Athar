@@ -2,24 +2,62 @@ package com.athar.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Athar Inspired Palette
-val AtharBlack = Color(0xFF000000)
-val AtharDarkGray = Color(0xFF121212)
-val AtharCardGray = Color(0xFF1C1C1C)
-val AtharGold = Color(0xFFE6C4A0) // Soft gold/beige highlight
-val AtharMutedGold = Color(0xFF4D4236)
-val AtharWhite = Color(0xFFFFFFFF)
+// ══════════════════════════════════════════════════════════════
+// ATHAR — Dark Green-Grey Palette
+// "Forest at twilight" — sophisticated, premium, Islamic.
+// ══════════════════════════════════════════════════════════════
 
-// Accent Colors for Services
-val AtharGreen = Color(0xFF4CAF50)
-val AtharBlue = Color(0xFF2196F3)
-val AtharRed = Color(0xFFE91E63)
-val AtharPurple = Color(0xFF9C27B0)
+// ─── Core Backgrounds ───
+val AtharBackground = Color(0xFF0D1512)       // Very dark green-grey (main bg)
+val AtharSurface = Color(0xFF15201C)          // Slightly lighter (elevated surfaces)
+val AtharCardSurface = Color(0xFF1A2723)      // Card backgrounds
+val AtharNavbarGlass = Color(0xFF1A2723)      // Navbar frosted glass base
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// ─── Primary Accent — Sage/Mint ───
+val AtharPrimary = Color(0xFFA8C5B8)          // Muted sage — main accent
+val AtharPrimaryDark = Color(0xFF6B9080)      // Deeper sage — secondary emphasis
+val AtharPrimaryLight = Color(0xFFC9DFD2)     // Light sage — active/highlight states
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// ─── Text ───
+val AtharTextPrimary = Color(0xFFE8EDE9)      // Warm white — main text
+val AtharTextSecondary = Color(0xFF8A9B91)    // Muted green-grey — secondary text
+val AtharTextOnPrimary = Color(0xFF0D1512)    // Dark text on primary accent
+
+// ─── Navbar ───
+val AtharNavPillSelected = Color(0xFF263B33)  // Selected item pill bg
+val AtharNavIconInactive = Color(0xFF6B7B72)  // Unselected nav icon color
+
+// ─── Service Card Accents ───
+val AtharEmerald = Color(0xFF5DA67D)          // Refined emerald green
+val AtharTeal = Color(0xFF4A9B8E)             // Calm teal
+val AtharTerracotta = Color(0xFFC17A5E)       // Warm terracotta
+val AtharLavender = Color(0xFF8B7DA6)         // Dusty lavender
+val AtharAmber = Color(0xFFCDA96D)            // Warm amber (subtle gold nod)
+
+// ─── Borders & Dividers ───
+val AtharOutline = Color(0xFF243530)          // Subtle green-tinted border
+val AtharOutlineVariant = Color(0xFF1C2B26)   // Even subtler border
+
+// ─── Legacy aliases (for backward compat during migration) ───
+@Deprecated("Use AtharBackground", replaceWith = ReplaceWith("AtharBackground"))
+val AtharBlack = AtharBackground
+@Deprecated("Use AtharSurface", replaceWith = ReplaceWith("AtharSurface"))
+val AtharDarkGray = AtharSurface
+@Deprecated("Use AtharCardSurface", replaceWith = ReplaceWith("AtharCardSurface"))
+val AtharCardGray = AtharCardSurface
+@Deprecated("Use AtharPrimary", replaceWith = ReplaceWith("AtharPrimary"))
+val AtharGold = AtharPrimary
+@Deprecated("Use AtharPrimaryDark", replaceWith = ReplaceWith("AtharPrimaryDark"))
+val AtharMutedGold = AtharPrimaryDark
+@Deprecated("Use AtharTextPrimary", replaceWith = ReplaceWith("AtharTextPrimary"))
+val AtharWhite = AtharTextPrimary
+
+// Legacy service colors
+@Deprecated("Use AtharEmerald", replaceWith = ReplaceWith("AtharEmerald"))
+val AtharGreen = AtharEmerald
+@Deprecated("Use AtharTeal", replaceWith = ReplaceWith("AtharTeal"))
+val AtharBlue = AtharTeal
+@Deprecated("Use AtharTerracotta", replaceWith = ReplaceWith("AtharTerracotta"))
+val AtharRed = AtharTerracotta
+@Deprecated("Use AtharLavender", replaceWith = ReplaceWith("AtharLavender"))
+val AtharPurple = AtharLavender

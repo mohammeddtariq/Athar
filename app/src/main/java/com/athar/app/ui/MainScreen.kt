@@ -9,9 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -35,10 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -47,30 +47,35 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.athar.app.R
 import com.athar.app.ui.home.HomeScreen
 import com.athar.app.ui.services.ServicesScreen
-import com.athar.app.ui.theme.AtharBlack
-import com.athar.app.ui.theme.AtharGold
-import com.athar.app.ui.theme.AtharWhite
+import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharNavIconInactive
+import com.athar.app.ui.theme.AtharNavPillSelected
+import com.athar.app.ui.theme.AtharNavbarGlass
+import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharTextPrimary
+import com.athar.app.ui.theme.AtharTextSecondary
 
 sealed class Screen(
     val route: String,
-    val label: String,
+    val labelResId: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
     object Settings : Screen(
-        "settings", "الإعدادات",
+        "settings", R.string.nav_settings,
         Icons.Rounded.Settings, Icons.Outlined.Settings
     )
 
     object Home : Screen(
-        "home", "اليوم",
+        "home", R.string.nav_home,
         Icons.Rounded.Home, Icons.Outlined.Home
     )
 
     object Services : Screen(
-        "services", "ركن المسلم",
+        "services", R.string.nav_services,
         Icons.Rounded.Explore, Icons.Outlined.Explore
     )
 }
@@ -88,7 +93,7 @@ fun MainScreen() {
         bottomBar = {
             FrostedGlassBottomBar(navController)
         },
-        containerColor = AtharBlack
+        containerColor = AtharBackground
     ) { innerPadding ->
         NavHost(
             navController,
@@ -96,7 +101,18 @@ fun MainScreen() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Settings.route) {
-                Text("Settings Screen", color = AtharGold, modifier = Modifier.padding(16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(AtharBackground)
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.nav_settings),
+                        color = AtharTextPrimary,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
             }
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Services.route) { ServicesScreen() }
@@ -122,9 +138,7 @@ fun FrostedGlassBottomBar(navController: androidx.navigation.NavHostController) 
                 .fillMaxWidth()
                 .height(68.dp)
                 .clip(RoundedCornerShape(34.dp))
-                .background(
-                    Color(0xFF1A1A1A).copy(alpha = 0.85f)
-                )
+                .background(AtharNavbarGlass.copy(alpha = 0.88f))
         ) {
             Row(
                 modifier = Modifier
@@ -164,19 +178,19 @@ private fun NavBarItem(
     onClick: () -> Unit
 ) {
     val iconTint by animateColorAsState(
-        targetValue = if (selected) AtharWhite else Color(0xFF8E8E93),
+        targetValue = if (selected) AtharPrimary else AtharNavIconInactive,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "iconTint"
     )
 
     val labelColor by animateColorAsState(
-        targetValue = if (selected) AtharWhite else Color(0xFF8E8E93),
+        targetValue = if (selected) AtharTextPrimary else AtharNavIconInactive,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "labelColor"
     )
 
     val bgColor by animateColorAsState(
-        targetValue = if (selected) Color(0xFF2C2C2E) else Color.Transparent,
+        targetValue = if (selected) AtharNavPillSelected else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "bgColor"
     )
@@ -205,14 +219,14 @@ private fun NavBarItem(
         ) {
             Icon(
                 imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
-                contentDescription = screen.label,
+                contentDescription = stringResource(screen.labelResId),
                 tint = iconTint,
                 modifier = Modifier.size(22.dp)
             )
             if (selected) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = screen.label,
+                    text = stringResource(screen.labelResId),
                     style = MaterialTheme.typography.labelMedium,
                     color = labelColor
                 )

@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">أَثَر</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">اليوم</string>
+    <string name="nav_services">ركن المسلم</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Home Screen -->
+    <string name="home_location_label">العبور</string>
+    <string name="home_prayer_iqamah">إقامة %s</string>
+    <string name="home_prayer_fajr">الفجر</string>
+    <string name="home_prayer_sunrise">الشروق</string>
+    <string name="home_prayer_dhuhr">الظهر</string>
+    <string name="home_prayer_asr">العصر</string>
+    <string name="home_prayer_maghrib">المغرب</string>
+    <string name="home_prayer_isha">العشاء</string>
+    <string name="home_friday_prayer">الجمعة</string>
+
+    <!-- Services Screen -->
+    <string name="services_title">ركن المسلم</string>
+    <string name="services_quran">القرآن الكريم</string>
+    <string name="services_books">موسوعة الكتب</string>
+    <string name="services_tools">أدوات</string>
+    <string name="services_agenda">الأجندة</string>
+    <string name="services_calendar">التقويم الإسلامي</string>
+    <string name="services_tasbih">تسبيح</string>
+
+    <!-- Language Selection -->
+    <string name="language_select_title">اختر لغتك</string>
+    <string name="language_select_subtitle">يمكنك تغييرها لاحقاً في الإعدادات</string>
+    <string name="language_arabic">العربية</string>
+    <string name="language_english">English</string>
+    <string name="language_continue">متابعة</string>
+    <string name="language_bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</string>
+</resources>

@@ -1,8 +1,6 @@
 package com.athar.app.ui.theme
 
 import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -14,35 +12,40 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AtharGold,
-    onPrimary = AtharBlack,
-    primaryContainer = AtharMutedGold,
-    onPrimaryContainer = AtharGold,
-    secondary = AtharMutedGold,
-    onSecondary = AtharWhite,
-    secondaryContainer = AtharCardGray,
-    onSecondaryContainer = AtharGold,
-    tertiary = AtharGreen,
-    background = AtharBlack,
-    surface = AtharDarkGray,
-    surfaceVariant = AtharCardGray,
-    onBackground = AtharWhite,
-    onSurface = AtharWhite,
-    onSurfaceVariant = Color(0xFFB0B0B0),
-    outline = Color(0xFF2A2A2A),
-    outlineVariant = Color(0xFF1E1E1E)
+    primary = AtharPrimary,
+    onPrimary = AtharTextOnPrimary,
+    primaryContainer = AtharPrimaryDark,
+    onPrimaryContainer = AtharPrimaryLight,
+    secondary = AtharPrimaryDark,
+    onSecondary = AtharTextPrimary,
+    secondaryContainer = AtharCardSurface,
+    onSecondaryContainer = AtharPrimary,
+    tertiary = AtharEmerald,
+    onTertiary = AtharTextOnPrimary,
+    background = AtharBackground,
+    onBackground = AtharTextPrimary,
+    surface = AtharSurface,
+    onSurface = AtharTextPrimary,
+    surfaceVariant = AtharCardSurface,
+    onSurfaceVariant = AtharTextSecondary,
+    outline = AtharOutline,
+    outlineVariant = AtharOutlineVariant
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = AtharGold,
-    onPrimary = AtharBlack,
-    secondary = AtharMutedGold,
-    onSecondary = AtharWhite,
-    tertiary = AtharGreen,
-    background = AtharWhite,
-    surface = Color(0xFFF5F5F5),
-    onBackground = AtharBlack,
-    onSurface = AtharBlack
+    primary = AtharPrimaryDark,
+    onPrimary = Color.White,
+    primaryContainer = AtharPrimaryLight,
+    onPrimaryContainer = AtharTextOnPrimary,
+    secondary = AtharPrimaryDark,
+    onSecondary = Color.White,
+    tertiary = AtharEmerald,
+    background = Color(0xFFF2F7F4),
+    onBackground = Color(0xFF1A2723),
+    surface = Color(0xFFEAF0EC),
+    onSurface = Color(0xFF1A2723),
+    surfaceVariant = Color(0xFFDDE6E0),
+    onSurfaceVariant = Color(0xFF4A5B52)
 )
 
 @Composable
@@ -52,15 +55,15 @@ fun AtharTheme(
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    // Set status bar color to match the dark theme
+    // Set system bars to match the theme
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = AtharBlack.toArgb()
+            window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
