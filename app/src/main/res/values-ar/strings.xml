@@ -99,6 +99,7 @@
     <string name="notif_channel_desc">تذكير عند دخول وقت الصلاة</string>
     <string name="notif_prayer_title">حان وقت %s</string>
     <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
+    <string name="notif_sunrise_body">الشروق — انتهى وقت الفجر.</string>
     <!-- Onboarding tagline -->
     <string name="onboarding_tagline_short">رفيقك المسلم.</string>
     <string name="onboarding_notif_title">تنبيهات الصلاة</string>
@@ -126,4 +127,11 @@
     <string name="location_mine">موقعي</string>
     <string name="qibla_stale">الموقع متوقف — يظهر آخر موقع محفوظ. شغّله لقبلة دقيقة.</string>
     <string name="qibla_turn_on">تشغيل</string>
+    <!-- Quran Appearance -->
+    <string name="quran_theme_amoled">أسود نقي (AMOLED)</string>
+    <string name="quran_theme_olive">طابع أثر</string>
+    <string name="quran_theme_light">ورق مصحف فاتح</string>
+    <string name="quran_font_size">حجم الخط</string>
+    <string name="quran_font_bold">عريض</string>
+    <string name="quran_audio_playing">تشغيل تلاوة السورة…</string>
 </resources>

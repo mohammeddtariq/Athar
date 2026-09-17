@@ -40,11 +40,28 @@ import com.athar.app.ui.theme.ThmanyahSans
 fun HanafiAsrSetting(
     isHanafi: Boolean,
     onToggle: (Boolean) -> Unit,
-    showTitle: Boolean = true
+    showTitle: Boolean = true,
+    lang: String? = null
 ) {
+    // During setup the system locale is still the default, so an explicit
+    // language override is accepted; settings (lang = null) uses resources.
+    fun pick(en: String, ar: String): String = if (lang == "en") en else ar
+    val title = lang?.let { pick("School", "المذهب") }
+        ?: stringResource(R.string.settings_school)
+    val toggleTitle = lang?.let { pick("Hanafi Asr", "العصر على الحنفي") }
+        ?: stringResource(R.string.hanafi_asr)
+    val toggleSub = lang?.let { pick("Later Asr with a larger shadow length", "عصر متأخر بطول ظل أكبر") }
+        ?: stringResource(R.string.hanafi_asr_sub)
+    val note = lang?.let {
+        pick(
+            "Shafii, Maliki and Hanbali share the same Asr time. Hanafi uses a later Asr.",
+            "الشافعي والمالكي والحنبلي لهم نفس وقت العصر. الحنفي له عصر متأخر."
+        )
+    } ?: stringResource(R.string.school_note)
+
     if (showTitle) {
         Text(
-            text = stringResource(R.string.settings_school),
+            text = title,
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Black,
             fontSize = 15.sp,
@@ -71,14 +88,14 @@ fun HanafiAsrSetting(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.hanafi_asr),
+                        text = toggleTitle,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Black,
                         fontSize = 13.5.sp,
                         color = AtharTextPrimary
                     )
                     Text(
-                        text = stringResource(R.string.hanafi_asr_sub),
+                        text = toggleSub,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 11.5.sp,
@@ -99,7 +116,7 @@ fun HanafiAsrSetting(
         }
 
         Text(
-            text = stringResource(R.string.school_note),
+            text = note,
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Medium,
             fontSize = 11.5.sp,

@@ -38,6 +38,10 @@ class AppPreferences(private val context: Context) {
         // Notifications
         private val NOTIF_MASTER_KEY = booleanPreferencesKey("notif_master")
         private val NOTIF_PREFIX = "notif_prayer_"
+
+        // Quran Appearance
+        private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
+        private val QURAN_FONT_SCALE_KEY = doublePreferencesKey("quran_font_scale")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -53,6 +57,13 @@ class AppPreferences(private val context: Context) {
     val schoolId: Flow<String> = context.dataStore.data.map { it[SCHOOL_KEY] ?: "SHAFII" }
 
     val notificationsMaster: Flow<Boolean> = context.dataStore.data.map { it[NOTIF_MASTER_KEY] ?: false }
+
+    val quranThemeMode: Flow<QuranThemeMode> = context.dataStore.data.map {
+        QuranThemeMode.fromId(it[QURAN_THEME_KEY] ?: "AMOLED")
+    }
+    val quranFontScale: Flow<Float> = context.dataStore.data.map {
+        (it[QURAN_FONT_SCALE_KEY] ?: 1.0).toFloat()
+    }
 
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
         context.dataStore.data.map { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] ?: true }
@@ -121,6 +132,25 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setPrayerNotification(prayerKey: String, enabled: Boolean) {
         context.dataStore.edit { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] = enabled }
+    }
+
+    suspend fun setQuranThemeMode(mode: QuranThemeMode) {
+        context.dataStore.edit { it[QURAN_THEME_KEY] = mode.id }
+    }
+
+    suspend fun setQuranFontScale(scale: Float) {
+        context.dataStore.edit { it[QURAN_FONT_SCALE_KEY] = scale.toDouble() }
+    }
+}
+
+/** 3 Quran Appearance Modes: Pure AMOLED Black, App Dark Olive, and Light Paper */
+enum class QuranThemeMode(val id: String) {
+    AMOLED("AMOLED"),
+    DARK_OLIVE("DARK_OLIVE"),
+    LIGHT("LIGHT");
+
+    companion object {
+        fun fromId(id: String): QuranThemeMode = entries.firstOrNull { it.id == id } ?: AMOLED
     }
 }
 

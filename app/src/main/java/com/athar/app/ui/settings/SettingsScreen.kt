@@ -2,7 +2,6 @@ package com.athar.app.ui.settings
 
 import android.Manifest
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -68,6 +67,7 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimaryMuted
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -426,6 +426,44 @@ fun SettingsScreen() {
                 }
             }
 
+            // ── App Logo (Standalone above About section) ──
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 18.dp, bottom = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "أَثَر",
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 38.sp,
+                        color = AtharPrimaryLight,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "A T H A R",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        letterSpacing = 6.sp,
+                        color = AtharTextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.onboarding_tagline_short),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.5.sp,
+                        color = AtharPrimaryMuted,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
             // ── About + GitHub ──
             item {
                 SectionCard(title = stringResource(R.string.settings_about)) {
@@ -482,68 +520,35 @@ fun SettingsScreen() {
                 }
             }
 
-            // ── Brand footer (mini setup mark, theme tones, localized bio) ──
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 26.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "أَثَر",
-                        fontFamily = ThmanyahSerifDisplay,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 30.sp,
-                        color = AtharPrimaryLight,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "ATHAR",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 10.sp,
-                        letterSpacing = 5.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.onboarding_tagline_short),
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.5.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
             // ── Fixed closing quote (identical in every language) ──
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 18.dp, bottom = 8.dp),
+                        .padding(top = 28.dp, bottom = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "لا غالب إلا الله.",
                         fontFamily = ThmanyahSerifDisplay,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        fontSize = 17.sp,
                         color = AtharPrimaryLight,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "\"There is no victor except Allah.\"",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.5.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
+                    Spacer(Modifier.height(3.dp))
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr
+                    ) {
+                        Text(
+                            text = "\"There is no victor except Allah.\"",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.5.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
@@ -556,6 +561,7 @@ private fun PrayerToggleList(prefs: AppPreferences) {
     val context = LocalContext.current
     val prayers = listOf(
         "fajr" to R.string.home_prayer_fajr,
+        "sunrise" to R.string.home_prayer_sunrise,
         "dhuhr" to R.string.home_prayer_dhuhr,
         "asr" to R.string.home_prayer_asr,
         "maghrib" to R.string.home_prayer_maghrib,

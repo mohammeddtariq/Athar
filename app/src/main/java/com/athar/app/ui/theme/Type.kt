@@ -41,6 +41,14 @@ val ThmanyahSerifText = FontFamily(
     Font(R.font.thmanyah_serif_text_black, FontWeight.Black)
 )
 
+val QuranUthmanicHafs = FontFamily(
+    Font(R.font.quran_uthmanic_hafs, FontWeight.Normal)
+)
+
+val QuranSurahNames = FontFamily(
+    Font(R.font.quran_surah_names, FontWeight.Normal)
+)
+
 val Typography = Typography(
     // ─── Display styles — Refined Sizes ───
     displayLarge = TextStyle(

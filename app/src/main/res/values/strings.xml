@@ -2,7 +2,7 @@
     <string name="app_name">Athar - أَثَر</string>
 
     <!-- Navigation -->
-    <string name="nav_home">Today</string>
+    <string name="nav_home">Home</string>
     <string name="nav_services">Essence</string>
     <string name="nav_settings">Settings</string>
 
@@ -99,6 +99,7 @@
     <string name="notif_channel_desc">Reminders at prayer time</string>
     <string name="notif_prayer_title">Time for %s</string>
     <string name="notif_prayer_body">May your prayer be accepted.</string>
+    <string name="notif_sunrise_body">Sunrise — the time of Fajr has ended.</string>
     <!-- Onboarding tagline -->
     <string name="onboarding_tagline_short">Your Muslim companion app.</string>
     <string name="onboarding_notif_title">Prayer reminders</string>
@@ -126,4 +127,11 @@
     <string name="location_mine">My location</string>
     <string name="qibla_stale">Location is off — showing the last saved location. Turn it on for an accurate Qibla.</string>
     <string name="qibla_turn_on">Turn on</string>
+    <!-- Quran Appearance -->
+    <string name="quran_theme_amoled">AMOLED</string>
+    <string name="quran_theme_olive">App Theme</string>
+    <string name="quran_theme_light">Light Paper</string>
+    <string name="quran_font_size">Font Size</string>
+    <string name="quran_font_bold">Bold</string>
+    <string name="quran_audio_playing">Playing Surah recitation…</string>
 </resources>

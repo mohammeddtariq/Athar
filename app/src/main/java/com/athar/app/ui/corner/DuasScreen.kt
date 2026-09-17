@@ -3,6 +3,7 @@ package com.athar.app.ui.corner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,10 +26,15 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,15 +47,27 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
 
-/** Duas browser — Hisnul Muslim selection, olive cards, no emojis. */
+/** Duas browser — Hisnul Muslim selection with a tap dhikr counter. */
 @Composable
 fun DuasScreen(onBack: () -> Unit) {
+    val haptics = LocalHapticFeedback.current
+    // Session dhikr counts, keyed per dua. Tap card = +1, long-press = reset.
+    var counts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
+    fun duaKey(d: Dua): String = d.arabic.take(32) + "|" + d.source
+    fun targetOf(d: Dua): Int? = d.repeat
+        ?.filter { it.isDigit() }
+        ?.takeIf { it.isNotEmpty() }
+        ?.toIntOrNull()
+        ?.takeIf { it in 1..1000 }
+
     // Dark base with the Islamic lattice (Quran stays pure black).
     PatternScaffold {
         LazyColumn(
@@ -158,13 +176,42 @@ fun DuasScreen(onBack: () -> Unit) {
                     }
                 }
                 itemsIndexed(category.duas, key = { _, dua -> dua.arabic.take(24) + dua.source }) { index, dua ->
+                    val target = targetOf(dua)
+                    val count = counts[duaKey(dua)] ?: 0
+                    val done = target != null && count >= target
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 20.dp, vertical = 4.dp)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .background(AtharCardSurface.copy(alpha = 0.85f))
-                            .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
+                            .border(
+                                1.dp,
+                                if (done) AtharPrimary.copy(alpha = 0.55f) else AtharCardBorder,
+                                RoundedCornerShape(16.dp)
+                            )
+                            .combinedClickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    if (target != null) {
+                                        if (count < target) {
+                                            val next = count + 1
+                                            counts = counts + (duaKey(dua) to next)
+                                            haptics.performHapticFeedback(
+                                                if (next >= target) HapticFeedbackType.LongPress
+                                                else HapticFeedbackType.TextHandleMove
+                                            )
+                                        }
+                                    }
+                                },
+                                onLongClick = {
+                                    if (count > 0) {
+                                        counts = counts + (duaKey(dua) to 0)
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                }
+                            )
                             .padding(16.dp)
                     ) {
                         Column {
@@ -211,24 +258,60 @@ fun DuasScreen(onBack: () -> Unit) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(4.dp))
+                            if (target != null && count > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(AtharCardBorder)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(
+                                                (count.toFloat() / target).coerceAtMost(1f)
+                                            )
+                                            .height(4.dp)
+                                            .background(
+                                                if (done) AtharPrimaryLight else AtharPrimary
+                                            )
+                                    )
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (dua.repeat != null) {
+                                if (target != null) {
+                                    if (count == 0) {
+                                        Text(
+                                            "اضغط للعدّ • Tap to count",
+                                            fontFamily = ThmanyahSans,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 10.sp,
+                                            color = AtharTextSecondary.copy(alpha = 0.7f),
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(AtharPrimary.copy(alpha = 0.22f))
+                                            .background(
+                                                if (done) AtharPrimary
+                                                else AtharPrimary.copy(alpha = 0.22f)
+                                            )
                                             .padding(horizontal = 9.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            dua.repeat,
+                                            if (count == 0) dua.repeat ?: ""
+                                            else if (done) "$count/$target ✓"
+                                            else "$count/$target",
                                             fontFamily = ThmanyahSans,
                                             fontWeight = FontWeight.Black,
                                             fontSize = 10.5.sp,
-                                            color = AtharPrimaryLight
+                                            color = if (done) AtharTextOnPrimary else AtharPrimaryLight
                                         )
                                     }
                                     Spacer(Modifier.size(6.dp))

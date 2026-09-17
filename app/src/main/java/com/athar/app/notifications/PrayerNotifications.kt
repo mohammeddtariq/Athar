@@ -15,7 +15,6 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.MadhabOption
 import com.athar.app.data.computeDayPrayers
-import com.athar.app.data.findNextPrayer
 import com.athar.app.data.prayerDateToday
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,8 +61,8 @@ object PrayerNotifications {
 
             val now = LocalTime.now()
             val ordered = listOf(
-                "fajr" to today.fajr, "dhuhr" to today.dhuhr, "asr" to today.asr,
-                "maghrib" to today.maghrib, "isha" to today.isha
+                "fajr" to today.fajr, "sunrise" to today.sunrise, "dhuhr" to today.dhuhr,
+                "asr" to today.asr, "maghrib" to today.maghrib, "isha" to today.isha
             )
             var target: Pair<String, java.time.LocalTime>? = null
             var tomorrow = false
@@ -108,7 +107,7 @@ object PrayerNotifications {
 
     fun cancelAll(context: Context) {
         val alarm = context.applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        for (key in listOf("fajr", "dhuhr", "asr", "maghrib", "isha")) {
+        for (key in listOf("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")) {
             val intent = Intent(context.applicationContext, PrayerAlarmReceiver::class.java)
             val pending = PendingIntent.getBroadcast(
                 context.applicationContext,
@@ -131,7 +130,10 @@ object PrayerNotifications {
         val notification = NotificationCompat.Builder(context.applicationContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText(context.getString(R.string.notif_prayer_body))
+            .setContentText(
+                if (prayerKey == "sunrise") context.getString(R.string.notif_sunrise_body)
+                else context.getString(R.string.notif_prayer_body)
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(openPending)
@@ -143,6 +145,7 @@ object PrayerNotifications {
     private fun prayerTitle(context: Context, key: String): String {
         val res = when (key) {
             "fajr" -> R.string.home_prayer_fajr
+            "sunrise" -> R.string.home_prayer_sunrise
             "dhuhr" -> R.string.home_prayer_dhuhr
             "asr" -> R.string.home_prayer_asr
             "maghrib" -> R.string.home_prayer_maghrib

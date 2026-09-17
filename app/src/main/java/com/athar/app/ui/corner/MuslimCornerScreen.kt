@@ -57,7 +57,6 @@ import com.athar.app.ui.theme.AtharGradientEnd
 import com.athar.app.ui.theme.AtharGradientStart
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
-import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import kotlinx.coroutines.delay

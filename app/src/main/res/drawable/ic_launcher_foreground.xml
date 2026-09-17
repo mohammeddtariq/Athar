@@ -3,27 +3,117 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Modern sleek leaf in pale pistachio over the deep-olive background. -->
+
+    <!-- ═══ Athar (أَثَر) Brand Logo Vector Foreground ═══ -->
+    <!-- Authentic calligraphy mark with diacritics and ATHAR typography in pale sage -->
+
+    <!-- Hamza above Alif -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M54,28 C73,41 77,62 54,77 C31,62 35,41 54,28 Z"
-        android:strokeWidth="4.5"
         android:strokeColor="#D8E3C8"
+        android:strokeWidth="2"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:strokeLineJoin="round"
+        android:pathData="M 68.5,29.5 C 67.5,28.2 69,27 70.5,27.2 C 71.8,27.4 72.5,28.5 71.8,29.5 L 68.5,31.2 L 72.5,31.2" />
+
+    <!-- Alif stroke -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M54,36 L54,70"
-        android:strokeWidth="3"
         android:strokeColor="#D8E3C8"
-        android:strokeLineCap="round" />
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M54,77 C53.5,80 51.5,81.5 49,82"
-        android:strokeWidth="3.5"
-        android:strokeColor="#D8E3C8"
-        android:strokeLineCap="round" />
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M 70.5,34.5 L 70.5,58.5" />
+
+    <!-- Three Dots of Thaa (ث) -->
+    <!-- Top dot -->
     <path
         android:fillColor="#D8E3C8"
-        android:pathData="M66.5,30.5m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+        android:pathData="M 52,32.5 L 53.8,34.3 L 52,36.1 L 50.2,34.3 Z" />
+    <!-- Bottom Left dot -->
+    <path
+        android:fillColor="#D8E3C8"
+        android:pathData="M 47.5,37.5 L 49.3,39.3 L 47.5,41.1 L 45.7,39.3 Z" />
+    <!-- Bottom Right dot -->
+    <path
+        android:fillColor="#D8E3C8"
+        android:pathData="M 56.5,37.5 L 58.3,39.3 L 56.5,41.1 L 54.7,39.3 Z" />
+
+    <!-- Thaa (ث) & Raa (ر) Connected Calligraphy Flow -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D8E3C8"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 54,46.5 C 54,52 50,56.5 45,56.5 C 40,56.5 35,53.5 33,48.5" />
+
+    <!-- Connecting baseline to Alif -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D8E3C8"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M 53.5,56.5 L 70.5,56.5" />
+
+    <!-- Sweeping Tail of Raa (ر) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D8E3C8"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 44.5,56.5 C 41,61.5 35,66 27.5,67.5" />
+
+    <!-- Tashkeel decorative fatha mark -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D8E3C8"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M 42,32 L 37.5,35.5" />
+
+    <!-- ═══ Latin Typography: A T H A R ═══ -->
+    <!-- 'A' -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#93A086"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 36,78 L 38.5,72 L 41,78 M 37.2,75.8 L 39.8,75.8" />
+
+    <!-- 'T' -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#93A086"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 44.5,72 L 49.5,72 M 47,72 L 47,78" />
+
+    <!-- 'H' -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#93A086"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 53,72 L 53,78 M 57.5,72 L 57.5,78 M 53,75 L 57.5,75" />
+
+    <!-- 'A' -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#93A086"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 61,78 L 63.5,72 L 66,78 M 62.2,75.8 L 64.8,75.8" />
+
+    <!-- 'R' -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#93A086"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 69.5,78 L 69.5,72 L 72.8,72 C 74.2,72 74.5,73.2 74.5,74.2 C 74.5,75.2 73.8,75.5 72.8,75.5 L 69.5,75.5 M 72.2,75.5 L 74.5,78" />
+
 </vector>

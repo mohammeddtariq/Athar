@@ -1,7 +1,6 @@
 package com.athar.app.ui.onboarding
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -123,7 +122,7 @@ fun OnboardingFlow(
             if (fix != null) {
                 gpsLatLng = fix
                 selectedCity = null
-                gpsLabel = context.getString(R.string.location_mine)
+                gpsLabel = if (language == "en") "My location" else "موقعي"
             }
             gpsLocating = false
         }
@@ -214,6 +213,7 @@ fun OnboardingFlow(
                 onNext = { if (language != null) step = 1 }
             )
             1 -> NotificationStep(
+                language = language,
                 onAllow = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         val granted = ContextCompat.checkSelfPermission(
@@ -272,7 +272,7 @@ private fun GreetingStep(
     onPickLanguage: (String) -> Unit,
     onNext: () -> Unit
 ) {
-    val tagline = if (language == "ar") "رفيقك المسلم." else "Your Muslim companion app."
+    val tagline = if (language == "ar") "رفيقك المسلم." else "\u2066Your Muslim companion app.\u2069"
 
     Column(
         modifier = Modifier
@@ -393,10 +393,20 @@ private fun GreetingStep(
 
 @Composable
 private fun NotificationStep(
+    language: String?,
     onAllow: () -> Unit,
     onLater: () -> Unit,
     onBack: () -> Unit
 ) {
+    // The system locale is still the default during setup, so the chosen
+    // language is applied explicitly here instead of via resources.
+    val isAr = language != "en"
+    val title = if (isAr) "تنبيهات الصلاة" else "Prayer reminders"
+    val sub = if (isAr) "اسمح بالتنبيهات ليذكّرك أَثَر عند دخول كل صلاة."
+        else "Allow notifications so Athar can remind you at each prayer time."
+    val allow = if (isAr) "اسمح بالتنبيهات" else "Allow reminders"
+    val later = if (isAr) "ليس الآن" else "Not now"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -421,7 +431,7 @@ private fun NotificationStep(
         }
         Spacer(Modifier.height(24.dp))
         Text(
-            text = stringResource(R.string.onboarding_notif_title),
+            text = title,
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Black,
             fontSize = 22.sp,
@@ -430,7 +440,7 @@ private fun NotificationStep(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.onboarding_notif_sub),
+            text = sub,
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Medium,
             fontSize = 13.5.sp,
@@ -452,7 +462,7 @@ private fun NotificationStep(
             )
         ) {
             Text(
-                text = stringResource(R.string.onboarding_allow),
+                text = allow,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Black,
                 fontSize = 15.sp
@@ -461,7 +471,7 @@ private fun NotificationStep(
         Spacer(Modifier.height(6.dp))
         TextButton(onClick = onLater) {
             Text(
-                text = stringResource(R.string.onboarding_later),
+                text = later,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
@@ -579,7 +589,8 @@ private fun SetupStep(
             Spacer(Modifier.height(6.dp))
             HanafiAsrSetting(
                 isHanafi = school == "HANAFI",
-                onToggle = { on -> onPickSchool(if (on) "HANAFI" else "SHAFII") }
+                onToggle = { on -> onPickSchool(if (on) "HANAFI" else "SHAFII") },
+                lang = language
             )
         }
 

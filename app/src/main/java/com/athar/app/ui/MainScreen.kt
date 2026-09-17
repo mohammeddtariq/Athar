@@ -1,10 +1,5 @@
 package com.athar.app.ui
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -24,12 +20,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Mosque
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Mosque
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -85,15 +80,15 @@ sealed class Screen(
         Icons.Rounded.Settings, Icons.Outlined.Settings
     )
 
-    // Combined dock capsule tabs
+    // Combined dock capsule tabs: Home + Essence
     object Corner : Screen(
         "corner", R.string.nav_services,
-        Icons.Rounded.AutoStories, Icons.Outlined.AutoStories
+        Icons.Rounded.Mosque, Icons.Outlined.Mosque
     )
 
     object Home : Screen(
         "home", R.string.nav_home,
-        Icons.Rounded.Today, Icons.Outlined.Today
+        Icons.Rounded.Home, Icons.Outlined.Home
     )
 }
 
@@ -104,26 +99,35 @@ object DetailRoutes {
     const val DUAS = "duas"
 }
 
-// Combined dock items: Essence, Today
+// Combined dock items: Home, Essence
 val dockItems = listOf(
-    Screen.Corner,
-    Screen.Home
+    Screen.Home,
+    Screen.Corner
 )
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val isDetailScreen = currentRoute in listOf(
+        DetailRoutes.QURAN,
+        DetailRoutes.QIBLA,
+        DetailRoutes.DUAS
+    )
 
     Scaffold(
         bottomBar = {
-            AtharNavBar(navController)
+            if (!isDetailScreen) {
+                AtharNavBar(navController)
+            }
         },
         containerColor = AtharBackground
     ) { innerPadding ->
         NavHost(
             navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(if (isDetailScreen) PaddingValues(0.dp) else innerPadding)
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(onOpenSettings = { navController.navigateToTab(Screen.Settings) })
@@ -157,9 +161,10 @@ private fun NavHostController.navigateToTab(screen: Screen) {
 }
 
 /**
- * Bottom navigation: slim frosted-glass dock + standalone Settings circle.
- * In RTL (Arabic) the combined dock starts from the right and the
- * standalone Settings sits on the left; mirrored in LTR.
+ * Bottom navigation: slim frosted-glass dock with the two tabs packed
+ * close together in the center (static, no expanding animation) +
+ * standalone Settings circle. In RTL (Arabic) the dock starts from the
+ * right and Settings sits alone on the left; mirrored in LTR.
  */
 @Composable
 fun AtharNavBar(navController: NavHostController) {
@@ -181,18 +186,17 @@ fun AtharNavBar(navController: NavHostController) {
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(68.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
             if (isRtl) {
+                // In RTL: first child in Row is placed on the RIGHT side.
+                // Combined Dock on the RIGHT, Standalone Settings on the LEFT.
                 DockCapsule(
-                    modifier = Modifier.weight(1f),
                     isSelected = ::isSelected,
                     onSelect = { navController.navigateToTab(it) }
                 )
@@ -202,13 +206,14 @@ fun AtharNavBar(navController: NavHostController) {
                     onClick = { navController.navigateToTab(Screen.Settings) }
                 )
             } else {
+                // In LTR: first child in Row is placed on the LEFT side.
+                // Standalone Settings on the LEFT, Combined Dock on the RIGHT.
                 StandaloneSettingsButton(
                     selected = isSelected(Screen.Settings),
                     onClick = { navController.navigateToTab(Screen.Settings) }
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 DockCapsule(
-                    modifier = Modifier.weight(1f),
                     isSelected = ::isSelected,
                     onSelect = { navController.navigateToTab(it) }
                 )
@@ -217,7 +222,10 @@ fun AtharNavBar(navController: NavHostController) {
     }
 }
 
-/** Combined floating capsule dock — frosted glass, weight-aligned items. */
+/**
+ * Combined floating capsule dock — frosted glass, compact squircle tabs
+ * closely mimicking the Islamic Figures reference screenshot.
+ */
 @Composable
 private fun DockCapsule(
     modifier: Modifier = Modifier,
@@ -226,84 +234,61 @@ private fun DockCapsule(
 ) {
     Box(
         modifier = modifier
-            .fillMaxHeight()
+            .height(60.dp)
             .shadow(
                 elevation = 12.dp,
-                shape = RoundedCornerShape(34.dp),
+                shape = RoundedCornerShape(30.dp),
                 spotColor = Color.Black.copy(alpha = 0.6f)
             )
-            .clip(RoundedCornerShape(34.dp))
-            .background(AtharNavbarBg.copy(alpha = 0.78f))
-            .border(1.dp, AtharNavbarBorder.copy(alpha = 0.9f), RoundedCornerShape(34.dp))
-            .padding(horizontal = 6.dp, vertical = 6.dp),
+            .clip(RoundedCornerShape(30.dp))
+            .background(AtharNavbarBg.copy(alpha = 0.85f))
+            .border(1.dp, AtharNavbarBorder.copy(alpha = 0.85f), RoundedCornerShape(30.dp))
+            .padding(horizontal = 6.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
         ) {
             dockItems.forEach { screen ->
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    DockNavItem(
-                        screen = screen,
-                        selected = isSelected(screen),
-                        onClick = { onSelect(screen) }
-                    )
-                }
+                DockNavItem(
+                    screen = screen,
+                    selected = isSelected(screen),
+                    onClick = { onSelect(screen) }
+                )
             }
         }
     }
 }
 
-/** Standalone circular floating button (Settings tab) — frosted glass. */
+/** Standalone squircle floating button (Settings tab) — frosted glass. */
 @Composable
 private fun StandaloneSettingsButton(
     selected: Boolean,
     onClick: () -> Unit
 ) {
     val screen = Screen.Settings
-    val bgAnim by animateColorAsState(
-        targetValue = if (selected) AtharNavPillSelected.copy(alpha = 0.9f)
-        else AtharNavbarBg.copy(alpha = 0.72f),
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "standaloneBg"
-    )
-    val borderAnim by animateColorAsState(
-        targetValue = if (selected) AtharPrimary.copy(alpha = 0.45f) else AtharNavbarBorder,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "standaloneBorder"
-    )
-    val iconTint by animateColorAsState(
-        targetValue = if (selected) AtharPrimaryLight else AtharNavIconInactive,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "standaloneIcon"
-    )
-    val scaleAnim by animateFloatAsState(
-        targetValue = if (selected) 1.05f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "standaloneScale"
-    )
+    val iconTint = if (selected) AtharPrimaryLight else AtharNavIconInactive
+    val labelColor = if (selected) AtharTextPrimary else AtharNavIconInactive
 
     Box(
         modifier = Modifier
-            .size(64.dp)
-            .graphicsLayer {
-                scaleX = scaleAnim
-                scaleY = scaleAnim
-            }
+            .size(width = 66.dp, height = 60.dp)
             .shadow(
                 elevation = 12.dp,
-                shape = RoundedCornerShape(32.dp),
+                shape = RoundedCornerShape(26.dp),
                 spotColor = Color.Black.copy(alpha = 0.6f)
             )
-            .clip(RoundedCornerShape(32.dp))
-            .background(bgAnim)
-            .border(1.dp, borderAnim, RoundedCornerShape(32.dp))
+            .clip(RoundedCornerShape(26.dp))
+            .background(
+                if (selected) AtharNavPillSelected.copy(alpha = 0.95f)
+                else AtharNavbarBg.copy(alpha = 0.85f)
+            )
+            .border(
+                1.dp,
+                if (selected) AtharPrimary.copy(alpha = 0.45f) else AtharNavbarBorder.copy(alpha = 0.85f),
+                RoundedCornerShape(26.dp)
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -319,22 +304,24 @@ private fun StandaloneSettingsButton(
                 imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
                 contentDescription = stringResource(screen.labelResId),
                 tint = iconTint,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(21.dp)
             )
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = stringResource(screen.labelResId),
                 fontFamily = ThmanyahSans,
-                fontWeight = if (selected) FontWeight.Black else FontWeight.Bold,
-                fontSize = 9.5.sp,
-                color = iconTint
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 10.sp,
+                color = labelColor
             )
         }
     }
 }
 
 /**
- * Dock item: weight-centered so icon and label stay perfectly aligned.
- * Selected: olive pill with icon + label. Unselected: compact icon + label.
+ * Compact dock item — vertical squircle tab.
+ * Selected: dark sage green squircle pill enclosing icon & label.
+ * Unselected: subtle icon & label without background pill.
  */
 @Composable
 private fun DockNavItem(
@@ -342,35 +329,18 @@ private fun DockNavItem(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val pillBg by animateColorAsState(
-        targetValue = if (selected) AtharNavPillSelected.copy(alpha = 0.95f) else Color.Transparent,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "pillBg"
-    )
-    val iconTint by animateColorAsState(
-        targetValue = if (selected) AtharPrimaryLight else AtharNavIconInactive,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "dockIconTint"
-    )
-    val labelColor by animateColorAsState(
-        targetValue = if (selected) AtharTextPrimary else AtharNavIconInactive,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "dockLabelColor"
-    )
-    val paddingHorizontal by animateDpAsState(
-        targetValue = if (selected) 16.dp else 4.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "dockPadding"
-    )
+    val iconTint = if (selected) AtharPrimaryLight else AtharNavIconInactive
+    val labelColor = if (selected) AtharTextPrimary else AtharNavIconInactive
 
     Box(
         modifier = Modifier
-            .then(if (selected) Modifier.fillMaxHeight() else Modifier)
-            .clip(RoundedCornerShape(24.dp))
-            .background(pillBg)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                if (selected) AtharNavPillSelected.copy(alpha = 0.95f) else Color.Transparent
+            )
             .then(
                 if (selected) {
-                    Modifier.border(1.dp, AtharPrimary.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                    Modifier.border(1.dp, AtharPrimary.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
                 } else Modifier
             )
             .clickable(
@@ -378,48 +348,27 @@ private fun DockNavItem(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = paddingHorizontal, vertical = 5.dp),
+            .padding(horizontal = if (selected) 18.dp else 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        if (selected) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = screen.selectedIcon,
-                    contentDescription = stringResource(screen.labelResId),
-                    tint = iconTint,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = stringResource(screen.labelResId),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 12.5.sp,
-                    color = labelColor
-                )
-            }
-        } else {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = screen.unselectedIcon,
-                    contentDescription = stringResource(screen.labelResId),
-                    tint = iconTint,
-                    modifier = Modifier.size(22.dp)
-                )
-                Text(
-                    text = stringResource(screen.labelResId),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.5.sp,
-                    color = labelColor
-                )
-            }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
+                contentDescription = stringResource(screen.labelResId),
+                tint = iconTint,
+                modifier = Modifier.size(21.dp)
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = stringResource(screen.labelResId),
+                fontFamily = ThmanyahSans,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 10.5.sp,
+                color = labelColor
+            )
         }
     }
 }

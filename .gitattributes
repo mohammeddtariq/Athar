@@ -1,0 +1,11 @@
+# Ensure GitHub Linguist calculates language statistics for Kotlin only
+# and ignores generated HTML build reports, JSON assets, and Gradle wrappers.
+*.html linguist-detectable=false
+*.html linguist-vendored
+*.json linguist-vendored
+*.xml linguist-vendored
+build/** linguist-vendored
+app/build/** linguist-vendored
+gradlew linguist-vendored
+gradlew.bat linguist-vendored
+gradle/wrapper/** linguist-vendored

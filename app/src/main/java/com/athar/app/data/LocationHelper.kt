@@ -123,6 +123,7 @@ object LocationHelper {
  * dialog turning location on with one tap. Calls [onEnabled] when the
  * providers are confirmed on.
  */
+@Suppress("DEPRECATION") // setAlwaysShow: still the only way to force the enable dialog
 @Composable
 fun rememberLocationEnabler(onEnabled: () -> Unit): () -> Unit {
     val context = LocalContext.current
