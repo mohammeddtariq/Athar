@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,9 +66,7 @@ import com.athar.app.data.MadhabOption
 import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
-import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.IslamicPatternBackground
-import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -106,11 +103,12 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
     val madhabId by prefs.madhabId.collectAsState(initial = "SHAFI")
     val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
 
-    var now by remember { mutableStateOf(LocalTime.now()) }
+    // Minute-granularity clock for the "next" highlight — cheap, recomposes rarely.
+    var nowMinute by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
-            now = LocalTime.now()
-            delay(1000)
+            nowMinute = LocalTime.now()
+            delay(30_000)
         }
     }
 
@@ -129,7 +127,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
         }
     }
 
-    val next = remember(day, now) { findNextPrayer(day, now) }
+    val next = remember(day, nowMinute) { findNextPrayer(day, nowMinute) }
     val isFriday = LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY
     val dhuhrLabel = if (isFriday) R.string.home_friday_prayer else R.string.home_prayer_dhuhr
 
@@ -148,11 +146,15 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
         isVisible = true
     }
 
-    PatternScaffold(patternAlpha = 0.05f) {
+    // Solid dark base — no full-screen pattern (pattern lives only on the card + settings).
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Transparent)
                 .statusBarsPadding(),
             contentPadding = PaddingValues(bottom = 110.dp)
         ) {
@@ -182,8 +184,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
                     NextPrayerCard(
                         nextKey = next.key,
                         nextTime = next.time,
-                        isTomorrow = next.isTomorrow,
-                        now = now
+                        isTomorrow = next.isTomorrow
                     )
                 }
             }
@@ -241,7 +242,7 @@ private fun TopBar(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(18.dp))
-                .background(AtharCardSurface.copy(alpha = 0.85f))
+                .background(AtharCardSurface)
                 .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -271,7 +272,7 @@ private fun TopBar(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(AtharCardSurface.copy(alpha = 0.85f))
+                .background(AtharCardSurface)
                 .border(1.dp, AtharCardBorder, CircleShape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -290,14 +291,27 @@ private fun TopBar(
     }
 }
 
-/** Featured Next Prayer card with the Islamic lattice baked in. No emojis. */
+/**
+ * Featured Next Prayer card with the Islamic lattice baked in.
+ * The per-second countdown lives here so only the card ticks —
+ * the rest of the screen stays still. "Time Remaining" and the
+ * countdown pill sit together in one row.
+ */
 @Composable
 fun NextPrayerCard(
     nextKey: String,
     nextTime: LocalTime,
-    isTomorrow: Boolean,
-    now: LocalTime
+    isTomorrow: Boolean
 ) {
+    // Second ticker scoped to this card only.
+    var now by remember { mutableStateOf(LocalTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalTime.now()
+            delay(1000)
+        }
+    }
+
     val scale = remember { Animatable(0.95f) }
     LaunchedEffect(Unit) {
         scale.animateTo(
@@ -308,17 +322,6 @@ fun NextPrayerCard(
             )
         )
     }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "borderPulse")
-    val borderAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.30f,
-        targetValue = 0.75f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2400),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowAlpha"
-    )
 
     val nameRes = when (nextKey) {
         "fajr" -> R.string.home_prayer_fajr
@@ -360,16 +363,12 @@ fun NextPrayerCard(
                     colors = listOf(AtharGradientStart, AtharGradientEnd)
                 )
             )
-            .border(
-                1.dp,
-                AtharPrimary.copy(alpha = borderAlpha * 0.40f),
-                RoundedCornerShape(20.dp)
-            )
     ) {
-        // Pattern layer inside the card
+        // Static pattern layer inside the card.
         IslamicPatternBackground(
             modifier = Modifier.matchParentSize(),
             alpha = 0.10f,
+            animated = false,
             cellDp = 64f
         )
         Column(modifier = Modifier.padding(18.dp)) {
@@ -378,20 +377,23 @@ fun NextPrayerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Live countdown pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AtharPrimary.copy(alpha = 0.16f))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text(
-                        remainingText,
-                        color = AtharPrimaryLight,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 12.sp
-                    )
+                if (isTomorrow) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AtharPrimary.copy(alpha = 0.16f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.home_tomorrow),
+                            color = AtharPrimaryLight,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp
+                        )
+                    }
+                } else {
+                    Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     stringResource(R.string.home_next_prayer),
@@ -417,8 +419,7 @@ fun NextPrayerCard(
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
-                stringResource(R.string.home_prayer_iqamah, prayerName) +
-                    if (isTomorrow) " • " + stringResource(R.string.home_tomorrow) else "",
+                stringResource(R.string.home_prayer_iqamah, prayerName),
                 color = AtharTextSecondary,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
@@ -441,17 +442,12 @@ fun NextPrayerCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Time Remaining label + countdown pill together in one row.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Rounded.ChevronLeft,
-                    contentDescription = null,
-                    tint = AtharPrimaryLight,
-                    modifier = Modifier.size(16.dp)
-                )
                 Text(
                     stringResource(R.string.home_time_remaining),
                     color = AtharPrimaryLight,
@@ -459,9 +455,51 @@ fun NextPrayerCard(
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AtharPrimary.copy(alpha = 0.16f))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        remainingText,
+                        color = AtharPrimaryLight,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
+        // Breathing glow border isolated in its own overlay —
+        // only this thin layer recomposes each pulse frame.
+        CardGlowBorder()
     }
+}
+
+/** Isolated pulsing border overlay so the card content never recomposes for it. */
+@Composable
+private fun BoxScope.CardGlowBorder() {
+    val transition = rememberInfiniteTransition(label = "borderPulse")
+    val borderAlpha by transition.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowAlpha"
+    )
+    Spacer(
+        modifier = Modifier
+            .matchParentSize()
+            .border(
+                1.dp,
+                AtharPrimary.copy(alpha = borderAlpha * 0.40f),
+                RoundedCornerShape(20.dp)
+            )
+    )
 }
 
 @Composable
@@ -482,7 +520,7 @@ fun PrayerItem(row: PrayerRow) {
                         .border(1.dp, AtharPrimary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 } else {
                     Modifier
-                        .background(AtharCardSurface.copy(alpha = 0.85f))
+                        .background(AtharCardSurface)
                         .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
                 }
             )
@@ -526,7 +564,7 @@ fun PrayerItem(row: PrayerRow) {
 fun HomeScreenPreview() {
     AtharTheme {
         Box(Modifier.background(AtharBackground)) {
-            NextPrayerCard("maghrib", LocalTime.of(19, 6), false, LocalTime.of(18, 0))
+            NextPrayerCard("maghrib", LocalTime.of(19, 6), false)
         }
     }
 }

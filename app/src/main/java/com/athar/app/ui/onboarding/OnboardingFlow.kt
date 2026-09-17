@@ -5,11 +5,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -47,10 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,8 +59,9 @@ import androidx.core.content.ContextCompat
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
-import com.athar.app.data.MadhabOption
-import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.notifications.PrayerNotifications
+import com.athar.app.ui.components.SchoolSelector
+import com.athar.app.ui.components.TypewriterText
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
@@ -77,9 +78,10 @@ data class PresetCity(val label: String, val lat: Double, val lng: Double)
 val presetCities = listOf(
     PresetCity("Al Obour", 30.25, 31.47),
     PresetCity("Cairo", 30.0444, 31.2357),
+    PresetCity("Abu Dhabi", 24.4539, 55.6713),
+    PresetCity("Dubai", 25.2048, 55.2708),
     PresetCity("Makkah", 21.4225, 39.8262),
     PresetCity("Madinah", 24.5247, 39.5692),
-    PresetCity("Dubai", 25.2048, 55.2708),
     PresetCity("Istanbul", 41.0082, 28.9784),
     PresetCity("Jakarta", -6.2088, 106.8456),
     PresetCity("London", 51.5074, -0.1278),
@@ -87,10 +89,11 @@ val presetCities = listOf(
 )
 
 /**
- * Two-step first-launch setup:
- *  1. Islamic greeting + tagline + language choice
- *  2. Location (GPS or preset city) + calculation method + madhab
- * A "Skip setup" affordance is always visible.
+ * First-launch setup on a solid dark background:
+ *  0. Islamic greeting + streaming bio + language choice
+ *  1. Notification permission for prayer reminders
+ *  2. Location (GPS or city) + calculation method + school
+ * "Skip setup" is always visible.
  */
 @Composable
 fun OnboardingFlow(
@@ -102,11 +105,12 @@ fun OnboardingFlow(
 
     var step by remember { mutableStateOf(0) }
     var language by remember { mutableStateOf<String?>(null) }
+    var notifGranted by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf<PresetCity?>(null) }
     var gpsLabel by remember { mutableStateOf<String?>(null) }
     var gpsLatLng by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var method by remember { mutableStateOf(CalcMethod.MWL) }
-    var madhab by remember { mutableStateOf(MadhabOption.SHAFI) }
+    var school by remember { mutableStateOf("SHAFII") }
 
     fun finish(skipLocation: Boolean) {
         scope.launch {
@@ -121,13 +125,27 @@ fun OnboardingFlow(
                 }
             }
             prefs.setCalcMethod(method.id)
-            prefs.setMadhab(madhab.id)
+            prefs.setSchool(school)
+            if (notifGranted) {
+                prefs.setNotificationsMaster(true)
+                PrayerNotifications.ensureChannel(context)
+                PrayerNotifications.scheduleNext(context)
+            }
             prefs.completeOnboarding()
             onFinished(lang)
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            notifGranted = true
+        }
+        step = 2
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
         val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
@@ -141,83 +159,92 @@ fun OnboardingFlow(
         }
     }
 
-    PatternScaffold {
-        Box(
+    // Solid dark base — never translucent, so the system theme can't wash it out.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+            .statusBarsPadding()
+    ) {
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            AtharBackground.copy(alpha = 0.55f),
-                            Color.Transparent,
-                            AtharBackground.copy(alpha = 0.75f)
-                        )
-                    )
-                )
-                .statusBarsPadding()
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.End
         ) {
-            // Skip always visible
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = { finish(skipLocation = true) }) {
-                    Text(
-                        text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = AtharTextSecondary
-                    )
-                }
+            TextButton(onClick = { finish(skipLocation = true) }) {
+                Text(
+                    text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = AtharTextSecondary
+                )
             }
+        }
 
-            if (step == 0) {
-                GreetingStep(
-                    language = language,
-                    onPickLanguage = { language = it },
-                    onNext = { if (language != null) step = 1 }
-                )
-            } else {
-                SetupStep(
-                    selectedCity = selectedCity,
-                    onPickCity = {
-                        selectedCity = it
-                        gpsLatLng = null
-                    },
-                    gpsActive = gpsLatLng != null,
-                    onUseGps = {
-                        val fine = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.ACCESS_FINE_LOCATION
+        when (step) {
+            0 -> GreetingStep(
+                language = language,
+                onPickLanguage = { language = it },
+                onNext = { if (language != null) step = 1 }
+            )
+            1 -> NotificationStep(
+                onAllow = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val granted = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.POST_NOTIFICATIONS
                         ) == PackageManager.PERMISSION_GRANTED
-                        val coarse = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.ACCESS_COARSE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (fine || coarse) {
-                            readLastLocation(context) { lat, lng ->
-                                gpsLatLng = lat to lng
-                                selectedCity = null
-                                gpsLabel = context.getString(R.string.setup_use_gps)
-                            }
+                        if (granted) {
+                            notifGranted = true
+                            step = 2
                         } else {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
+                            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
-                    },
-                    method = method,
-                    onPickMethod = { method = it },
-                    madhab = madhab,
-                    onPickMadhab = { madhab = it },
-                    onBack = { step = 0 },
-                    onStart = { finish(skipLocation = false) }
-                )
-            }
+                    } else {
+                        notifGranted = true
+                        step = 2
+                    }
+                },
+                onLater = { step = 2 },
+                onBack = { step = 0 }
+            )
+            else -> SetupStep(
+                selectedCity = selectedCity,
+                onPickCity = {
+                    selectedCity = it
+                    gpsLatLng = null
+                },
+                gpsActive = gpsLatLng != null,
+                onUseGps = {
+                    val fine = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    val coarse = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (fine || coarse) {
+                        readLastLocation(context) { lat, lng ->
+                            gpsLatLng = lat to lng
+                            selectedCity = null
+                            gpsLabel = context.getString(R.string.setup_use_gps)
+                        }
+                    } else {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                },
+                method = method,
+                onPickMethod = { method = it },
+                school = school,
+                onPickSchool = { school = it },
+                onBack = { step = 1 },
+                onStart = { finish(skipLocation = false) }
+            )
         }
     }
 }
@@ -228,11 +255,13 @@ private fun GreetingStep(
     onPickLanguage: (String) -> Unit,
     onNext: () -> Unit
 ) {
+    val tagline = if (language == "ar") "رفيقك المسلم." else "Your Muslim companion app."
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 28.dp)
-            .padding(bottom = 32.dp),
+            .padding(bottom = 32.dp, top = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -241,7 +270,7 @@ private fun GreetingStep(
             fontFamily = ThmanyahSerifDisplay,
             fontWeight = FontWeight.Medium,
             fontSize = 16.sp,
-            color = AtharPrimary.copy(alpha = 0.9f),
+            color = AtharPrimaryLight,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(26.dp))
@@ -251,7 +280,7 @@ private fun GreetingStep(
             fontWeight = FontWeight.Black,
             fontSize = 24.sp,
             lineHeight = 36.sp,
-            color = AtharPrimaryLight,
+            color = AtharTextPrimary,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(10.dp))
@@ -281,18 +310,18 @@ private fun GreetingStep(
             letterSpacing = 6.sp,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = if (language == "ar")
-                "رفيقك المسلم الهادئ — الصلاة والقرآن والقبلة في مكان واحد."
-            else
-                "Your quiet Muslim companion — prayer, Quran and direction, in one calm place.",
+        Spacer(Modifier.height(14.dp))
+        // Streaming bio — replays when the language changes.
+        TypewriterText(
+            text = tagline,
             fontFamily = ThmanyahSans,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
-            color = AtharTextSecondary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = AtharPrimaryLight,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
         )
         Spacer(Modifier.height(30.dp))
         Row(
@@ -346,6 +375,96 @@ private fun GreetingStep(
 }
 
 @Composable
+private fun NotificationStep(
+    onAllow: () -> Unit,
+    onLater: () -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 28.dp)
+            .padding(bottom = 32.dp, top = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(88.dp)
+                .background(AtharPrimary.copy(alpha = 0.14f), CircleShape)
+                .border(1.dp, AtharPrimary.copy(alpha = 0.4f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.NotificationsActive,
+                contentDescription = null,
+                tint = AtharPrimaryLight,
+                modifier = Modifier.size(38.dp)
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = stringResource(R.string.onboarding_notif_title),
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Black,
+            fontSize = 22.sp,
+            color = AtharTextPrimary,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.onboarding_notif_sub),
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp,
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        Spacer(Modifier.height(32.dp))
+        Button(
+            onClick = onAllow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AtharPrimary,
+                contentColor = AtharTextOnPrimary
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.onboarding_allow),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        TextButton(onClick = onLater) {
+            Text(
+                text = stringResource(R.string.onboarding_later),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = AtharTextSecondary
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        TextButton(onClick = onBack) {
+            Text(
+                text = "رجوع • Back",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                color = AtharTextSecondary.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
 private fun SetupStep(
     selectedCity: PresetCity?,
     onPickCity: (PresetCity) -> Unit,
@@ -353,8 +472,8 @@ private fun SetupStep(
     onUseGps: () -> Unit,
     method: CalcMethod,
     onPickMethod: (CalcMethod) -> Unit,
-    madhab: MadhabOption,
-    onPickMadhab: (MadhabOption) -> Unit,
+    school: String,
+    onPickSchool: (String) -> Unit,
     onBack: () -> Unit,
     onStart: () -> Unit
 ) {
@@ -365,7 +484,7 @@ private fun SetupStep(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(48.dp))
             Text(
                 text = "أين أنت؟ • Where are you?",
                 fontFamily = ThmanyahSans,
@@ -386,12 +505,6 @@ private fun SetupStep(
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Simple flow layout: two columns via chunked rows is overkill; use column of chips
-            }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 presetCities.chunked(3).forEach { row ->
                     Row(
@@ -434,33 +547,7 @@ private fun SetupStep(
 
         item {
             Spacer(Modifier.height(6.dp))
-            Text(
-                text = "المذهب • Madhab (Asr)",
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 15.sp,
-                color = AtharTextPrimary
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                MadhabChip(
-                    title = "شافعي، مالكي، حنبلي",
-                    sub = "Shafi",
-                    selected = madhab == MadhabOption.SHAFI,
-                    onClick = { onPickMadhab(MadhabOption.SHAFI) },
-                    modifier = Modifier.weight(1f)
-                )
-                MadhabChip(
-                    title = "حنفي",
-                    sub = "Hanafi",
-                    selected = madhab == MadhabOption.HANAFI,
-                    onClick = { onPickMadhab(MadhabOption.HANAFI) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            SchoolSelector(schoolId = school, onPickSchool = onPickSchool)
         }
 
         item {
@@ -676,62 +763,6 @@ private fun MethodRow(title: String, selected: Boolean, onClick: () -> Unit) {
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MadhabChip(
-    title: String,
-    sub: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val border by animateColorAsState(
-        targetValue = if (selected) AtharPrimary else AtharCardBorder,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "madBorder"
-    )
-    val bg by animateColorAsState(
-        targetValue = if (selected) AtharPrimary.copy(alpha = 0.14f) else Color.Transparent,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "madBg"
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1.02f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "madScale"
-    )
-    Box(
-        modifier = modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.2.dp, border, RoundedCornerShape(14.dp))
-            .background(bg)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = title,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 13.sp,
-                color = if (selected) AtharPrimaryLight else AtharTextPrimary
-            )
-            Text(
-                text = sub,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                color = AtharTextSecondary
-            )
         }
     }
 }

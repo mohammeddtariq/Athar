@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Atharأَثَر" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Atharأَثَر" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF0A0C08</item>
+        <item name="android:windowBackgroundFallback">#FF0A0C08</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>

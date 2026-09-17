@@ -49,7 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
-import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharGradientEnd
@@ -63,7 +63,6 @@ import kotlinx.coroutines.delay
 
 data class CornerEntry(
     val titleRes: Int,
-    val subRes: Int,
     val icon: ImageVector,
     val tint: Color,
     val route: String
@@ -83,15 +82,15 @@ fun MuslimCornerScreen(
 
     val entries = listOf(
         CornerEntry(
-            R.string.services_quran, R.string.services_quran_sub,
+            R.string.services_quran,
             Icons.Outlined.AutoStories, AtharPrimary, "quran"
         ),
         CornerEntry(
-            R.string.services_qibla, R.string.services_qibla_sub,
+            R.string.services_qibla,
             Icons.Outlined.Explore, AtharPrimary, "qibla"
         ),
         CornerEntry(
-            R.string.services_duas, R.string.services_duas_sub,
+            R.string.services_duas,
             Icons.Outlined.FormatQuote, AtharPrimary, "duas"
         )
     )
@@ -102,7 +101,11 @@ fun MuslimCornerScreen(
         else -> onOpenDuas()
     }
 
-    PatternScaffold(patternAlpha = 0.05f) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -196,7 +199,6 @@ fun MuslimCornerScreen(
                     ) {
                         ToolListItem(
                             title = stringResource(entry.titleRes),
-                            subtitle = stringResource(entry.subRes),
                             icon = entry.icon,
                             onClick = { open(entry.route) }
                         )
@@ -252,15 +254,6 @@ private fun FeaturedQuranCard(onClick: () -> Unit) {
                     fontSize = 17.sp,
                     textAlign = TextAlign.End
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    stringResource(R.string.services_quran_sub),
-                    color = AtharTextSecondary,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.End
-                )
             }
         }
     }
@@ -269,7 +262,6 @@ private fun FeaturedQuranCard(onClick: () -> Unit) {
 @Composable
 fun ToolListItem(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit
 ) {
@@ -302,27 +294,15 @@ fun ToolListItem(
                 Icon(icon, contentDescription = null, tint = AtharPrimary, modifier = Modifier.size(19.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(
-                    title,
-                    color = AtharTextPrimary,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.End
-                )
-                Text(
-                    subtitle,
-                    color = AtharTextSecondary,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.5.sp,
-                    textAlign = TextAlign.End
-                )
-            }
+            Text(
+                title,
+                color = AtharTextPrimary,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

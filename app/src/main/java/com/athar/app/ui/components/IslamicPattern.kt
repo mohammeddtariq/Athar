@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
+import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharPrimary
 import kotlin.math.cos
 import kotlin.math.sin
@@ -81,7 +83,7 @@ private fun DrawScope.drawLattice(color: Color, cellPx: Float, phase: Float) {
 
 private fun DrawScope.drawStar(center: Offset, radius: Float, color: Color) {
     val stroke = (radius * 0.055f).coerceAtLeast(1f)
-    // Two overlapping squares (0° and 45°) = eight-pointed star.
+    // Khatam: two overlapping squares (0° and 45°) = eight-pointed star.
     for (rot in listOf(0f, 45f)) {
         rotate(degrees = rot, pivot = center) {
             val h = radius * 0.72f
@@ -94,6 +96,19 @@ private fun DrawScope.drawStar(center: Offset, radius: Float, color: Color) {
             for (i in corners.indices) {
                 drawLine(color, corners[i], corners[(i + 1) % 4], strokeWidth = stroke)
             }
+        }
+    }
+    // Outer linking diamond (echoes the reference lattice grid).
+    rotate(degrees = 45f, pivot = center) {
+        val h = radius * 1.02f
+        val corners = listOf(
+            Offset(center.x - h, center.y - h),
+            Offset(center.x + h, center.y - h),
+            Offset(center.x + h, center.y + h),
+            Offset(center.x - h, center.y + h)
+        )
+        for (i in corners.indices) {
+            drawLine(color, corners[i], corners[(i + 1) % 4], strokeWidth = stroke * 0.7f)
         }
     }
     // Inner octagon hint.
@@ -110,15 +125,19 @@ private fun DrawScope.drawStar(center: Offset, radius: Float, color: Color) {
     drawCircle(color, radius = stroke * 0.9f, center = center)
 }
 
-/** Convenience wrapper: pattern behind [content]. */
+/** Convenience wrapper: opaque dark base + pattern behind [content]. */
 @Composable
 fun PatternScaffold(
     modifier: Modifier = Modifier,
-    patternAlpha: Float = 0.055f,
-    animated: Boolean = true,
+    patternAlpha: Float = 0.07f,
+    animated: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+    ) {
         IslamicPatternBackground(
             modifier = Modifier.fillMaxSize(),
             alpha = patternAlpha,

@@ -59,9 +59,9 @@ import androidx.core.net.toUri
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
-import com.athar.app.data.MadhabOption
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.components.SchoolSelector
 import com.athar.app.ui.onboarding.presetCities
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -74,7 +74,7 @@ import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import kotlinx.coroutines.launch
 
-const val ATHAR_GITHUB_URL = "https://github.com/anomalyco/opencode"
+const val ATHAR_GITHUB_URL = "https://github.com/mohammeddtariq/Athar"
 
 @Composable
 fun SettingsScreen() {
@@ -85,7 +85,7 @@ fun SettingsScreen() {
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
     val city by prefs.cityLabel.collectAsState(initial = null)
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
-    val madhabId by prefs.madhabId.collectAsState(initial = "SHAFI")
+    val schoolId by prefs.schoolId.collectAsState(initial = "SHAFII")
     val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
 
     var showMethods by remember { mutableStateOf(false) }
@@ -380,36 +380,19 @@ fun SettingsScreen() {
                 }
             }
 
-            // ── Madhab ──
+            // ── School (Hanafi / Maliki / Shafii / Hanbali) + Hanafi Asr ──
             item {
-                SectionCard(title = stringResource(R.string.settings_madhab)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        LangChip(
-                            label = stringResource(R.string.madhab_shafi),
-                            selected = madhabId == "SHAFI",
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    prefs.setMadhab("SHAFI")
-                                    PrayerNotifications.scheduleNext(context)
-                                }
+                SectionCard(title = stringResource(R.string.settings_school)) {
+                    SchoolSelector(
+                        schoolId = schoolId,
+                        showTitle = false,
+                        onPickSchool = { id ->
+                            scope.launch {
+                                prefs.setSchool(id)
+                                PrayerNotifications.scheduleNext(context)
                             }
-                        )
-                        LangChip(
-                            label = stringResource(R.string.madhab_hanafi),
-                            selected = madhabId == "HANAFI",
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    prefs.setMadhab("HANAFI")
-                                    PrayerNotifications.scheduleNext(context)
-                                }
-                            }
-                        )
-                    }
+                        }
+                    )
                 }
             }
 

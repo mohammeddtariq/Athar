@@ -26,7 +26,6 @@
     <!-- Services Screen -->
     <string name="services_title">Essence</string>
     <string name="services_quran">Holy Quran</string>
-    <string name="services_quran_sub">AMOLED mushaf reader</string>
     <string name="services_qibla">Qibla Direction</string>
     <string name="services_qibla_sub">Compass to the Kaaba</string>
     <string name="services_duas">Duas</string>
@@ -100,4 +99,24 @@
     <string name="notif_channel_desc">Reminders at prayer time</string>
     <string name="notif_prayer_title">Time for %s</string>
     <string name="notif_prayer_body">May your prayer be accepted.</string>
+    <!-- Onboarding tagline -->
+    <string name="onboarding_tagline_short">Your Muslim companion app.</string>
+    <string name="onboarding_notif_title">Prayer reminders</string>
+    <string name="onboarding_notif_sub">Allow notifications so Athar can remind you at each prayer time.</string>
+    <string name="onboarding_allow">Allow reminders</string>
+    <string name="onboarding_later">Not now</string>
+
+    <!-- School (madhab for Asr) -->
+    <string name="settings_school">School</string>
+    <string name="school_hanafi">Hanafi</string>
+    <string name="school_maliki">Maliki</string>
+    <string name="school_shafii">Shafii</string>
+    <string name="school_hanbali">Hanbali</string>
+    <string name="hanafi_asr">Hanafi Asr</string>
+    <string name="hanafi_asr_sub">Later Asr with a larger shadow length</string>
+    <string name="school_note">Shafii, Maliki and Hanbali share the same Asr time. Hanafi uses a later Asr.</string>
+
+    <!-- Quran states -->
+    <string name="quran_offline">You are offline and this surah is not downloaded yet. Connect once to download it.</string>
+    <string name="quran_loading">Loading…</string>
 </resources>

@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,9 +26,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.List
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,15 +41,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
-import com.athar.app.ui.theme.AtharCardBorder
-import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.data.QuranRepository
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -54,9 +60,12 @@ import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifText
 
 /**
- * Built-in Quran reader — pure AMOLED black, mushaf-style page,
- * matching the reference screenshot (surah pill header, centered
- * Uthmani text, page divider, floating controls).
+ * Built-in Quran reader — pure black mushaf page: surah pill header,
+ * centered Uthmani text with ayah markers, divider, floating controls.
+ *
+ * Full text loads per surah from the Quran.com API (Quran Foundation,
+ * Madani mushaf) and is cached offline after the first open. A small set
+ * of short surahs is bundled as an instant offline fallback.
  */
 @Composable
 fun QuranScreen(onBack: () -> Unit) {
@@ -94,7 +103,6 @@ fun QuranScreen(onBack: () -> Unit) {
             .background(Color.Black)
             .statusBarsPadding()
     ) {
-        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -102,7 +110,6 @@ fun QuranScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Back acts as list toggle here — keep symmetric with reader header
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -141,7 +148,6 @@ fun QuranScreen(onBack: () -> Unit) {
             Spacer(Modifier.size(44.dp))
         }
 
-        // Search
         Box(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
@@ -186,7 +192,7 @@ fun QuranScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 110.dp)
+            contentPadding = PaddingValues(bottom = 110.dp)
         ) {
             items(filtered, key = { it.number }) { surah ->
                 val readable = readableSurahText.containsKey(surah.number)
@@ -209,7 +215,6 @@ fun QuranScreen(onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Number badge
                         Box(
                             modifier = Modifier
                                 .size(34.dp)
@@ -263,6 +268,8 @@ fun QuranScreen(onBack: () -> Unit) {
     }
 }
 
+private val AYAH_MARKER = Regex("﴿[٠-٩]+﴾")
+
 @Composable
 private fun SurahReader(
     surah: SurahMeta,
@@ -271,7 +278,34 @@ private fun SurahReader(
     onBackToList: () -> Unit,
     onNext: () -> Unit
 ) {
-    val text = readableSurahText[surah.number]
+    val context = LocalContext.current
+    var displayText by remember(surah.number) { mutableStateOf<String?>(null) }
+    var loadFailed by remember(surah.number) { mutableStateOf(false) }
+
+    LaunchedEffect(surah.number) {
+        displayText = null
+        loadFailed = false
+        val remote = QuranRepository.getSurahText(context.applicationContext, surah.number)
+        displayText = remote ?: readableSurahText[surah.number]
+        loadFailed = displayText == null
+    }
+
+    // Ayah markers in a softer tone, like a printed mushaf.
+    val annotated = remember(displayText) {
+        displayText?.let { raw ->
+            buildAnnotatedString {
+                var cursor = 0
+                for (match in AYAH_MARKER.findAll(raw)) {
+                    append(raw.substring(cursor, match.range.first))
+                    withStyle(SpanStyle(color = Color(0xFF9AA895))) {
+                        append(match.value)
+                    }
+                    cursor = match.range.last + 1
+                }
+                append(raw.substring(cursor))
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -279,7 +313,6 @@ private fun SurahReader(
             .background(Color.Black)
             .statusBarsPadding()
     ) {
-        // Top bar: list | surah pill | next
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -319,114 +352,146 @@ private fun SurahReader(
             )
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .background(Color.Black),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 24.dp, end = 24.dp, top = 8.dp, bottom = 130.dp
-            )
-        ) {
-            item {
-                if (text != null) {
-                    Text(
-                        text,
-                        fontFamily = ThmanyahSerifText,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = (23 * fontScale).sp,
-                        lineHeight = (44 * fontScale).sp,
-                        color = Color(0xFFF2F4EE),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+        when {
+            annotated != null -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color.Black),
+                    contentPadding = PaddingValues(
+                        start = 24.dp, end = 24.dp, top = 8.dp, bottom = 130.dp
                     )
-                } else {
+                ) {
+                    item {
+                        Text(
+                            annotated,
+                            fontFamily = ThmanyahSerifText,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = (23 * fontScale).sp,
+                            lineHeight = (44 * fontScale).sp,
+                            color = Color(0xFFF2F4EE),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 26.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(1.dp)
+                                    .background(Color(0xFF22261F))
+                            )
+                            Text(
+                                "  ${surah.number}  ",
+                                fontFamily = ThmanyahSans,
+                                fontSize = 12.sp,
+                                color = AtharTextSecondary
+                            )
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(1.dp)
+                                    .background(Color(0xFF22261F))
+                            )
+                        }
+                    }
+                }
+            }
+            loadFailed -> {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        stringResource(R.string.quran_coming),
+                        stringResource(R.string.quran_offline),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp,
+                        lineHeight = 22.sp,
                         color = AtharTextSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 60.dp)
+                        textAlign = TextAlign.Center
                     )
                 }
             }
-            item {
-                // Page divider with surah number
-                Row(
+            else -> {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 26.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(1.dp)
-                            .background(Color(0xFF22261F))
-                    )
-                    Text(
-                        "  ${surah.number}  ",
-                        fontFamily = ThmanyahSans,
-                        fontSize = 12.sp,
-                        color = AtharTextSecondary
-                    )
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(1.dp)
-                            .background(Color(0xFF22261F))
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color = AtharPrimaryLight,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.quran_loading),
+                            fontFamily = ThmanyahSans,
+                            fontSize = 13.sp,
+                            color = AtharTextSecondary
+                        )
+                    }
                 }
             }
         }
     }
 
-    // Floating controls (font size - / reset / +)
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(bottom = 112.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color(0xFF141712).copy(alpha = 0.92f))
-                .border(1.dp, Color(0xFF262B24), RoundedCornerShape(28.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+    if (annotated != null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            ReaderCircleButton(
-                icon = { Icon(Icons.Rounded.FormatSize, null, tint = AtharTextPrimary, modifier = Modifier.size(20.dp)) },
-                onClick = { onFontScale(fontScale - 0.1f) }
-            )
-            ReaderCircleButton(
-                icon = {
-                    Text(
-                        "أ",
-                        color = AtharTextPrimary,
-                        fontFamily = ThmanyahSerifText,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                onClick = { onFontScale(1f) }
-            )
-            ReaderCircleButton(
-                icon = {
-                    Text(
-                        "+",
-                        color = AtharTextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                onClick = { onFontScale(fontScale + 0.1f) }
-            )
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 112.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color(0xFF141712).copy(alpha = 0.92f))
+                    .border(1.dp, Color(0xFF262B24), RoundedCornerShape(28.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ReaderCircleButton(
+                    icon = { Icon(Icons.Rounded.FormatSize, null, tint = AtharTextPrimary, modifier = Modifier.size(20.dp)) },
+                    onClick = { onFontScale(fontScale - 0.1f) }
+                )
+                ReaderCircleButton(
+                    icon = {
+                        Text(
+                            "أ",
+                            color = AtharTextPrimary,
+                            fontFamily = ThmanyahSerifText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    onClick = { onFontScale(1f) }
+                )
+                ReaderCircleButton(
+                    icon = {
+                        Text(
+                            "+",
+                            color = AtharTextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    onClick = { onFontScale(fontScale + 0.1f) }
+                )
+            }
         }
     }
 }

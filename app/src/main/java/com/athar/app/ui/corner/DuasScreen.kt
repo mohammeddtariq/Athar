@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,10 +35,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
-import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
@@ -48,7 +49,11 @@ import com.athar.app.ui.theme.ThmanyahSerifText
 /** Duas browser — Hisnul Muslim selection, olive cards, no emojis. */
 @Composable
 fun DuasScreen(onBack: () -> Unit) {
-    PatternScaffold(patternAlpha = 0.05f) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -104,33 +109,57 @@ fun DuasScreen(onBack: () -> Unit) {
 
             duaCategories.forEach { category ->
                 item(key = "header_${category.titleEn}") {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.End
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                category.titleAr,
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp,
-                                color = AtharTextPrimary,
-                                textAlign = TextAlign.End
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(1.dp)
+                                    .background(AtharCardBorder)
                             )
-                            Text(
-                                category.titleEn,
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 11.sp,
-                                color = AtharTextSecondary,
-                                textAlign = TextAlign.End
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 10.dp)
+                                    .size(6.dp)
+                                    .background(AtharPrimary, CircleShape)
+                            )
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(1.dp)
+                                    .background(AtharCardBorder)
                             )
                         }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            category.titleAr,
+                            fontFamily = ThmanyahSerifDisplay,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 19.sp,
+                            color = AtharTextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            category.titleEn,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp,
+                            letterSpacing = 2.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
-                items(category.duas, key = { it.arabic.take(24) + it.source }) { dua ->
+                itemsIndexed(category.duas, key = { _, dua -> dua.arabic.take(24) + dua.source }) { index, dua ->
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 20.dp, vertical = 4.dp)
@@ -141,12 +170,35 @@ fun DuasScreen(onBack: () -> Unit) {
                             .padding(16.dp)
                     ) {
                         Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(AtharPrimary.copy(alpha = 0.14f))
+                                        .border(1.dp, AtharPrimary.copy(alpha = 0.35f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "${index + 1}",
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 12.sp,
+                                        color = AtharPrimaryLight
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
                             Text(
                                 dua.arabic,
                                 fontFamily = ThmanyahSerifText,
                                 fontWeight = FontWeight.Normal,
-                                fontSize = 18.sp,
-                                lineHeight = 34.sp,
+                                fontSize = 19.sp,
+                                lineHeight = 37.sp,
                                 color = AtharTextPrimary,
                                 textAlign = TextAlign.End,
                                 modifier = Modifier.fillMaxWidth()
@@ -163,8 +215,26 @@ fun DuasScreen(onBack: () -> Unit) {
                             Spacer(Modifier.height(4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                if (dua.repeat != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(AtharPrimary.copy(alpha = 0.22f))
+                                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            dua.repeat,
+                                            fontFamily = ThmanyahSans,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 10.5.sp,
+                                            color = AtharPrimaryLight
+                                        )
+                                    }
+                                    Spacer(Modifier.size(6.dp))
+                                }
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))

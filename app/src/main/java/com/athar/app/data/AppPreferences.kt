@@ -30,9 +30,10 @@ class AppPreferences(private val context: Context) {
         private val CITY_KEY = stringPreferencesKey("city_label")
         private val LOCATION_SET_KEY = booleanPreferencesKey("location_set")
 
-        // Calculation (method + madhab)
+        // Calculation (method + school)
         private val METHOD_KEY = stringPreferencesKey("calc_method") // e.g. "MWL"
         private val MADHAB_KEY = stringPreferencesKey("madhab")      // "SHAFI" | "HANAFI"
+        private val SCHOOL_KEY = stringPreferencesKey("school")      // "HANAFI"|"MALIKI"|"SHAFII"|"HANBALI"
 
         // Notifications
         private val NOTIF_MASTER_KEY = booleanPreferencesKey("notif_master")
@@ -49,6 +50,7 @@ class AppPreferences(private val context: Context) {
 
     val calcMethodId: Flow<String> = context.dataStore.data.map { it[METHOD_KEY] ?: "MWL" }
     val madhabId: Flow<String> = context.dataStore.data.map { it[MADHAB_KEY] ?: "SHAFI" }
+    val schoolId: Flow<String> = context.dataStore.data.map { it[SCHOOL_KEY] ?: "SHAFII" }
 
     val notificationsMaster: Flow<Boolean> = context.dataStore.data.map { it[NOTIF_MASTER_KEY] ?: false }
 
@@ -94,6 +96,23 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setMadhab(madhabId: String) {
         context.dataStore.edit { it[MADHAB_KEY] = madhabId }
+    }
+
+    /**
+     * School picker (Hanafi / Maliki / Shafii / Hanbali).
+     * Only Hanafi changes the Asr time (larger shadow length);
+     * the other three share the standard Asr. Madhab is kept in sync.
+     */
+    suspend fun setSchool(schoolId: String) {
+        context.dataStore.edit {
+            it[SCHOOL_KEY] = schoolId
+            it[MADHAB_KEY] = if (schoolId == "HANAFI") "HANAFI" else "SHAFI"
+        }
+    }
+
+    /** "Hanafi Asr" switch: on = Hanafi school, off = back to Shafii. */
+    suspend fun setHanafiAsr(enabled: Boolean) {
+        setSchool(if (enabled) "HANAFI" else "SHAFII")
     }
 
     suspend fun setNotificationsMaster(enabled: Boolean) {

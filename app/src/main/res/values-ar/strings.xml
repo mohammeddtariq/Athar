@@ -26,7 +26,6 @@
     <!-- Services Screen -->
     <string name="services_title">الجوهر</string>
     <string name="services_quran">القرآن الكريم</string>
-    <string name="services_quran_sub">مصحف بخلفية سوداء مريحة</string>
     <string name="services_qibla">اتجاه القبلة</string>
     <string name="services_qibla_sub">بوصلة نحو الكعبة</string>
     <string name="services_duas">الأدعية</string>
@@ -100,4 +99,24 @@
     <string name="notif_channel_desc">تذكير عند دخول وقت الصلاة</string>
     <string name="notif_prayer_title">حان وقت %s</string>
     <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
+    <!-- Onboarding tagline -->
+    <string name="onboarding_tagline_short">رفيقك المسلم.</string>
+    <string name="onboarding_notif_title">تنبيهات الصلاة</string>
+    <string name="onboarding_notif_sub">اسمح بالتنبيهات ليذكّرك أَثَر عند دخول كل صلاة.</string>
+    <string name="onboarding_allow">اسمح بالتنبيهات</string>
+    <string name="onboarding_later">ليس الآن</string>
+
+    <!-- School (madhab for Asr) -->
+    <string name="settings_school">المذهب</string>
+    <string name="school_hanafi">حنفي</string>
+    <string name="school_maliki">مالكي</string>
+    <string name="school_shafii">شافعي</string>
+    <string name="school_hanbali">حنبلي</string>
+    <string name="hanafi_asr">العصر على الحنفي</string>
+    <string name="hanafi_asr_sub">عصر متأخر بطول ظل أكبر</string>
+    <string name="school_note">الشافعي والمالكي والحنبلي لهم نفس وقت العصر. الحنفي له عصر متأخر.</string>
+
+    <!-- Quran states -->
+    <string name="quran_offline">لا يوجد اتصال وهذه السورة غير محمّلة بعد. اتصل مرة واحدة لتحميلها.</string>
+    <string name="quran_loading">جارٍ التحميل…</string>
 </resources>
