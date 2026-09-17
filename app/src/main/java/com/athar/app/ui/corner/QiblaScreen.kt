@@ -1,10 +1,13 @@
 package com.athar.app.ui.corner
 
+import android.Manifest
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -30,16 +33,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,17 +65,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.LocationHelper
 import com.athar.app.data.QiblaCalculator
+import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimaryMuted
+import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
+import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -78,18 +88,57 @@ import kotlin.math.sin
  * circular dial with degree ring + needle, signal + help texts.
  */
 @Composable
-fun QiblaScreen(onBack: () -> Unit) {
+fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val prefs = remember { AppPreferences(context.applicationContext) }
     val lat by prefs.latitude.collectAsState(initial = null)
     val lng by prefs.longitude.collectAsState(initial = null)
     val city by prefs.cityLabel.collectAsState(initial = null)
 
-    val qiblaBearing = remember(lat, lng) {
-        if (lat != null && lng != null) QiblaCalculator.bearing(lat!!, lng!!) else null
+    var liveLoc by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var providersOn by remember { mutableStateOf(LocationHelper.isProvidersOn(context)) }
+    var locating by remember { mutableStateOf(false) }
+    var prompted by remember { mutableStateOf(false) }
+
+    fun refresh() {
+        providersOn = LocationHelper.isProvidersOn(context)
+        if (!LocationHelper.hasPermission(context)) return
+        locating = true
+        scope.launch {
+            liveLoc = LocationHelper.freshFix(context.applicationContext)
+            providersOn = LocationHelper.isProvidersOn(context)
+            locating = false
+        }
     }
-    val distanceKm = remember(lat, lng) {
-        if (lat != null && lng != null) QiblaCalculator.distanceKm(lat!!, lng!!) else null
+    val requestEnableLocation = rememberLocationEnabler(onEnabled = { refresh() })
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) refresh()
+    }
+
+    LaunchedEffect(Unit) { refresh() }
+    // One automatic popup asking to turn location on.
+    LaunchedEffect(providersOn) {
+        if (!prompted && LocationHelper.hasPermission(context) && !providersOn) {
+            prompted = true
+            requestEnableLocation()
+        }
+    }
+
+    // Live fix wins; otherwise the last saved location.
+    val effective: Pair<Double, Double>? = liveLoc
+        ?: if (lat != null && lng != null) lat!! to lng!! else null
+
+    val qiblaBearing = remember(effective) {
+        effective?.let { QiblaCalculator.bearing(it.first, it.second) }
+    }
+    val distanceKm = remember(effective) {
+        effective?.let { QiblaCalculator.distanceKm(it.first, it.second) }
     }
 
     var azimuth by remember { mutableFloatStateOf(0f) }
@@ -191,26 +240,82 @@ fun QiblaScreen(onBack: () -> Unit) {
         }
 
         if (qiblaBearing == null) {
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp, vertical = 40.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
-                    .padding(22.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    stringResource(R.string.qibla_no_location),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = AtharTextSecondary,
-                    textAlign = TextAlign.Center
-                )
+            if (locating) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 80.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color = AtharPrimaryLight,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.quran_loading),
+                            fontFamily = ThmanyahSans,
+                            fontSize = 13.sp,
+                            color = AtharTextSecondary
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+                        .padding(22.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            stringResource(R.string.qibla_no_location),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        if (!LocationHelper.hasPermission(context)) {
+                            QiblaActionButton(
+                                label = stringResource(R.string.setup_use_gps),
+                                onClick = {
+                                    permissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                }
+                            )
+                        } else {
+                            QiblaActionButton(
+                                label = stringResource(R.string.quran_retry),
+                                onClick = { refresh() }
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        QiblaGhostButton(
+                            label = stringResource(R.string.settings_title),
+                            onClick = onOpenSettings
+                        )
+                    }
+                }
             }
             return@Column
+        }
+
+        // Red warning when providers are off: bearing comes from the last saved fix.
+        if (!providersOn) {
+            StaleBanner(onTurnOn = { requestEnableLocation() })
+            Spacer(Modifier.height(6.dp))
         }
 
         val bearing = qiblaBearing
@@ -339,6 +444,100 @@ fun QiblaScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+/** Small red warning: location is off, bearing uses the last saved fix. */
+@Composable
+private fun StaleBanner(onTurnOn: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 24.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF2A1210))
+            .border(1.dp, Color(0xFF7A2E28), RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.qibla_stale),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.5.sp,
+                lineHeight = 16.sp,
+                color = Color(0xFFE08D84),
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.size(10.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF7A2E28))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onTurnOn
+                    )
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.qibla_turn_on),
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QiblaActionButton(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(AtharPrimary)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 26.dp, vertical = 11.dp)
+    ) {
+        Text(
+            text = label,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Black,
+            fontSize = 13.5.sp,
+            color = AtharTextOnPrimary
+        )
+    }
+}
+
+@Composable
+private fun QiblaGhostButton(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = label,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            color = AtharTextSecondary
+        )
     }
 }
 

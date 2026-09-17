@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharPrimary
@@ -32,9 +33,9 @@ import kotlin.math.sin
 fun IslamicPatternBackground(
     modifier: Modifier = Modifier,
     tint: Color = AtharPrimary,
-    alpha: Float = 0.055f,
+    alpha: Float = 0.08f,
     animated: Boolean = true,
-    cellDp: Float = 92f
+    cellDp: Float = 68f
 ) {
     if (!animated) {
         Canvas(modifier = modifier.fillMaxSize()) {
@@ -77,12 +78,27 @@ private fun DrawScope.drawLattice(color: Color, cellPx: Float, phase: Float) {
             val cx = c * cellPx + (if (r % 2 == 0) 0f else cellPx / 2f) - drift * 0.25f
             val cy = r * cellPx - drift * 0.15f
             drawStar(Offset(cx, cy), cellPx * 0.42f, color)
+            // Tiny diamond connectors between stars, like the reference lattice.
+            drawDiamond(Offset(cx + cellPx / 2f, cy), cellPx * 0.10f, color)
+            drawDiamond(Offset(cx, cy + cellPx / 2f), cellPx * 0.10f, color)
         }
     }
 }
 
+private fun DrawScope.drawDiamond(center: Offset, radius: Float, color: Color) {
+    val stroke = (radius * 0.35f).coerceAtLeast(1f)
+    rotate(degrees = 45f, pivot = center) {
+        drawRect(
+            color = color,
+            topLeft = Offset(center.x - radius, center.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+            style = Stroke(width = stroke)
+        )
+    }
+}
+
 private fun DrawScope.drawStar(center: Offset, radius: Float, color: Color) {
-    val stroke = (radius * 0.055f).coerceAtLeast(1f)
+    val stroke = (radius * 0.045f).coerceAtLeast(1f)
     // Khatam: two overlapping squares (0° and 45°) = eight-pointed star.
     for (rot in listOf(0f, 45f)) {
         rotate(degrees = rot, pivot = center) {

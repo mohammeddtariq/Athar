@@ -67,6 +67,7 @@ import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
 import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -112,7 +113,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
         }
     }
 
-    val day: DayPrayers = remember(lat, lng, methodId, madhabId) {
+    val day: DayPrayers = remember(lat, lng, methodId, madhabId, LocalDate.now()) {
         if (lat != null && lng != null) {
             runCatching {
                 computeDayPrayers(
@@ -146,12 +147,8 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
         isVisible = true
     }
 
-    // Solid dark base — no full-screen pattern (pattern lives only on the card + settings).
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AtharBackground)
-    ) {
+    // Dark base with the Islamic lattice (Quran stays pure black).
+    PatternScaffold {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

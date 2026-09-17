@@ -61,6 +61,58 @@ val duaCategories: List<DuaCategory> = listOf(
                 "Glory be to Allah and praise Him. Whoever says it a hundred times, his sins are forgiven even if like the sea's foam.",
                 "Muslim",
                 "×100"
+            ),
+            Dua(
+                "أَصْبَحْنَا عَلَى فِطْرَةِ الْإِسْلَامِ وَعَلَى كَلِمَةِ الْإِخْلَاصِ وَعَلَى دِينِ نَبِيِّنَا مُحَمَّدٍ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ وَعَلَى مِلَّةِ أَبِينَا إِبْرَاهِيمَ حَنِيفًا مُسْلِمًا وَمَا كَانَ مِنَ الْمُشْرِكِينَ",
+                "We have entered the morning upon the fitrah of Islam, the word of sincerity, the religion of our Prophet Muhammad, and the creed of our father Abraham.",
+                "Ahmad"
+            ),
+            Dua(
+                "اللَّهُمَّ فَاطِرَ السَّمَاوَاتِ وَالْأَرْضِ عَالِمَ الْغَيْبِ وَالشَّهَادَةِ رَبَّ كُلِّ شَيْءٍ وَمَلِيكَهُ، أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا أَنْتَ، أَعُوذُ بِكَ مِنْ شَرِّ نَفْسِي وَشَرِّ الشَّيْطَانِ وَشِرْكِهِ",
+                "O Allah, Originator of the heavens and the earth, Knower of the unseen and the seen… I seek refuge in You from the evil of my soul and of Satan.",
+                "At-Tirmidhi"
+            ),
+            Dua(
+                "اللَّهُمَّ عَافِنِي فِي بَدَنِي، اللَّهُمَّ عَافِنِي فِي سَمْعِي، اللَّهُمَّ عَافِنِي فِي بَصَرِي، لَا إِلَهَ إِلَّا أَنْتَ",
+                "O Allah, grant me health in my body, my hearing and my sight; there is no god but You.",
+                "Abu Dawud",
+                "×3"
+            ),
+            Dua(
+                "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْكُفْرِ وَالْفَقْرِ، وَأَعُوذُ بِكَ مِنْ عَذَابِ الْقَبْرِ، لَا إِلَهَ إِلَّا أَنْتَ",
+                "O Allah, I seek refuge in You from disbelief and poverty, and from the punishment of the grave.",
+                "Abu Dawud",
+                "×3"
+            ),
+            Dua(
+                "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+                "None has the right to be worshipped but Allah alone… Whoever says it a hundred times, it equals freeing ten slaves and no one brings better.",
+                "Bukhari & Muslim",
+                "×100"
+            ),
+            Dua(
+                "أَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ",
+                "I seek Allah's forgiveness and repent to Him.",
+                "Al-Bukhari",
+                "×100"
+            ),
+            Dua(
+                "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ عَدَدَ خَلْقِهِ وَرِضَا نَفْسِهِ وَزِنَةَ عَرْشِهِ وَمِدَادَ كَلِمَاتِهِ",
+                "Glory be to Allah and praise Him, by the number of His creation, His pleasure, the weight of His Throne and the ink of His words. These words outweigh a morning of worship.",
+                "Muslim",
+                "×3"
+            ),
+            Dua(
+                "سورة الإخلاص والفلق والناس — تُقرأ حين تُصبح وحين تُمسي",
+                "Recite Al-Ikhlas, Al-Falaq and An-Nas morning and evening thrice; they suffice you against everything.",
+                "At-Tirmidhi",
+                "×3"
+            ),
+            Dua(
+                "اللَّهُمَّ إِنِّي أَصْبَحْتُ أُشْهِدُكَ وَأُشْهِدُ حَمَلَةَ عَرْشِكَ وَمَلَائِكَتَكَ وَجَمِيعَ خَلْقِكَ أَنَّكَ أَنْتَ اللَّهُ لَا إِلَهَ إِلَّا أَنْتَ وَحْدَكَ لَا شَرِيكَ لَكَ وَأَنَّ مُحَمَّدًا عَبْدُكَ وَرَسُولُكَ",
+                "O Allah, I enter the morning calling You and all creation to witness that You are Allah… Whoever says it, Allah frees him from the Fire.",
+                "Abu Dawud",
+                "×4"
             )
         )
     ),
@@ -87,6 +139,12 @@ val duaCategories: List<DuaCategory> = listOf(
                 "آمَنَ الرَّسُولُ بِمَا أُنْزِلَ إِلَيْهِ مِنْ رَبِّهِ وَالْمُؤْمِنُونَ كُلٌّ آمَنَ بِاللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ لَا نُفَرِّقُ بَيْنَ أَحَدٍ مِنْ رُسُلِهِ وَقَالُوا سَمِعْنَا وَأَطَعْنَا غُفْرَانَكَ رَبَّنَا وَإِلَيْكَ الْمَصِيرُ. لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا اكْتَسَبَتْ رَبَّنَا لَا تُؤَاخِذْنَا إِنْ نَسِينَا أَوْ أَخْطَأْنَا رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِنْ قَبْلِنَا رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنْتَ مَوْلَانَا فَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
                 "The last two verses of Al-Baqarah. Whoever recites them at night, they suffice him.",
                 "Bukhari & Muslim"
+            ),
+            Dua(
+                "اللَّهُمَّ إِنِّي أَمْسَيْتُ أُشْهِدُكَ وَأُشْهِدُ حَمَلَةَ عَرْشِكَ وَمَلَائِكَتَكَ وَجَمِيعَ خَلْقِكَ أَنَّكَ أَنْتَ اللَّهُ لَا إِلَهَ إِلَّا أَنْتَ وَحْدَكَ لَا شَرِيكَ لَكَ وَأَنَّ مُحَمَّدًا عَبْدُكَ وَرَسُولُكَ",
+                "O Allah, I enter the evening calling You and all creation to witness that You are Allah… Whoever says it, Allah frees him from the Fire.",
+                "Abu Dawud",
+                "×4"
             )
         )
     ),
@@ -180,6 +238,41 @@ val duaCategories: List<DuaCategory> = listOf(
             Dua(
                 "بِسْمِ اللَّهِ وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
                 "In Allah's name, and blessings upon the Messenger of Allah. O Allah, I ask You from Your bounty. (Leaving the mosque.)",
+                "Muslim"
+            )
+        )
+    ),
+    DuaCategory(
+        "بعد الأذان", "After the adhan",
+        listOf(
+            Dua(
+                "اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ وَالصَّلَاةِ الْقَائِمَةِ، آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ، وَابْعَثْهُ مَقَامًا مَحْمُودًا الَّذِي وَعَدْتَهُ",
+                "O Allah, Lord of this perfect call and established prayer, grant Muhammad the intercession and distinction, and raise him to the praised station. Whoever says it, my intercession is assured for him.",
+                "Al-Bukhari"
+            )
+        )
+    ),
+    DuaCategory(
+        "جوامع الدعاء", "Essential supplications",
+        listOf(
+            Dua(
+                "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+                "Our Lord, give us good in this world and good in the Hereafter, and shield us from the punishment of the Fire.",
+                "Quran 2:201"
+            ),
+            Dua(
+                "اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ",
+                "O Allah, help me to remember You, thank You, and worship You excellently.",
+                "Abu Dawud"
+            ),
+            Dua(
+                "يَا مُقَلِّبَ الْقُلُوبِ ثَبِّتْ قَلْبِي عَلَى دِينِكَ",
+                "O Turner of hearts, make my heart firm upon Your religion.",
+                "At-Tirmidhi"
+            ),
+            Dua(
+                "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ زَوَالِ نِعْمَتِكَ وَتَحَوُّلِ عَافِيَتِكَ وَفُجَاءَةِ نِقْمَتِكَ وَجَمِيعِ سَخَطِكَ",
+                "O Allah, I seek refuge in You from the removal of Your blessing, the loss of Your protection, sudden punishment, and all Your anger.",
                 "Muslim"
             )
         )

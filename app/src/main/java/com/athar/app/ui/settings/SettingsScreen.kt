@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,9 +58,11 @@ import androidx.core.net.toUri
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
+import com.athar.app.data.LocationHelper
+import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.notifications.PrayerNotifications
+import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
-import com.athar.app.ui.components.SchoolSelector
 import com.athar.app.ui.onboarding.presetCities
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -102,18 +103,28 @@ fun SettingsScreen() {
             }
         }
     }
+    var locLocating by remember { mutableStateOf(false) }
+
+    fun fetchFreshFix() {
+        locLocating = true
+        scope.launch {
+            val fix = LocationHelper.freshFix(context.applicationContext)
+            if (fix != null) {
+                prefs.setLocation(fix.first, fix.second, context.getString(R.string.location_mine))
+                PrayerNotifications.scheduleNext(context)
+            }
+            locLocating = false
+        }
+    }
+    val requestEnableLocation = rememberLocationEnabler(onEnabled = { fetchFreshFix() })
+
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
         val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
-            readLastLocation(context) { lat, lng ->
-                scope.launch {
-                    prefs.setLocation(lat, lng, context.getString(R.string.setup_use_gps))
-                    PrayerNotifications.scheduleNext(context)
-                }
-            }
+            requestEnableLocation()
         }
     }
 
@@ -212,25 +223,11 @@ fun SettingsScreen() {
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SmallButton(
-                            label = stringResource(R.string.setup_use_gps),
+                            label = if (locLocating) "…" else stringResource(R.string.setup_use_gps),
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                val fine = ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.ACCESS_FINE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
-                                val coarse = ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (fine || coarse) {
-                                    readLastLocation(context) { lat, lng ->
-                                        scope.launch {
-                                            prefs.setLocation(
-                                                lat, lng,
-                                                context.getString(R.string.setup_use_gps)
-                                            )
-                                            PrayerNotifications.scheduleNext(context)
-                                        }
-                                    }
+                                if (LocationHelper.hasPermission(context)) {
+                                    requestEnableLocation()
                                 } else {
                                     locationLauncher.launch(
                                         arrayOf(
@@ -247,6 +244,14 @@ fun SettingsScreen() {
                             onClick = { showCities = !showCities }
                         )
                     }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.setup_precise),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary
+                    )
                     if (showCities) {
                         Spacer(Modifier.height(8.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -257,11 +262,11 @@ fun SettingsScreen() {
                                         .clip(RoundedCornerShape(10.dp))
                                         .border(
                                             1.dp,
-                                            if (city == preset.label) AtharPrimary else AtharCardBorder,
+                                            if (city == preset.display(language)) AtharPrimary else AtharCardBorder,
                                             RoundedCornerShape(10.dp)
                                         )
                                         .background(
-                                            if (city == preset.label) AtharPrimary.copy(alpha = 0.12f)
+                                            if (city == preset.display(language)) AtharPrimary.copy(alpha = 0.12f)
                                             else Color.Transparent
                                         )
                                         .clickable(
@@ -269,7 +274,10 @@ fun SettingsScreen() {
                                             indication = null,
                                             onClick = {
                                                 scope.launch {
-                                                    prefs.setLocation(preset.lat, preset.lng, preset.label)
+                                                    prefs.setLocation(
+                                                        preset.lat, preset.lng,
+                                                        preset.display(language)
+                                                    )
                                                     PrayerNotifications.scheduleNext(context)
                                                     showCities = false
                                                 }
@@ -278,7 +286,7 @@ fun SettingsScreen() {
                                         .padding(horizontal = 14.dp, vertical = 9.dp)
                                 ) {
                                     Text(
-                                        preset.label,
+                                        preset.display(language),
                                         fontFamily = ThmanyahSans,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
@@ -383,12 +391,12 @@ fun SettingsScreen() {
             // ── School (Hanafi / Maliki / Shafii / Hanbali) + Hanafi Asr ──
             item {
                 SectionCard(title = stringResource(R.string.settings_school)) {
-                    SchoolSelector(
-                        schoolId = schoolId,
+                    HanafiAsrSetting(
+                        isHanafi = schoolId == "HANAFI",
                         showTitle = false,
-                        onPickSchool = { id ->
+                        onToggle = { on ->
                             scope.launch {
-                                prefs.setSchool(id)
+                                prefs.setHanafiAsr(on)
                                 PrayerNotifications.scheduleNext(context)
                             }
                         }
@@ -470,6 +478,71 @@ fun SettingsScreen() {
                         color = AtharTextSecondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            // ── Brand footer (mini setup mark, theme tones, localized bio) ──
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 26.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "أَثَر",
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 30.sp,
+                        color = AtharPrimaryLight,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "ATHAR",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 10.sp,
+                        letterSpacing = 5.sp,
+                        color = AtharTextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.onboarding_tagline_short),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.5.sp,
+                        color = AtharTextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // ── Fixed closing quote (identical in every language) ──
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 18.dp, bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "لا غالب إلا الله.",
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = AtharPrimaryLight,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "\"There is no victor except Allah.\"",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.5.sp,
+                        color = AtharTextSecondary,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -626,19 +699,4 @@ private fun methodDisplayName(m: CalcMethod): String = when (m) {
     CalcMethod.UMM_AL_QURA -> "Umm al-Qura"
     CalcMethod.ISNA -> "ISNA (North America)"
     CalcMethod.MOON_SIGHTING -> "Moonsighting Committee"
-}
-
-private fun readLastLocation(context: Context, onResult: (Double, Double) -> Unit) {
-    try {
-        val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
-            try {
-                val loc = manager.getLastKnownLocation(provider)
-                if (loc != null) {
-                    onResult(loc.latitude, loc.longitude)
-                    return
-                }
-            } catch (_: Exception) { /* next */ }
-        }
-    } catch (_: Exception) { /* none */ }
 }

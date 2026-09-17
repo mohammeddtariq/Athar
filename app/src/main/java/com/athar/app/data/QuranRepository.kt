@@ -83,7 +83,8 @@ object QuranRepository {
             val num = v.getInt("verse_number")
             val text = v.getString("text_uthmani").trim()
             sb.append(text)
-            sb.append(" ﴿").append(num.toArabicIndic()).append("﴾")
+            // Plain parentheses render reliably on every device font.
+            sb.append(" (").append(num.toArabicIndic()).append(")")
             if (i < verses.length() - 1) sb.append(" ")
         }
         return sb.toString()

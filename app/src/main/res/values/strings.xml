@@ -7,7 +7,7 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Home Screen -->
-    <string name="home_location_label">Al Obour</string>
+    <string name="home_location_label">My location</string>
     <string name="home_location_not_set">Set location</string>
     <string name="home_next_prayer">Next Prayer</string>
     <string name="home_prayer_iqamah">Iqamah for %s</string>
@@ -119,4 +119,11 @@
     <!-- Quran states -->
     <string name="quran_offline">You are offline and this surah is not downloaded yet. Connect once to download it.</string>
     <string name="quran_loading">Loading…</string>
+    <string name="quran_retry">Retry</string>
+
+    <!-- Location -->
+    <string name="setup_precise">For accurate prayer times, allow Precise location when asked.</string>
+    <string name="location_mine">My location</string>
+    <string name="qibla_stale">Location is off — showing the last saved location. Turn it on for an accurate Qibla.</string>
+    <string name="qibla_turn_on">Turn on</string>
 </resources>

@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.QuranRepository
+import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -268,7 +270,7 @@ fun QuranScreen(onBack: () -> Unit) {
     }
 }
 
-private val AYAH_MARKER = Regex("﴿[٠-٩]+﴾")
+private val AYAH_MARKER = Regex("\\([٠-٩]+\\)")
 
 @Composable
 private fun SurahReader(
@@ -281,12 +283,17 @@ private fun SurahReader(
     val context = LocalContext.current
     var displayText by remember(surah.number) { mutableStateOf<String?>(null) }
     var loadFailed by remember(surah.number) { mutableStateOf(false) }
+    var fontBold by remember(surah.number) { mutableStateOf(false) }
+    var attempt by remember(surah.number) { mutableIntStateOf(0) }
 
-    LaunchedEffect(surah.number) {
+    LaunchedEffect(surah.number, attempt) {
         displayText = null
         loadFailed = false
         val remote = QuranRepository.getSurahText(context.applicationContext, surah.number)
-        displayText = remote ?: readableSurahText[surah.number]
+        // Bundled fallback normalized to the same plain-marker style.
+        val fallback = readableSurahText[surah.number]
+            ?.replace("﴿", "(")?.replace("﴾", ")")
+        displayText = remote ?: fallback
         loadFailed = displayText == null
     }
 
@@ -367,7 +374,7 @@ private fun SurahReader(
                         Text(
                             annotated,
                             fontFamily = ThmanyahSerifText,
-                            fontWeight = FontWeight.Normal,
+                            fontWeight = if (fontBold) FontWeight.Black else FontWeight.Normal,
                             fontSize = (23 * fontScale).sp,
                             lineHeight = (44 * fontScale).sp,
                             color = Color(0xFFF2F4EE),
@@ -412,15 +419,37 @@ private fun SurahReader(
                         .padding(horizontal = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        stringResource(R.string.quran_offline),
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        lineHeight = 22.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            stringResource(R.string.quran_offline),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            lineHeight = 22.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(AtharPrimary)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { attempt++ }
+                                )
+                                .padding(horizontal = 28.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.quran_retry),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
+                        }
+                    }
                 }
             }
             else -> {
@@ -465,20 +494,27 @@ private fun SurahReader(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ReaderCircleButton(
-                    icon = { Icon(Icons.Rounded.FormatSize, null, tint = AtharTextPrimary, modifier = Modifier.size(20.dp)) },
+                    icon = {
+                        Text(
+                            "−",
+                            color = AtharTextPrimary,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     onClick = { onFontScale(fontScale - 0.1f) }
                 )
                 ReaderCircleButton(
                     icon = {
                         Text(
-                            "أ",
-                            color = AtharTextPrimary,
+                            "B",
+                            color = if (fontBold) AtharPrimaryLight else AtharTextPrimary,
                             fontFamily = ThmanyahSerifText,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 19.sp,
+                            fontWeight = if (fontBold) FontWeight.Black else FontWeight.Normal
                         )
                     },
-                    onClick = { onFontScale(1f) }
+                    onClick = { fontBold = !fontBold }
                 )
                 ReaderCircleButton(
                     icon = {

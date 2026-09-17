@@ -1,10 +1,8 @@
 package com.athar.app.ui.onboarding
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,8 +57,11 @@ import androidx.core.content.ContextCompat
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
+import com.athar.app.data.LocationHelper
+import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.notifications.PrayerNotifications
-import com.athar.app.ui.components.SchoolSelector
+import com.athar.app.ui.components.HanafiAsrSetting
+import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.TypewriterText
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -73,19 +74,21 @@ import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import kotlinx.coroutines.launch
 
-data class PresetCity(val label: String, val lat: Double, val lng: Double)
+data class PresetCity(val labelEn: String, val labelAr: String, val lat: Double, val lng: Double) {
+    fun display(lang: String?): String = if (lang == "ar") labelAr else labelEn
+}
 
 val presetCities = listOf(
-    PresetCity("Al Obour", 30.25, 31.47),
-    PresetCity("Cairo", 30.0444, 31.2357),
-    PresetCity("Abu Dhabi", 24.4539, 55.6713),
-    PresetCity("Dubai", 25.2048, 55.2708),
-    PresetCity("Makkah", 21.4225, 39.8262),
-    PresetCity("Madinah", 24.5247, 39.5692),
-    PresetCity("Istanbul", 41.0082, 28.9784),
-    PresetCity("Jakarta", -6.2088, 106.8456),
-    PresetCity("London", 51.5074, -0.1278),
-    PresetCity("New York", 40.7128, -74.006)
+    PresetCity("Cairo", "القاهرة", 30.0444, 31.2357),
+    PresetCity("Abu Dhabi", "أبوظبي", 24.4539, 55.6713),
+    PresetCity("Dubai", "دبي", 25.2048, 55.2708),
+    PresetCity("Jerusalem", "القدس", 31.7683, 35.2137),
+    PresetCity("Makkah", "مكة", 21.4225, 39.8262),
+    PresetCity("Madinah", "المدينة", 24.5247, 39.5692),
+    PresetCity("Istanbul", "إسطنبول", 41.0082, 28.9784),
+    PresetCity("Jakarta", "جاكرتا", -6.2088, 106.8456),
+    PresetCity("London", "لندن", 51.5074, -0.1278),
+    PresetCity("New York", "نيويورك", 40.7128, -74.006)
 )
 
 /**
@@ -111,6 +114,21 @@ fun OnboardingFlow(
     var gpsLatLng by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var method by remember { mutableStateOf(CalcMethod.MWL) }
     var school by remember { mutableStateOf("SHAFII") }
+    var gpsLocating by remember { mutableStateOf(false) }
+
+    fun fetchFreshFix() {
+        gpsLocating = true
+        scope.launch {
+            val fix = LocationHelper.freshFix(context.applicationContext)
+            if (fix != null) {
+                gpsLatLng = fix
+                selectedCity = null
+                gpsLabel = context.getString(R.string.location_mine)
+            }
+            gpsLocating = false
+        }
+    }
+    val requestEnableLocation = rememberLocationEnabler(onEnabled = { fetchFreshFix() })
 
     fun finish(skipLocation: Boolean) {
         scope.launch {
@@ -121,7 +139,11 @@ fun OnboardingFlow(
                 if (gps != null) {
                     prefs.setLocation(gps.first, gps.second, gpsLabel ?: "My location")
                 } else if (selectedCity != null) {
-                    prefs.setLocation(selectedCity!!.lat, selectedCity!!.lng, selectedCity!!.label)
+                    prefs.setLocation(
+                        selectedCity!!.lat,
+                        selectedCity!!.lng,
+                        selectedCity!!.display(lang)
+                    )
                 }
             }
             prefs.setCalcMethod(method.id)
@@ -151,21 +173,23 @@ fun OnboardingFlow(
         val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
-            readLastLocation(context) { lat, lng ->
-                gpsLatLng = lat to lng
-                selectedCity = null
-                gpsLabel = context.getString(R.string.setup_use_gps)
-            }
+            // Permission just granted → one-tap dialog turns providers on, then a fresh fix.
+            requestEnableLocation()
         }
     }
 
-    // Solid dark base — never translucent, so the system theme can't wash it out.
+    // Solid dark base with the Islamic lattice — the system theme can't wash it out.
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AtharBackground)
             .statusBarsPadding()
     ) {
+        IslamicPatternBackground(
+            modifier = Modifier.fillMaxSize(),
+            alpha = 0.07f,
+            animated = false
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -216,19 +240,12 @@ fun OnboardingFlow(
                     gpsLatLng = null
                 },
                 gpsActive = gpsLatLng != null,
+                gpsLocating = gpsLocating,
+                language = language,
                 onUseGps = {
-                    val fine = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                    val coarse = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (fine || coarse) {
-                        readLastLocation(context) { lat, lng ->
-                            gpsLatLng = lat to lng
-                            selectedCity = null
-                            gpsLabel = context.getString(R.string.setup_use_gps)
-                        }
+                    if (LocationHelper.hasPermission(context)) {
+                        // Pops the one-tap dialog if providers are off, then takes a fresh fix.
+                        requestEnableLocation()
                     } else {
                         locationPermissionLauncher.launch(
                             arrayOf(
@@ -469,6 +486,8 @@ private fun SetupStep(
     selectedCity: PresetCity?,
     onPickCity: (PresetCity) -> Unit,
     gpsActive: Boolean,
+    gpsLocating: Boolean,
+    language: String?,
     onUseGps: () -> Unit,
     method: CalcMethod,
     onPickMethod: (CalcMethod) -> Unit,
@@ -501,7 +520,17 @@ private fun SetupStep(
                 color = AtharTextSecondary
             )
             Spacer(Modifier.height(12.dp))
-            GpsButton(active = gpsActive, onClick = onUseGps)
+            GpsButton(active = gpsActive, locating = gpsLocating, onClick = onUseGps)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.setup_precise),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.5.sp,
+                color = AtharTextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         item {
@@ -514,6 +543,7 @@ private fun SetupStep(
                         row.forEach { city ->
                             CityChip(
                                 city = city,
+                                language = language,
                                 selected = selectedCity == city,
                                 onClick = { onPickCity(city) },
                                 modifier = Modifier.weight(1f)
@@ -547,7 +577,10 @@ private fun SetupStep(
 
         item {
             Spacer(Modifier.height(6.dp))
-            SchoolSelector(schoolId = school, onPickSchool = onPickSchool)
+            HanafiAsrSetting(
+                isHanafi = school == "HANAFI",
+                onToggle = { on -> onPickSchool(if (on) "HANAFI" else "SHAFII") }
+            )
         }
 
         item {
@@ -605,7 +638,7 @@ private fun methodTitle(m: CalcMethod): String = when (m) {
 }
 
 @Composable
-private fun GpsButton(active: Boolean, onClick: () -> Unit) {
+private fun GpsButton(active: Boolean, locating: Boolean, onClick: () -> Unit) {
     val bg by animateColorAsState(
         targetValue = if (active) AtharPrimary.copy(alpha = 0.16f) else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -655,7 +688,15 @@ private fun GpsButton(active: Boolean, onClick: () -> Unit) {
                     fontSize = 14.sp,
                     color = AtharTextPrimary
                 )
-                if (active) {
+                if (locating) {
+                    Text(
+                        text = "جارٍ التحديد • Locating…",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 11.sp,
+                        color = AtharPrimaryLight
+                    )
+                } else if (active) {
                     Text(
                         text = "تم الالتقاط • Captured",
                         fontFamily = ThmanyahSans,
@@ -672,6 +713,7 @@ private fun GpsButton(active: Boolean, onClick: () -> Unit) {
 @Composable
 private fun CityChip(
     city: PresetCity,
+    language: String?,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -700,7 +742,7 @@ private fun CityChip(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = city.label,
+            text = city.display(language),
             fontFamily = ThmanyahSans,
             fontWeight = if (selected) FontWeight.Black else FontWeight.Bold,
             fontSize = 12.sp,
@@ -840,24 +882,4 @@ private fun LanguageCard(
             )
         }
     }
-}
-
-@SuppressLint("MissingPermission")
-private fun readLastLocation(
-    context: Context,
-    onResult: (Double, Double) -> Unit
-) {
-    try {
-        val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-        for (provider in providers) {
-            try {
-                val loc = manager.getLastKnownLocation(provider)
-                if (loc != null) {
-                    onResult(loc.latitude, loc.longitude)
-                    return
-                }
-            } catch (_: Exception) { /* try next provider */ }
-        }
-    } catch (_: Exception) { /* no location */ }
 }

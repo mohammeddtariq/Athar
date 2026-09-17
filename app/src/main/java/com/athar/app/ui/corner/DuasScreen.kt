@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
+import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -49,11 +50,8 @@ import com.athar.app.ui.theme.ThmanyahSerifText
 /** Duas browser — Hisnul Muslim selection, olive cards, no emojis. */
 @Composable
 fun DuasScreen(onBack: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AtharBackground)
-    ) {
+    // Dark base with the Islamic lattice (Quran stays pure black).
+    PatternScaffold {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

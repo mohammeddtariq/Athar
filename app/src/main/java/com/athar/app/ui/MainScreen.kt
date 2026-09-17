@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -135,7 +136,12 @@ fun MainScreen() {
                 )
             }
             composable(DetailRoutes.QURAN) { QuranScreen(onBack = { navController.popBackStack() }) }
-            composable(DetailRoutes.QIBLA) { QiblaScreen(onBack = { navController.popBackStack() }) }
+            composable(DetailRoutes.QIBLA) {
+                QiblaScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenSettings = { navController.navigateToTab(Screen.Settings) }
+                )
+            }
             composable(DetailRoutes.DUAS) { DuasScreen(onBack = { navController.popBackStack() }) }
             composable(Screen.Settings.route) { SettingsScreen() }
         }
@@ -181,7 +187,7 @@ fun AtharNavBar(navController: NavHostController) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(68.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isRtl) {
@@ -221,10 +227,15 @@ private fun DockCapsule(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .clip(RoundedCornerShape(30.dp))
-            .background(AtharNavbarBg.copy(alpha = 0.72f))
-            .border(1.dp, AtharNavbarBorder.copy(alpha = 0.9f), RoundedCornerShape(30.dp))
-            .padding(horizontal = 5.dp, vertical = 5.dp),
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(34.dp),
+                spotColor = Color.Black.copy(alpha = 0.6f)
+            )
+            .clip(RoundedCornerShape(34.dp))
+            .background(AtharNavbarBg.copy(alpha = 0.78f))
+            .border(1.dp, AtharNavbarBorder.copy(alpha = 0.9f), RoundedCornerShape(34.dp))
+            .padding(horizontal = 6.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -233,7 +244,9 @@ private fun DockCapsule(
         ) {
             dockItems.forEach { screen ->
                 Box(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                     contentAlignment = Alignment.Center
                 ) {
                     DockNavItem(
@@ -278,14 +291,19 @@ private fun StandaloneSettingsButton(
 
     Box(
         modifier = Modifier
-            .size(60.dp)
+            .size(64.dp)
             .graphicsLayer {
                 scaleX = scaleAnim
                 scaleY = scaleAnim
             }
-            .clip(RoundedCornerShape(30.dp))
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(32.dp),
+                spotColor = Color.Black.copy(alpha = 0.6f)
+            )
+            .clip(RoundedCornerShape(32.dp))
             .background(bgAnim)
-            .border(1.dp, borderAnim, RoundedCornerShape(30.dp))
+            .border(1.dp, borderAnim, RoundedCornerShape(32.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -301,13 +319,13 @@ private fun StandaloneSettingsButton(
                 imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
                 contentDescription = stringResource(screen.labelResId),
                 tint = iconTint,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
             Text(
                 text = stringResource(screen.labelResId),
                 fontFamily = ThmanyahSans,
                 fontWeight = if (selected) FontWeight.Black else FontWeight.Bold,
-                fontSize = 9.sp,
+                fontSize = 9.5.sp,
                 color = iconTint
             )
         }
@@ -340,18 +358,19 @@ private fun DockNavItem(
         label = "dockLabelColor"
     )
     val paddingHorizontal by animateDpAsState(
-        targetValue = if (selected) 13.dp else 4.dp,
+        targetValue = if (selected) 16.dp else 4.dp,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "dockPadding"
     )
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(22.dp))
+            .then(if (selected) Modifier.fillMaxHeight() else Modifier)
+            .clip(RoundedCornerShape(24.dp))
             .background(pillBg)
             .then(
                 if (selected) {
-                    Modifier.border(0.8.dp, AtharPrimary.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
+                    Modifier.border(1.dp, AtharPrimary.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
                 } else Modifier
             )
             .clickable(
@@ -359,7 +378,7 @@ private fun DockNavItem(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = paddingHorizontal, vertical = 6.dp),
+            .padding(horizontal = paddingHorizontal, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
         if (selected) {
@@ -371,14 +390,14 @@ private fun DockNavItem(
                     imageVector = screen.selectedIcon,
                     contentDescription = stringResource(screen.labelResId),
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = stringResource(screen.labelResId),
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Black,
-                    fontSize = 12.sp,
+                    fontSize = 12.5.sp,
                     color = labelColor
                 )
             }
@@ -391,13 +410,13 @@ private fun DockNavItem(
                     imageVector = screen.unselectedIcon,
                     contentDescription = stringResource(screen.labelResId),
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
                 Text(
                     text = stringResource(screen.labelResId),
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp,
+                    fontSize = 9.5.sp,
                     color = labelColor
                 )
             }

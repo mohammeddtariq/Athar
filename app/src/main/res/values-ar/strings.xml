@@ -7,7 +7,7 @@
     <string name="nav_settings">الإعدادات</string>
 
     <!-- Home Screen -->
-    <string name="home_location_label">العبور</string>
+    <string name="home_location_label">موقعي</string>
     <string name="home_location_not_set">حدّد الموقع</string>
     <string name="home_next_prayer">الصلاة التالية</string>
     <string name="home_prayer_iqamah">إقامة %s</string>
@@ -119,4 +119,11 @@
     <!-- Quran states -->
     <string name="quran_offline">لا يوجد اتصال وهذه السورة غير محمّلة بعد. اتصل مرة واحدة لتحميلها.</string>
     <string name="quran_loading">جارٍ التحميل…</string>
+    <string name="quran_retry">إعادة المحاولة</string>
+
+    <!-- Location -->
+    <string name="setup_precise">لدقة المواقيت، اسمح بالموقع الدقيق عند السؤال.</string>
+    <string name="location_mine">موقعي</string>
+    <string name="qibla_stale">الموقع متوقف — يظهر آخر موقع محفوظ. شغّله لقبلة دقيقة.</string>
+    <string name="qibla_turn_on">تشغيل</string>
 </resources>
