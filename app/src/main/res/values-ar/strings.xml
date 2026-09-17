@@ -3,15 +3,16 @@
 
     <!-- Navigation -->
     <string name="nav_home">الرئيسية</string>
-    <string name="nav_services">ركن المسلم</string>
+    <string name="nav_services">الجوهر</string>
     <string name="nav_settings">الإعدادات</string>
-    <string name="nav_explore">استكشف</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">العبور</string>
+    <string name="home_location_not_set">حدّد الموقع</string>
     <string name="home_next_prayer">الصلاة التالية</string>
     <string name="home_prayer_iqamah">إقامة %s</string>
     <string name="home_time_remaining">الوقت المتبقي</string>
+    <string name="home_tomorrow">غداً</string>
     <string name="home_prayer_fajr">الفجر</string>
     <string name="home_prayer_sunrise">الشروق</string>
     <string name="home_prayer_dhuhr">الظهر</string>
@@ -23,21 +24,80 @@
     <string name="home_view_details">عرض التفاصيل</string>
 
     <!-- Services Screen -->
-    <string name="services_title">ركن المسلم</string>
+    <string name="services_title">الجوهر</string>
     <string name="services_quran">القرآن الكريم</string>
-    <string name="services_books">موسوعة الكتب</string>
-    <string name="services_tools">أدوات</string>
-    <string name="services_agenda">الأجندة</string>
-    <string name="services_calendar">التقويم الإسلامي</string>
-    <string name="services_tasbih">تسبيح</string>
+    <string name="services_quran_sub">مصحف بخلفية سوداء مريحة</string>
+    <string name="services_qibla">اتجاه القبلة</string>
+    <string name="services_qibla_sub">بوصلة نحو الكعبة</string>
+    <string name="services_duas">الأدعية</string>
+    <string name="services_duas_sub">من حصن المسلم</string>
     <string name="services_featured">مُميّزة</string>
     <string name="services_explore_categories">استكشف التصنيفات</string>
 
-    <!-- Language Selection -->
+    <!-- Onboarding -->
     <string name="language_select_title">اختر لغتك</string>
     <string name="language_select_subtitle">يمكنك تغييرها لاحقاً في الإعدادات</string>
     <string name="language_arabic">العربية</string>
     <string name="language_english">English</string>
     <string name="language_continue">متابعة</string>
     <string name="language_bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</string>
+    <string name="onboarding_greeting">السلام عليكم ورحمة الله وبركاته</string>
+    <string name="onboarding_greeting_ar">السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ</string>
+    <string name="onboarding_tagline">رفيقك المسلم الهادئ — الصلاة والقرآن والقبلة في مكان واحد.</string>
+    <string name="onboarding_skip">تخطَّ الإعداد</string>
+    <string name="onboarding_next">التالي</string>
+    <string name="onboarding_back">رجوع</string>
+    <string name="onboarding_start">ابدأ</string>
+    <string name="setup_location_title">أين أنت؟</string>
+    <string name="setup_location_sub">نستخدم موقعك فقط لحساب مواقيت الصلاة بدقة.</string>
+    <string name="setup_use_gps">استخدم موقعي</string>
+    <string name="setup_location_later">سأحدده لاحقاً</string>
+    <string name="setup_method_title">طريقة الحساب</string>
+    <string name="setup_madhab_title">المذهب (حساب العصر)</string>
+    <string name="madhab_shafi">شافعي، مالكي، حنبلي</string>
+    <string name="madhab_hanafi">حنفي</string>
+    <string name="method_mwl">رابطة العالم الإسلامي</string>
+    <string name="method_egyptian">الهيئة المصرية العامة للمساحة</string>
+    <string name="method_karachi">جامعة العلوم الإسلامية، كراتشي</string>
+    <string name="method_umm_al_qura">أم القرى، مكة</string>
+    <string name="method_isna">أمريكا الشمالية ISNA</string>
+    <string name="method_moonsighting">لجنة رؤية الهلال</string>
+
+    <!-- Qibla -->
+    <string name="qibla_title">القبلة</string>
+    <string name="qibla_from_north">من الشمال</string>
+    <string name="qibla_signal">إشارة البوصلة</string>
+    <string name="qibla_crosscheck">قارن مع تطبيق البوصلة</string>
+    <string name="qibla_help">أمسك الهاتف مسطحاً وابتعد عن المعادن. وازِن سهم القبلة مع مقدمة الهاتف عندما تستقبل القبلة.</string>
+    <string name="qibla_no_location">حدّد موقعك لعرض اتجاه القبلة.</string>
+    <string name="qibla_distance">%1$s كم إلى مكة</string>
+
+    <!-- Quran -->
+    <string name="quran_title">القرآن الكريم</string>
+    <string name="quran_search">ابحث في السور…</string>
+    <string name="quran_ayahs">%1$d آيات</string>
+    <string name="quran_coming">النص الكامل قادم في النسخة التجريبية التالية — الفاتحة وقصار السور متاحة الآن.</string>
+
+    <!-- Duas -->
+    <string name="duas_title">الأدعية</string>
+    <string name="duas_sub">من حصن المسلم</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_location">الموقع</string>
+    <string name="settings_method">طريقة الحساب</string>
+    <string name="settings_madhab">المذهب</string>
+    <string name="settings_notifications">تنبيهات الصلاة</string>
+    <string name="settings_notifications_sub">ذكّرني عند دخول وقت الصلاة</string>
+    <string name="settings_about">عن أَثَر</string>
+    <string name="settings_about_sub">مبني بمكتبات مفتوحة — انظر الشكر والتقدير</string>
+    <string name="settings_github">أَثَر على GitHub</string>
+    <string name="settings_version">الإصدار 1.0 (تجريبي)</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">مواقيت الصلاة</string>
+    <string name="notif_channel_desc">تذكير عند دخول وقت الصلاة</string>
+    <string name="notif_prayer_title">حان وقت %s</string>
+    <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
 </resources>

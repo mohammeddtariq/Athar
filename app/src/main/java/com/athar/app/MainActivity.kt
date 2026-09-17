@@ -7,32 +7,28 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import com.athar.app.data.LanguagePreferences
+import com.athar.app.data.AppPreferences
 import com.athar.app.ui.MainScreen
-import com.athar.app.ui.onboarding.LanguageSelectionScreen
+import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharTheme
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var languagePreferences: LanguagePreferences
+    private lateinit var appPreferences: AppPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        languagePreferences = LanguagePreferences(applicationContext)
+        appPreferences = AppPreferences(applicationContext)
 
         setContent {
-            val isOnboardingCompleted by languagePreferences.isOnboardingCompleted
+            val isOnboardingCompleted by appPreferences.isOnboardingCompleted
                 .collectAsState(initial = null)
-            val selectedLanguage by languagePreferences.selectedLanguage
+            val selectedLanguage by appPreferences.selectedLanguage
                 .collectAsState(initial = "ar")
-            val scope = rememberCoroutineScope()
 
-            // Apply locale based on stored preference
             applyLocale(selectedLanguage)
 
             AtharTheme {
@@ -41,13 +37,10 @@ class MainActivity : ComponentActivity() {
                         // Loading state — show nothing (brief flash)
                     }
                     false -> {
-                        LanguageSelectionScreen(
-                            onLanguageSelected = { langCode ->
-                                scope.launch {
-                                    languagePreferences.setLanguageAndCompleteOnboarding(langCode)
-                                    applyLocale(langCode)
-                                    recreate()
-                                }
+                        OnboardingFlow(
+                            onFinished = { langCode ->
+                                applyLocale(langCode)
+                                recreate()
                             }
                         )
                     }

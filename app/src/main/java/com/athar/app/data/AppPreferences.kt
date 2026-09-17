@@ -1,0 +1,129 @@
+package com.athar.app.data
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "athar_preferences")
+
+/**
+ * Single source of truth for user preferences.
+ * Kept in one DataStore file ("athar_preferences") shared with [LanguagePreferences].
+ */
+class AppPreferences(private val context: Context) {
+
+    companion object {
+        // Language / onboarding (mirrors keys in LanguagePreferences for interop)
+        private val LANGUAGE_KEY = stringPreferencesKey("selected_language")
+        private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
+
+        // Location
+        private val LAT_KEY = doublePreferencesKey("latitude")
+        private val LNG_KEY = doublePreferencesKey("longitude")
+        private val CITY_KEY = stringPreferencesKey("city_label")
+        private val LOCATION_SET_KEY = booleanPreferencesKey("location_set")
+
+        // Calculation (method + madhab)
+        private val METHOD_KEY = stringPreferencesKey("calc_method") // e.g. "MWL"
+        private val MADHAB_KEY = stringPreferencesKey("madhab")      // "SHAFI" | "HANAFI"
+
+        // Notifications
+        private val NOTIF_MASTER_KEY = booleanPreferencesKey("notif_master")
+        private val NOTIF_PREFIX = "notif_prayer_"
+    }
+
+    val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
+    val isOnboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_COMPLETED_KEY] ?: false }
+
+    val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
+    val longitude: Flow<Double?> = context.dataStore.data.map { it[LNG_KEY] }
+    val cityLabel: Flow<String?> = context.dataStore.data.map { it[CITY_KEY] }
+    val isLocationSet: Flow<Boolean> = context.dataStore.data.map { it[LOCATION_SET_KEY] ?: false }
+
+    val calcMethodId: Flow<String> = context.dataStore.data.map { it[METHOD_KEY] ?: "MWL" }
+    val madhabId: Flow<String> = context.dataStore.data.map { it[MADHAB_KEY] ?: "SHAFI" }
+
+    val notificationsMaster: Flow<Boolean> = context.dataStore.data.map { it[NOTIF_MASTER_KEY] ?: false }
+
+    fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
+        context.dataStore.data.map { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] ?: true }
+
+    suspend fun setLanguageAndCompleteOnboarding(languageCode: String) {
+        context.dataStore.edit {
+            it[LANGUAGE_KEY] = languageCode
+            it[ONBOARDING_COMPLETED_KEY] = true
+        }
+    }
+
+    suspend fun completeOnboarding() {
+        context.dataStore.edit { it[ONBOARDING_COMPLETED_KEY] = true }
+    }
+
+    suspend fun setLanguage(languageCode: String) {
+        context.dataStore.edit { it[LANGUAGE_KEY] = languageCode }
+    }
+
+    suspend fun setLocation(lat: Double, lng: Double, city: String) {
+        context.dataStore.edit {
+            it[LAT_KEY] = lat
+            it[LNG_KEY] = lng
+            it[CITY_KEY] = city
+            it[LOCATION_SET_KEY] = true
+        }
+    }
+
+    suspend fun clearLocation() {
+        context.dataStore.edit {
+            it.remove(LAT_KEY)
+            it.remove(LNG_KEY)
+            it.remove(CITY_KEY)
+            it[LOCATION_SET_KEY] = false
+        }
+    }
+
+    suspend fun setCalcMethod(methodId: String) {
+        context.dataStore.edit { it[METHOD_KEY] = methodId }
+    }
+
+    suspend fun setMadhab(madhabId: String) {
+        context.dataStore.edit { it[MADHAB_KEY] = madhabId }
+    }
+
+    suspend fun setNotificationsMaster(enabled: Boolean) {
+        context.dataStore.edit { it[NOTIF_MASTER_KEY] = enabled }
+    }
+
+    suspend fun setPrayerNotification(prayerKey: String, enabled: Boolean) {
+        context.dataStore.edit { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] = enabled }
+    }
+}
+
+/** Calculation methods offered in setup & settings (subset of the Adhan library). */
+enum class CalcMethod(val id: String) {
+    MWL("MWL"),
+    EGYPTIAN("EGYPTIAN"),
+    KARACHI("KARACHI"),
+    UMM_AL_QURA("UMM_AL_QURA"),
+    ISNA("ISNA"),
+    MOON_SIGHTING("MOON_SIGHTING");
+
+    companion object {
+        fun fromId(id: String): CalcMethod = entries.firstOrNull { it.id == id } ?: MWL
+    }
+}
+
+enum class MadhabOption(val id: String) {
+    SHAFI("SHAFI"),
+    HANAFI("HANAFI");
+
+    companion object {
+        fun fromId(id: String): MadhabOption = entries.firstOrNull { it.id == id } ?: SHAFI
+    }
+}

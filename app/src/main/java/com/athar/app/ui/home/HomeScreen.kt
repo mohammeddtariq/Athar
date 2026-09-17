@@ -13,7 +13,21 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -21,11 +35,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,154 +52,252 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import com.athar.app.R
-import com.athar.app.ui.theme.*
+import com.athar.app.data.AppPreferences
+import com.athar.app.data.CalcMethod
+import com.athar.app.data.DayPrayers
+import com.athar.app.data.MadhabOption
+import com.athar.app.data.computeDayPrayers
+import com.athar.app.data.fallbackDayPrayers
+import com.athar.app.data.findNextPrayer
+import com.athar.app.notifications.PrayerNotifications
+import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharCardSurface
+import com.athar.app.ui.theme.AtharGradientEnd
+import com.athar.app.ui.theme.AtharGradientStart
+import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimarySubtle
+import com.athar.app.ui.theme.AtharTextPrimary
+import com.athar.app.ui.theme.AtharTextSecondary
+import com.athar.app.ui.theme.AtharTheme
+import com.athar.app.ui.theme.ThmanyahSans
+import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import kotlinx.coroutines.delay
+import java.time.DayOfWeek
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
-data class PrayerTime(val nameResId: Int, val time: String, val isCurrent: Boolean = false)
+data class PrayerRow(val key: String, val nameResId: Int, val time: LocalTime, val isNext: Boolean = false)
 
-val samplePrayers = listOf(
-    PrayerTime(R.string.home_prayer_fajr, "5:08"),
-    PrayerTime(R.string.home_prayer_sunrise, "6:36"),
-    PrayerTime(R.string.home_friday_prayer, "13:52"),
-    PrayerTime(R.string.home_prayer_asr, "16:32"),
-    PrayerTime(R.string.home_prayer_maghrib, "19:06", true),
-    PrayerTime(R.string.home_prayer_isha, "20:33")
-)
+private val timeFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onOpenSettings: () -> Unit = {}) {
+    val context = LocalContext.current
+    val prefs = remember { AppPreferences(context.applicationContext) }
+
+    val lat by prefs.latitude.collectAsState(initial = null)
+    val lng by prefs.longitude.collectAsState(initial = null)
+    val city by prefs.cityLabel.collectAsState(initial = null)
+    val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
+    val madhabId by prefs.madhabId.collectAsState(initial = "SHAFI")
+    val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
+
+    var now by remember { mutableStateOf(LocalTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalTime.now()
+            delay(1000)
+        }
+    }
+
+    val day: DayPrayers = remember(lat, lng, methodId, madhabId) {
+        if (lat != null && lng != null) {
+            runCatching {
+                computeDayPrayers(
+                    lat!!, lng!!,
+                    date = LocalDate.now(),
+                    method = CalcMethod.fromId(methodId),
+                    madhab = MadhabOption.fromId(madhabId)
+                )
+            }.getOrNull() ?: fallbackDayPrayers()
+        } else {
+            fallbackDayPrayers()
+        }
+    }
+
+    val next = remember(day, now) { findNextPrayer(day, now) }
+    val isFriday = LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY
+    val dhuhrLabel = if (isFriday) R.string.home_friday_prayer else R.string.home_prayer_dhuhr
+
+    val rows = listOf(
+        PrayerRow("fajr", R.string.home_prayer_fajr, day.fajr, next.key == "fajr"),
+        PrayerRow("sunrise", R.string.home_prayer_sunrise, day.sunrise),
+        PrayerRow("dhuhr", dhuhrLabel, day.dhuhr, next.key == "dhuhr"),
+        PrayerRow("asr", R.string.home_prayer_asr, day.asr, next.key == "asr"),
+        PrayerRow("maghrib", R.string.home_prayer_maghrib, day.maghrib, next.key == "maghrib"),
+        PrayerRow("isha", R.string.home_prayer_isha, day.isha, next.key == "isha")
+    )
+
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(60)
         isVisible = true
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AtharBackground)
-            .statusBarsPadding(),
-        contentPadding = PaddingValues(bottom = 100.dp)
-    ) {
-        // ─── Top Bar ───
-        item {
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(tween(400)) + slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { -30 }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+    PatternScaffold(patternAlpha = 0.05f) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .statusBarsPadding(),
+            contentPadding = PaddingValues(bottom = 110.dp)
+        ) {
+            item {
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn(tween(400)) + slideInVertically(
+                        spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    ) { -30 }
                 ) {
-                    // Location chip
+                    TopBar(
+                        cityLabel = city,
+                        notificationsOn = notifMaster,
+                        onBellClick = onOpenSettings,
+                        onLocationClick = onOpenSettings
+                    )
+                }
+            }
+
+            item {
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn(tween(500, 80)) + slideInVertically(
+                        spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    ) { 50 }
+                ) {
+                    NextPrayerCard(
+                        nextKey = next.key,
+                        nextTime = next.time,
+                        isTomorrow = next.isTomorrow,
+                        now = now
+                    )
+                }
+            }
+
+            item {
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn(tween(400, 200))
+                ) {
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(AtharCardSurface)
-                            .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Outlined.LocationOn,
-                            contentDescription = null,
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            stringResource(R.string.home_location_label),
+                            stringResource(R.string.home_prayers_title),
                             color = AtharTextPrimary,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
-                            fontSize = 13.sp
-                        )
-                    }
-
-                    // Notification bell
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(AtharCardSurface)
-                            .border(1.dp, AtharCardBorder, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Outlined.Notifications,
-                            contentDescription = null,
-                            tint = AtharTextSecondary,
-                            modifier = Modifier.size(18.dp)
+                            fontSize = 16.sp
                         )
                     }
                 }
             }
-        }
 
-        // ─── Featured Next Prayer Card ───
-        item {
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(tween(500, 80)) + slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { 50 }
-            ) {
-                NextPrayerCard()
-            }
-        }
-
-        // ─── Prayer Times Section Header ───
-        item {
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(tween(400, 200))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        stringResource(R.string.home_prayers_title),
-                        color = AtharTextPrimary,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("🕌", fontSize = 15.sp)
-                }
-            }
-        }
-
-        // ─── Prayer List with fluid staggered animation ───
-        itemsIndexed(samplePrayers) { index, prayer ->
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(tween(350, 250 + index * 50)) +
+            itemsIndexed(rows) { index, row ->
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn(tween(350, 250 + index * 50)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { 30 }
-            ) {
-                PrayerItem(prayer)
+                ) {
+                    PrayerItem(row)
+                }
             }
         }
     }
 }
 
-/**
- * Featured Next Prayer card with subtle ambient pulsing border and refined typography sizing.
- */
 @Composable
-fun NextPrayerCard() {
+private fun TopBar(
+    cityLabel: String?,
+    notificationsOn: Boolean,
+    onBellClick: () -> Unit,
+    onLocationClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(18.dp))
+                .background(AtharCardSurface.copy(alpha = 0.85f))
+                .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onLocationClick
+                )
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.LocationOn,
+                contentDescription = null,
+                tint = AtharPrimaryLight,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                cityLabel ?: stringResource(R.string.home_location_not_set),
+                color = AtharTextPrimary,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(AtharCardSurface.copy(alpha = 0.85f))
+                .border(1.dp, AtharCardBorder, CircleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onBellClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                contentDescription = null,
+                tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/** Featured Next Prayer card with the Islamic lattice baked in. No emojis. */
+@Composable
+fun NextPrayerCard(
+    nextKey: String,
+    nextTime: LocalTime,
+    isTomorrow: Boolean,
+    now: LocalTime
+) {
     val scale = remember { Animatable(0.95f) }
     LaunchedEffect(Unit) {
         scale.animateTo(
@@ -195,7 +309,6 @@ fun NextPrayerCard() {
         )
     }
 
-    // Ambient breathing glow on card border
     val infiniteTransition = rememberInfiniteTransition(label = "borderPulse")
     val borderAlpha by infiniteTransition.animateFloat(
         initialValue = 0.30f,
@@ -207,7 +320,34 @@ fun NextPrayerCard() {
         label = "glowAlpha"
     )
 
-    val maghribName = stringResource(R.string.home_prayer_maghrib)
+    val nameRes = when (nextKey) {
+        "fajr" -> R.string.home_prayer_fajr
+        "dhuhr" -> {
+            if (LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) R.string.home_friday_prayer
+            else R.string.home_prayer_dhuhr
+        }
+        "asr" -> R.string.home_prayer_asr
+        "maghrib" -> R.string.home_prayer_maghrib
+        else -> R.string.home_prayer_isha
+    }
+    val prayerName = stringResource(nameRes)
+
+    val remaining = remember(nextTime, now, isTomorrow) {
+        val targetSecs = nextTime.toSecondOfDay().toLong()
+        val nowSecs = now.toSecondOfDay().toLong()
+        val diff = if (isTomorrow || targetSecs <= nowSecs) {
+            (24 * 3600 - nowSecs) + targetSecs
+        } else {
+            targetSecs - nowSecs
+        }
+        Duration.ofSeconds(diff)
+    }
+    val remainingText = String.format(
+        "%02d:%02d:%02d",
+        remaining.toHours(),
+        remaining.toMinutesPart(),
+        remaining.toSecondsPart()
+    )
 
     Box(
         modifier = Modifier
@@ -225,30 +365,34 @@ fun NextPrayerCard() {
                 AtharPrimary.copy(alpha = borderAlpha * 0.40f),
                 RoundedCornerShape(20.dp)
             )
-            .padding(18.dp)
     ) {
-        Column {
-            // Top row — label + star badge
+        // Pattern layer inside the card
+        IslamicPatternBackground(
+            modifier = Modifier.matchParentSize(),
+            alpha = 0.10f,
+            cellDp = 64f
+        )
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Live countdown pill
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(AtharPrimary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AtharPrimary.copy(alpha = 0.16f))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
-                    Icon(
-                        Icons.Outlined.Star,
-                        contentDescription = null,
-                        tint = AtharPrimaryLight,
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        remainingText,
+                        color = AtharPrimaryLight,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp
                     )
                 }
-
                 Text(
                     stringResource(R.string.home_next_prayer),
                     color = AtharPrimaryLight,
@@ -260,9 +404,8 @@ fun NextPrayerCard() {
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Prayer name — refined serif display
             Text(
-                maghribName,
+                prayerName,
                 color = AtharTextPrimary,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
@@ -273,9 +416,9 @@ fun NextPrayerCard() {
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Subtitle
             Text(
-                stringResource(R.string.home_prayer_iqamah, maghribName),
+                stringResource(R.string.home_prayer_iqamah, prayerName) +
+                    if (isTomorrow) " • " + stringResource(R.string.home_tomorrow) else "",
                 color = AtharTextSecondary,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
@@ -286,9 +429,8 @@ fun NextPrayerCard() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Time display — refined size
             Text(
-                "19:06",
+                nextTime.format(timeFmt),
                 color = AtharPrimaryLight,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
@@ -299,7 +441,6 @@ fun NextPrayerCard() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // View details row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,
@@ -312,7 +453,7 @@ fun NextPrayerCard() {
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    stringResource(R.string.home_view_details),
+                    stringResource(R.string.home_time_remaining),
                     color = AtharPrimaryLight,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
@@ -324,26 +465,24 @@ fun NextPrayerCard() {
 }
 
 @Composable
-fun PrayerItem(prayer: PrayerTime) {
-    val prayerName = stringResource(prayer.nameResId)
-
+fun PrayerItem(row: PrayerRow) {
     Box(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 3.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .then(
-                if (prayer.isCurrent) {
+                if (row.isNext) {
                     Modifier
                         .background(
                             Brush.horizontalGradient(
-                                listOf(AtharPrimarySubtle.copy(alpha = 0.5f), AtharCardSurface)
+                                listOf(AtharPrimarySubtle.copy(alpha = 0.6f), AtharCardSurface)
                             )
                         )
                         .border(1.dp, AtharPrimary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 } else {
                     Modifier
-                        .background(AtharCardSurface)
+                        .background(AtharCardSurface.copy(alpha = 0.85f))
                         .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
                 }
             )
@@ -354,25 +493,22 @@ fun PrayerItem(prayer: PrayerTime) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Time on left
             Text(
-                prayer.time,
-                color = if (prayer.isCurrent) AtharPrimaryLight else AtharTextSecondary,
+                row.time.format(timeFmt),
+                color = if (row.isNext) AtharPrimaryLight else AtharTextSecondary,
                 fontFamily = ThmanyahSans,
-                fontWeight = if (prayer.isCurrent) FontWeight.Black else FontWeight.Bold,
+                fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,
                 fontSize = 14.sp
             )
-
-            // Name on right
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    prayerName,
-                    color = if (prayer.isCurrent) AtharTextPrimary else AtharTextPrimary,
+                    stringResource(row.nameResId),
+                    color = AtharTextPrimary,
                     fontFamily = ThmanyahSans,
-                    fontWeight = if (prayer.isCurrent) FontWeight.Black else FontWeight.Bold,
+                    fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,
                     fontSize = 14.sp
                 )
-                if (prayer.isCurrent) {
+                if (row.isNext) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
@@ -389,6 +525,8 @@ fun PrayerItem(prayer: PrayerTime) {
 @Composable
 fun HomeScreenPreview() {
     AtharTheme {
-        HomeScreen()
+        Box(Modifier.background(AtharBackground)) {
+            NextPrayerCard("maghrib", LocalTime.of(19, 6), false, LocalTime.of(18, 0))
+        }
     }
 }

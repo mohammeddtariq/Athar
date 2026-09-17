@@ -3,15 +3,16 @@
 
     <!-- Navigation -->
     <string name="nav_home">Today</string>
-    <string name="nav_services">Muslim\'s Corner</string>
+    <string name="nav_services">Essence</string>
     <string name="nav_settings">Settings</string>
-    <string name="nav_explore">Explore</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">Al Obour</string>
+    <string name="home_location_not_set">Set location</string>
     <string name="home_next_prayer">Next Prayer</string>
     <string name="home_prayer_iqamah">Iqamah for %s</string>
     <string name="home_time_remaining">Time Remaining</string>
+    <string name="home_tomorrow">Tomorrow</string>
     <string name="home_prayer_fajr">Fajr</string>
     <string name="home_prayer_sunrise">Sunrise</string>
     <string name="home_prayer_dhuhr">Dhuhr</string>
@@ -23,21 +24,80 @@
     <string name="home_view_details">View Details</string>
 
     <!-- Services Screen -->
-    <string name="services_title">Muslim\'s Corner</string>
+    <string name="services_title">Essence</string>
     <string name="services_quran">Holy Quran</string>
-    <string name="services_books">Books Encyclopedia</string>
-    <string name="services_tools">Tools</string>
-    <string name="services_agenda">Agenda</string>
-    <string name="services_calendar">Islamic Calendar</string>
-    <string name="services_tasbih">Tasbih</string>
+    <string name="services_quran_sub">AMOLED mushaf reader</string>
+    <string name="services_qibla">Qibla Direction</string>
+    <string name="services_qibla_sub">Compass to the Kaaba</string>
+    <string name="services_duas">Duas</string>
+    <string name="services_duas_sub">Hisnul Muslim collection</string>
     <string name="services_featured">Featured</string>
     <string name="services_explore_categories">Explore Categories</string>
 
-    <!-- Language Selection -->
+    <!-- Onboarding -->
     <string name="language_select_title">Choose Your Language</string>
     <string name="language_select_subtitle">You can change this later in settings</string>
     <string name="language_arabic">العربية</string>
     <string name="language_english">English</string>
     <string name="language_continue">Continue</string>
     <string name="language_bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</string>
+    <string name="onboarding_greeting">As-salamu alaykum wa rahmatullahi wa barakatuh</string>
+    <string name="onboarding_greeting_ar">السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ</string>
+    <string name="onboarding_tagline">Your quiet Muslim companion — prayer, Quran and direction, in one calm place.</string>
+    <string name="onboarding_skip">Skip setup</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_start">Begin</string>
+    <string name="setup_location_title">Where are you?</string>
+    <string name="setup_location_sub">We use your location only to calculate accurate prayer times.</string>
+    <string name="setup_use_gps">Use my location</string>
+    <string name="setup_location_later">I\'ll set it later</string>
+    <string name="setup_method_title">Calculation method</string>
+    <string name="setup_madhab_title">Madhab (Asr calculation)</string>
+    <string name="madhab_shafi">Shafi, Maliki, Hanbali</string>
+    <string name="madhab_hanafi">Hanafi</string>
+    <string name="method_mwl">Muslim World League</string>
+    <string name="method_egyptian">Egyptian General Authority</string>
+    <string name="method_karachi">University of Islamic Sciences, Karachi</string>
+    <string name="method_umm_al_qura">Umm al-Qura, Makkah</string>
+    <string name="method_isna">ISNA, North America</string>
+    <string name="method_moonsighting">Moonsighting Committee</string>
+
+    <!-- Qibla -->
+    <string name="qibla_title">Qibla</string>
+    <string name="qibla_from_north">from north</string>
+    <string name="qibla_signal">Compass signal</string>
+    <string name="qibla_crosscheck">Cross-check with your compass app</string>
+    <string name="qibla_help">Hold the phone flat and move away from metal. Align the Qibla arrow with “Phone front” when you face the Qibla.</string>
+    <string name="qibla_no_location">Set your location to see the Qibla bearing.</string>
+    <string name="qibla_distance">%1$s km to Makkah</string>
+
+    <!-- Quran -->
+    <string name="quran_title">Holy Quran</string>
+    <string name="quran_search">Search surahs…</string>
+    <string name="quran_ayahs">%1$d ayahs</string>
+    <string name="quran_coming">Full text coming in the next beta — Fatiha and short surahs are readable now.</string>
+
+    <!-- Duas -->
+    <string name="duas_title">Duas</string>
+    <string name="duas_sub">From Hisnul Muslim</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_location">Location</string>
+    <string name="settings_method">Calculation method</string>
+    <string name="settings_madhab">Madhab</string>
+    <string name="settings_notifications">Prayer notifications</string>
+    <string name="settings_notifications_sub">Remind me at prayer time</string>
+    <string name="settings_about">About Athar</string>
+    <string name="settings_about_sub">Built with open libraries — see credits</string>
+    <string name="settings_github">Athar on GitHub</string>
+    <string name="settings_version">Version 1.0 (beta)</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">Prayer times</string>
+    <string name="notif_channel_desc">Reminders at prayer time</string>
+    <string name="notif_prayer_title">Time for %s</string>
+    <string name="notif_prayer_body">May your prayer be accepted.</string>
 </resources>

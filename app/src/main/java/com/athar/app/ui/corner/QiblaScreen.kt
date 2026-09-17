@@ -1,0 +1,481 @@
+package com.athar.app.ui.corner
+
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.athar.app.R
+import com.athar.app.data.AppPreferences
+import com.athar.app.data.QiblaCalculator
+import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharCardSurface
+import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimaryMuted
+import com.athar.app.ui.theme.AtharTextPrimary
+import com.athar.app.ui.theme.AtharTextSecondary
+import com.athar.app.ui.theme.ThmanyahSans
+import com.athar.app.ui.theme.ThmanyahSerifDisplay
+import kotlin.math.cos
+import kotlin.math.sin
+
+/**
+ * Qibla compass matching the reference: big bearing from north,
+ * circular dial with degree ring + needle, signal + help texts.
+ */
+@Composable
+fun QiblaScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { AppPreferences(context.applicationContext) }
+    val lat by prefs.latitude.collectAsState(initial = null)
+    val lng by prefs.longitude.collectAsState(initial = null)
+    val city by prefs.cityLabel.collectAsState(initial = null)
+
+    val qiblaBearing = remember(lat, lng) {
+        if (lat != null && lng != null) QiblaCalculator.bearing(lat!!, lng!!) else null
+    }
+    val distanceKm = remember(lat, lng) {
+        if (lat != null && lng != null) QiblaCalculator.distanceKm(lat!!, lng!!) else null
+    }
+
+    var azimuth by remember { mutableFloatStateOf(0f) }
+    var accuracy by remember { mutableIntStateOf(3) }
+
+    DisposableEffect(context) {
+        val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accel = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val magnet = manager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        var gravity: FloatArray? = null
+        var geomag: FloatArray? = null
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                when (event.sensor.type) {
+                    Sensor.TYPE_ACCELEROMETER -> gravity = event.values.clone()
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        geomag = event.values.clone()
+                        accuracy = event.accuracy
+                    }
+                }
+                val g = gravity ?: return
+                val m = geomag ?: return
+                val r = FloatArray(9)
+                val i = FloatArray(9)
+                if (SensorManager.getRotationMatrix(r, i, g, m)) {
+                    val orient = FloatArray(3)
+                    SensorManager.getOrientation(r, orient)
+                    var deg = Math.toDegrees(orient[0].toDouble()).toFloat()
+                    deg = (deg + 360) % 360
+                    azimuth = deg
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, acc: Int) {
+                if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD) accuracy = acc
+            }
+        }
+        if (accel != null) manager.registerListener(listener, accel, SensorManager.SENSOR_DELAY_UI)
+        if (magnet != null) manager.registerListener(listener, magnet, SensorManager.SENSOR_DELAY_UI)
+        onDispose { manager.unregisterListener(listener) }
+    }
+
+    // Smooth the needle.
+    val smoothAzimuth by animateFloatAsState(
+        targetValue = azimuth,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 120f),
+        label = "azimuth"
+    )
+
+    val signalPct = when (accuracy) {
+        3 -> 94
+        2 -> 72
+        1 -> 45
+        else -> 30
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 110.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onBack
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = null,
+                    tint = AtharTextPrimary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                stringResource(R.string.qibla_title),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+                color = AtharTextPrimary
+            )
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.size(44.dp))
+        }
+
+        if (qiblaBearing == null) {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp, vertical = 40.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(AtharCardSurface)
+                    .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+                    .padding(22.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    stringResource(R.string.qibla_no_location),
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = AtharTextSecondary,
+                    textAlign = TextAlign.Center
+                )
+            }
+            return@Column
+        }
+
+        val bearing = qiblaBearing
+        val bearingInt = bearing.toInt()
+
+        Text(
+            "$bearingInt°",
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Black,
+            fontSize = 64.sp,
+            color = AtharTextPrimary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            stringResource(R.string.qibla_from_north),
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(18.dp))
+
+        // Compass dial — rotates with the phone; qibla marker fixed at bearing.
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            QiblaDial(
+                azimuth = smoothAzimuth,
+                qiblaBearing = bearing.toFloat(),
+                modifier = Modifier.size(300.dp)
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.qibla_signal) + " ",
+                fontFamily = ThmanyahSans,
+                fontSize = 14.sp,
+                color = AtharTextSecondary
+            )
+            Text(
+                "$signalPct%",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
+                color = AtharTextPrimary
+            )
+            Spacer(Modifier.size(6.dp))
+            Icon(
+                Icons.Rounded.Info,
+                contentDescription = null,
+                tint = AtharTextSecondary,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.qibla_crosscheck),
+                fontFamily = ThmanyahSans,
+                fontSize = 13.5.sp,
+                color = AtharTextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Icon(
+                Icons.Rounded.Info,
+                contentDescription = null,
+                tint = AtharTextSecondary,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            stringResource(R.string.qibla_help),
+            fontFamily = ThmanyahSans,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp,
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+        )
+
+        if (distanceKm != null) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                stringResource(R.string.qibla_distance, "%,.0f".format(distanceKm)),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = AtharPrimaryLight,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (city != null) {
+            Text(
+                city!!,
+                fontFamily = ThmanyahSans,
+                fontSize = 12.sp,
+                color = AtharTextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun QiblaDial(
+    azimuth: Float,
+    qiblaBearing: Float,
+    modifier: Modifier = Modifier
+) {
+    val measurer = rememberTextMeasurer()
+    Canvas(modifier = modifier) {
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension / 2f - 8.dp.toPx()
+
+        // Outer progress-style ring (pale pistachio, like the reference).
+        drawArc(
+            color = AtharPrimaryLight.copy(alpha = 0.9f),
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = Offset(c.x - radius, c.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+            style = Stroke(width = 5.dp.toPx())
+        )
+        // Faint track underneath for depth.
+        drawArc(
+            color = AtharPrimaryMuted.copy(alpha = 0.25f),
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = Offset(c.x - radius, c.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+
+        // Rotating rose: counter-rotate by azimuth so N points to true north.
+        rotate(degrees = -azimuth, pivot = c) {
+            // Degree ticks + labels every 30°.
+            for (deg in 0 until 360 step 5) {
+                val major = deg % 30 == 0
+                val a = Math.toRadians(deg.toDouble() - 90)
+                val outer = radius - 14.dp.toPx()
+                val inner = outer - (if (major) 14.dp.toPx() else 7.dp.toPx())
+                drawLine(
+                    AtharTextSecondary.copy(alpha = if (major) 0.9f else 0.4f),
+                    Offset(c.x + (inner * cos(a)).toFloat(), c.y + (inner * sin(a)).toFloat()),
+                    Offset(c.x + (outer * cos(a)).toFloat(), c.y + (outer * sin(a)).toFloat()),
+                    strokeWidth = if (major) 2.5f else 1.5f
+                )
+                if (major && deg % 30 == 0 && deg != 0) {
+                    val labelR = radius - 52.dp.toPx()
+                    val pos = Offset(
+                        c.x + (labelR * cos(a)).toFloat(),
+                        c.y + (labelR * sin(a)).toFloat()
+                    )
+                    val label = when (deg) {
+                        90 -> "E"; 180 -> "S"; 270 -> "W"
+                        else -> "$deg"
+                    }
+                    val layout = measurer.measure(
+                        label,
+                        style = androidx.compose.ui.text.TextStyle(
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = if (label.length == 1) AtharTextSecondary else AtharTextSecondary.copy(alpha = 0.7f)
+                        )
+                    )
+                    drawText(
+                        layout,
+                        topLeft = Offset(pos.x - layout.size.width / 2f, pos.y - layout.size.height / 2f)
+                    )
+                }
+            }
+            // Cardinal N label.
+            val nPos = Offset(c.x, c.y - (radius - 52.dp.toPx()))
+            val nLayout = measurer.measure(
+                "N",
+                style = androidx.compose.ui.text.TextStyle(
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp,
+                    color = AtharTextPrimary
+                )
+            )
+            drawText(
+                nLayout,
+                topLeft = Offset(nPos.x - nLayout.size.width / 2f, nPos.y - nLayout.size.height / 2f)
+            )
+
+            // Qibla marker triangle at the bearing (rotates with the rose).
+            val qa = Math.toRadians(qiblaBearing.toDouble() - 90)
+            val tipR = radius - 6.dp.toPx()
+            val tip = Offset(c.x + (tipR * cos(qa)).toFloat(), c.y + (tipR * sin(qa)).toFloat())
+            val baseR = tipR - 16.dp.toPx()
+            val perp = qa + Math.PI / 2
+            val half = 9.dp.toPx()
+            val path = Path().apply {
+                moveTo(tip.x, tip.y)
+                lineTo(
+                    (c.x + baseR * cos(qa) + half * cos(perp)).toFloat(),
+                    (c.y + baseR * sin(qa) + half * sin(perp)).toFloat()
+                )
+                lineTo(
+                    (c.x + baseR * cos(qa) - half * cos(perp)).toFloat(),
+                    (c.y + baseR * sin(qa) - half * sin(perp)).toFloat()
+                )
+                close()
+            }
+            drawPath(path, AtharPrimaryLight)
+        }
+
+        // Needle: points toward the Qibla relative to phone heading.
+        val relative = qiblaBearing - azimuth
+        rotate(degrees = relative, pivot = c) {
+            // Needle shaft upward.
+            drawLine(
+                AtharPrimaryLight,
+                Offset(c.x, c.y + 26.dp.toPx()),
+                Offset(c.x, c.y - (radius - 78.dp.toPx())),
+                strokeWidth = 4.dp.toPx()
+            )
+            // Kaaba-end cap (rounded weight at the bottom).
+            drawCircle(
+                AtharPrimaryLight,
+                radius = 9.dp.toPx(),
+                center = Offset(c.x, c.y + 34.dp.toPx())
+            )
+            drawCircle(
+                AtharBackground,
+                radius = 5.dp.toPx(),
+                center = Offset(c.x, c.y + 34.dp.toPx())
+            )
+            // Center pivot.
+            drawCircle(AtharBackground, radius = 8.dp.toPx(), center = c)
+            drawCircle(AtharPrimaryLight, radius = 8.dp.toPx(), center = c, style = Stroke(3.dp.toPx()))
+            drawCircle(AtharPrimaryLight, radius = 2.5.dp.toPx(), center = c)
+        }
+    }
+}
