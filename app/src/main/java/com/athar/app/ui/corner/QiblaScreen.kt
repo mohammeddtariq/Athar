@@ -201,7 +201,7 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
             .background(AtharBackground)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(bottom = 110.dp)
+            .padding(bottom = 120.dp)
     ) {
         Row(
             modifier = Modifier

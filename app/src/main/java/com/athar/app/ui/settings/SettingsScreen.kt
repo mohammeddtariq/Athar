@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -151,7 +153,7 @@ fun SettingsScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 110.dp)
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             item {
                 Text(
@@ -434,30 +436,17 @@ fun SettingsScreen() {
                         .padding(top = 18.dp, bottom = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "أَثَر",
-                        fontFamily = ThmanyahSerifDisplay,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 38.sp,
-                        color = AtharPrimaryLight,
-                        textAlign = TextAlign.Center
+                    Image(
+                        painter = painterResource(R.drawable.athar_logo),
+                        contentDescription = "أَثَر — ATHAR",
+                        modifier = Modifier.size(110.dp)
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "A T H A R",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        letterSpacing = 6.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.onboarding_tagline_short),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 12.5.sp,
+                        fontSize = 13.sp,
                         color = AtharPrimaryMuted,
                         textAlign = TextAlign.Center
                     )

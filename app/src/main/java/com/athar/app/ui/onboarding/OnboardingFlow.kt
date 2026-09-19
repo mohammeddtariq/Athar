@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -272,7 +274,7 @@ private fun GreetingStep(
     onPickLanguage: (String) -> Unit,
     onNext: () -> Unit
 ) {
-    val tagline = if (language == "ar") "رفيقك المسلم." else "\u2066Your Muslim companion app.\u2069"
+    val tagline = if (language == "ar") "رفيقك المسلم" else "\u2066Your Muslim companion app\u2069"
 
     Column(
         modifier = Modifier
@@ -309,25 +311,13 @@ private fun GreetingStep(
             color = AtharTextSecondary,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(22.dp))
-        Text(
-            text = "أَثَر",
-            fontFamily = ThmanyahSerifDisplay,
-            fontWeight = FontWeight.Black,
-            fontSize = 52.sp,
-            color = AtharPrimaryLight,
-            textAlign = TextAlign.Center
+        Spacer(Modifier.height(18.dp))
+        Image(
+            painter = painterResource(R.drawable.athar_logo),
+            contentDescription = "أَثَر — ATHAR",
+            modifier = Modifier.size(116.dp)
         )
-        Text(
-            text = "ATHAR",
-            fontFamily = ThmanyahSans,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
-            color = AtharTextSecondary,
-            letterSpacing = 6.sp,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
         // Streaming bio — replays when the language changes.
         TypewriterText(
             text = tagline,

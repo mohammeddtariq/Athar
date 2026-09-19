@@ -3,6 +3,9 @@
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
+    <string name="nav_quran">Quran</string>
+    <string name="nav_duas">Duas</string>
+    <string name="nav_qibla">Qibla</string>
     <string name="nav_services">Essence</string>
     <string name="nav_settings">Settings</string>
 
@@ -101,7 +104,7 @@
     <string name="notif_prayer_body">May your prayer be accepted.</string>
     <string name="notif_sunrise_body">Sunrise — the time of Fajr has ended.</string>
     <!-- Onboarding tagline -->
-    <string name="onboarding_tagline_short">Your Muslim companion app.</string>
+    <string name="onboarding_tagline_short">Your Muslim companion app</string>
     <string name="onboarding_notif_title">Prayer reminders</string>
     <string name="onboarding_notif_sub">Allow notifications so Athar can remind you at each prayer time.</string>
     <string name="onboarding_allow">Allow reminders</string>

@@ -193,7 +193,10 @@ fun getQuranColors(mode: QuranThemeMode): QuranReaderColors = when (mode) {
  * - Floating bottom capsule with TT (font scale/weight), Palette (theme switcher), and Play (recitation audio).
  */
 @Composable
-fun QuranScreen(onBack: () -> Unit) {
+fun QuranScreen(
+    onBack: () -> Unit = {},
+    onReadingModeChanged: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val appPrefs = remember { AppPreferences(context.applicationContext) }
@@ -207,6 +210,16 @@ fun QuranScreen(onBack: () -> Unit) {
 
     var openSurah by remember { mutableStateOf<SurahMeta?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(openSurah) {
+        onReadingModeChanged(openSurah != null)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            onReadingModeChanged(false)
+        }
+    }
 
     val colors = remember(themeMode) { getQuranColors(themeMode) }
 

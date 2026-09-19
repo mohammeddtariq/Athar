@@ -56,7 +56,7 @@ import com.athar.app.ui.theme.ThmanyahSerifText
 
 /** Duas browser — Hisnul Muslim selection with a tap dhikr counter. */
 @Composable
-fun DuasScreen(onBack: () -> Unit) {
+fun DuasScreen(onBack: () -> Unit = {}) {
     val haptics = LocalHapticFeedback.current
     // Session dhikr counts, keyed per dua. Tap card = +1, long-press = reset.
     var counts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -74,7 +74,7 @@ fun DuasScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 110.dp)
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             item {
                 Row(

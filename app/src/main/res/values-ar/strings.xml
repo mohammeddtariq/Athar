@@ -3,6 +3,9 @@
 
     <!-- Navigation -->
     <string name="nav_home">الرئيسية</string>
+    <string name="nav_quran">القرآن</string>
+    <string name="nav_duas">الأدعية</string>
+    <string name="nav_qibla">القبلة</string>
     <string name="nav_services">الجوهر</string>
     <string name="nav_settings">الإعدادات</string>
 
@@ -101,7 +104,7 @@
     <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
     <string name="notif_sunrise_body">الشروق — انتهى وقت الفجر.</string>
     <!-- Onboarding tagline -->
-    <string name="onboarding_tagline_short">رفيقك المسلم.</string>
+    <string name="onboarding_tagline_short">رفيقك المسلم</string>
     <string name="onboarding_notif_title">تنبيهات الصلاة</string>
     <string name="onboarding_notif_sub">اسمح بالتنبيهات ليذكّرك أَثَر عند دخول كل صلاة.</string>
     <string name="onboarding_allow">اسمح بالتنبيهات</string>

@@ -141,11 +141,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
         PrayerRow("isha", R.string.home_prayer_isha, day.isha, next.key == "isha")
     )
 
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(60)
-        isVisible = true
-    }
+    val isVisible = true
 
     // Dark base with the Islamic lattice (Quran stays pure black).
     PatternScaffold {
@@ -153,7 +149,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 110.dp)
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             item {
                 AnimatedVisibility(

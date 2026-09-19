@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -24,128 +25,175 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Subtle Islamic eight-fold star lattice, drawn with Canvas so no asset
- * files are needed. Tone-matched to the olive theme; sits behind content.
- *
- * @param animated slow breathing drift so the background feels alive.
+ * Modern Islamic Geometric Lattice Pattern based on user reference:
+ * - 8-pointed star (khatam) rosettes with interlocking chevron/strapwork ribbons.
+ * - Architectural embossed feel with delicate sage geometry.
+ * - Smooth corner/edge gradient fade so text and cards remain effortlessly readable.
  */
 @Composable
 fun IslamicPatternBackground(
     modifier: Modifier = Modifier,
     tint: Color = AtharPrimary,
-    alpha: Float = 0.08f,
-    animated: Boolean = true,
-    cellDp: Float = 68f
+    alpha: Float = 0.12f,
+    animated: Boolean = false,
+    cellDp: Float = 72f
 ) {
     if (!animated) {
         Canvas(modifier = modifier.fillMaxSize()) {
-            drawLattice(tint.copy(alpha = alpha), cellPx = cellDp * density, phase = 0f)
+            drawArabesqueLattice(tint, alpha, cellPx = cellDp * density, phase = 0f)
         }
         return
     }
-    val transition = rememberInfiniteTransition(label = "patternDrift")
+
+    val transition = rememberInfiniteTransition(label = "islamicPatternDrift")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(48000, easing = LinearEasing),
+            animation = tween(60000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "phase"
+        label = "patternPhase"
     )
     val breathe by transition.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 1f,
+        initialValue = 0.85f,
+        targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(6000, easing = LinearEasing),
+            animation = tween(8000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "breathe"
+        label = "patternBreathe"
     )
+
     Canvas(modifier = modifier.fillMaxSize()) {
-        drawLattice(tint.copy(alpha = alpha * breathe), cellPx = cellDp * density, phase = phase)
+        drawArabesqueLattice(tint, alpha * breathe, cellPx = cellDp * density, phase = phase)
     }
 }
 
-/** Repeating eight-pointed star (khatam) lattice. */
-private fun DrawScope.drawLattice(color: Color, cellPx: Float, phase: Float) {
-    val cols = (size.width / cellPx).toInt() + 3
-    val rows = (size.height / cellPx).toInt() + 3
-    // Slow diagonal drift derived from phase.
-    val drift = (phase / 360f) * cellPx
+/**
+ * Draws the Arabesque geometric star & strapwork mosaic with a smooth gradient fade
+ * from top-right to bottom-left (matching media_1789827589824.jpg).
+ */
+private fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellPx: Float, phase: Float) {
+    val w = size.width
+    val h = size.height
+    val cols = (w / cellPx).toInt() + 3
+    val rows = (h / cellPx).toInt() + 3
+
+    // Very subtle drift
+    val driftX = (phase / 360f) * cellPx * 0.15f
+    val driftY = (phase / 360f) * cellPx * 0.10f
+
     for (r in -1..rows) {
         for (c in -1..cols) {
-            val cx = c * cellPx + (if (r % 2 == 0) 0f else cellPx / 2f) - drift * 0.25f
-            val cy = r * cellPx - drift * 0.15f
-            drawStar(Offset(cx, cy), cellPx * 0.42f, color)
-            // Tiny diamond connectors between stars, like the reference lattice.
-            drawDiamond(Offset(cx + cellPx / 2f, cy), cellPx * 0.10f, color)
-            drawDiamond(Offset(cx, cy + cellPx / 2f), cellPx * 0.10f, color)
+            val cx = c * cellPx + (if (r % 2 == 0) 0f else cellPx / 2f) - driftX
+            val cy = r * cellPx - driftY
+
+            // Calculate gradient falloff: dense on top-right (x -> w, y -> 0), fading towards bottom-left
+            // Normalized position along the diagonal (from top-right = 1.0 to bottom-left = 0.0)
+            val diagonalFactor = ((cx / w) * 0.7f + (1f - (cy / h)) * 0.3f).coerceIn(0f, 1f)
+            // Smooth curve falloff
+            val localAlpha = baseAlpha * (diagonalFactor * diagonalFactor * 1.2f).coerceIn(0.01f, 1f)
+
+            if (localAlpha > 0.005f) {
+                val strokeColor = tint.copy(alpha = localAlpha)
+                val highlightColor = tint.copy(alpha = localAlpha * 0.45f)
+
+                // 1. Central 8-pointed star rosette
+                drawEightPointedStar(Offset(cx, cy), cellPx * 0.38f, strokeColor, highlightColor)
+
+                // 2. Interlocking diagonal strapwork ribbons connecting nodes
+                drawInterlockingRibbons(Offset(cx, cy), cellPx, strokeColor)
+
+                // 3. Intermediate diamonds between stars
+                drawCornerDiamonds(Offset(cx + cellPx / 2f, cy), cellPx * 0.12f, strokeColor)
+                drawCornerDiamonds(Offset(cx, cy + cellPx / 2f), cellPx * 0.12f, strokeColor)
+            }
         }
     }
 }
 
-private fun DrawScope.drawDiamond(center: Offset, radius: Float, color: Color) {
-    val stroke = (radius * 0.35f).coerceAtLeast(1f)
+private fun DrawScope.drawEightPointedStar(
+    center: Offset,
+    radius: Float,
+    primaryColor: Color,
+    highlightColor: Color
+) {
+    val strokeWidth = (radius * 0.045f).coerceAtLeast(1.2f)
+    val halfSide = radius * 0.707f
+
+    // Two overlapping squares rotated by 45 degrees forming the classic Khatam star
+    for (deg in listOf(0f, 45f)) {
+        rotate(degrees = deg, pivot = center) {
+            val corners = listOf(
+                Offset(center.x - halfSide, center.y - halfSide),
+                Offset(center.x + halfSide, center.y - halfSide),
+                Offset(center.x + halfSide, center.y + halfSide),
+                Offset(center.x - halfSide, center.y + halfSide)
+            )
+            for (i in corners.indices) {
+                drawLine(primaryColor, corners[i], corners[(i + 1) % 4], strokeWidth = strokeWidth)
+            }
+        }
+    }
+
+    // Concentric inner micro-octagon
+    val innerR = radius * 0.32f
+    val octPts = (0 until 8).map { i ->
+        val rad = Math.toRadians((i * 45.0 + 22.5))
+        Offset(
+            center.x + (innerR * cos(rad)).toFloat(),
+            center.y + (innerR * sin(rad)).toFloat()
+        )
+    }
+    for (i in octPts.indices) {
+        drawLine(highlightColor, octPts[i], octPts[(i + 1) % 8], strokeWidth = strokeWidth * 0.8f)
+    }
+}
+
+private fun DrawScope.drawInterlockingRibbons(
+    center: Offset,
+    cellPx: Float,
+    color: Color
+) {
+    val r = cellPx * 0.38f
+    val stroke = (cellPx * 0.015f).coerceAtLeast(1f)
+    // 8 outward radiating ribbon lines reaching toward adjacent star points
+    for (i in 0 until 8) {
+        val angle = Math.toRadians(i * 45.0)
+        val p1 = Offset(
+            center.x + (r * 0.82f * cos(angle)).toFloat(),
+            center.y + (r * 0.82f * sin(angle)).toFloat()
+        )
+        val p2 = Offset(
+            center.x + (cellPx * 0.50f * cos(angle)).toFloat(),
+            center.y + (cellPx * 0.50f * sin(angle)).toFloat()
+        )
+        drawLine(color, p1, p2, strokeWidth = stroke)
+    }
+}
+
+private fun DrawScope.drawCornerDiamonds(
+    center: Offset,
+    size: Float,
+    color: Color
+) {
+    val stroke = (size * 0.30f).coerceAtLeast(1f)
     rotate(degrees = 45f, pivot = center) {
         drawRect(
             color = color,
-            topLeft = Offset(center.x - radius, center.y - radius),
-            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+            topLeft = Offset(center.x - size, center.y - size),
+            size = androidx.compose.ui.geometry.Size(size * 2, size * 2),
             style = Stroke(width = stroke)
         )
     }
 }
 
-private fun DrawScope.drawStar(center: Offset, radius: Float, color: Color) {
-    val stroke = (radius * 0.045f).coerceAtLeast(1f)
-    // Khatam: two overlapping squares (0° and 45°) = eight-pointed star.
-    for (rot in listOf(0f, 45f)) {
-        rotate(degrees = rot, pivot = center) {
-            val h = radius * 0.72f
-            val corners = listOf(
-                Offset(center.x - h, center.y - h),
-                Offset(center.x + h, center.y - h),
-                Offset(center.x + h, center.y + h),
-                Offset(center.x - h, center.y + h)
-            )
-            for (i in corners.indices) {
-                drawLine(color, corners[i], corners[(i + 1) % 4], strokeWidth = stroke)
-            }
-        }
-    }
-    // Outer linking diamond (echoes the reference lattice grid).
-    rotate(degrees = 45f, pivot = center) {
-        val h = radius * 1.02f
-        val corners = listOf(
-            Offset(center.x - h, center.y - h),
-            Offset(center.x + h, center.y - h),
-            Offset(center.x + h, center.y + h),
-            Offset(center.x - h, center.y + h)
-        )
-        for (i in corners.indices) {
-            drawLine(color, corners[i], corners[(i + 1) % 4], strokeWidth = stroke * 0.7f)
-        }
-    }
-    // Inner octagon hint.
-    val pts = (0 until 8).map { i ->
-        val a = Math.toRadians((i * 45).toDouble())
-        Offset(
-            center.x + (radius * 0.30f * cos(a)).toFloat(),
-            center.y + (radius * 0.30f * sin(a)).toFloat()
-        )
-    }
-    for (i in pts.indices) {
-        drawLine(color, pts[i], pts[(i + 1) % 8], strokeWidth = stroke * 0.8f)
-    }
-    drawCircle(color, radius = stroke * 0.9f, center = center)
-}
-
-/** Convenience wrapper: opaque dark base + pattern behind [content]. */
+/** Convenience wrapper: opaque dark base + modern Islamic pattern behind [content]. */
 @Composable
 fun PatternScaffold(
     modifier: Modifier = Modifier,
-    patternAlpha: Float = 0.07f,
+    patternAlpha: Float = 0.12f,
     animated: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -162,3 +210,4 @@ fun PatternScaffold(
         content()
     }
 }
+
