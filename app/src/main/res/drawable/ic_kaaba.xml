@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Kaaba Body: Isometric / clean perspective cube -->
+    <!-- Front Face -->
+    <path
+        android:fillColor="#FFEDEFEA"
+        android:pathData="M5,8 L13,8 L13,20 L5,20 Z" />
+    <!-- Side Face -->
+    <path
+        android:fillColor="#FFB0B8A8"
+        android:pathData="M13,8 L19,5 L19,16 L13,20 Z" />
+    <!-- Top Face / Roof -->
+    <path
+        android:fillColor="#FFD2DACB"
+        android:pathData="M5,8 L11,5 L19,5 L13,8 Z" />
+    <!-- Golden Belt (Kiswa Hizam) - Front -->
+    <path
+        android:fillColor="#FFE5B85C"
+        android:pathData="M5,11 L13,11 L13,12.8 L5,12.8 Z" />
+    <!-- Golden Belt (Kiswa Hizam) - Side -->
+    <path
+        android:fillColor="#FFC89E46"
+        android:pathData="M13,11 L19,7.5 L19,9 L13,12.8 Z" />
+    <!-- Kaaba Door Accent (Bab al-Kaaba) -->
+    <path
+        android:fillColor="#FFE5B85C"
+        android:pathData="M9,15 L11.5,15 L11.5,20 L9,20 Z" />
+</vector>

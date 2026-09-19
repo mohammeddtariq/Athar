@@ -1,30 +1,36 @@
 package com.athar.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Explore
@@ -36,6 +42,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,12 +50,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -65,12 +75,13 @@ import com.athar.app.ui.corner.QuranScreen
 import com.athar.app.ui.home.HomeScreen
 import com.athar.app.ui.settings.SettingsScreen
 import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharNavGlow
+import com.athar.app.ui.theme.AtharNavIconActive
 import com.athar.app.ui.theme.AtharNavIconInactive
+import com.athar.app.ui.theme.AtharNavPillBorder
 import com.athar.app.ui.theme.AtharNavPillSelected
 import com.athar.app.ui.theme.AtharNavbarBg
 import com.athar.app.ui.theme.AtharNavbarBorder
-import com.athar.app.ui.theme.AtharPrimary
-import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.ThmanyahSans
 
 sealed class Screen(
@@ -137,16 +148,16 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(140, easing = FastOutSlowInEasing))
+                fadeIn(animationSpec = tween(140, easing = LinearEasing))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(110, easing = FastOutSlowInEasing))
+                fadeOut(animationSpec = tween(100, easing = LinearEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(140, easing = FastOutSlowInEasing))
+                fadeIn(animationSpec = tween(140, easing = LinearEasing))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(110, easing = FastOutSlowInEasing))
+                fadeOut(animationSpec = tween(100, easing = LinearEasing))
             }
         ) {
             composable(Screen.Home.route) {
@@ -201,11 +212,12 @@ private fun NavHostController.navigateToTab(screen: Screen) {
 }
 
 /**
- * Bottom navigation: elevated floating frosted-glass dock matching reference design:
- * - Substantial, tall pill dock matching reference photo height (~68dp).
- * - Active tab smoothly expands into an inner capsule containing [Icon] [Label].
- * - Inactive tabs display clean minimalist outline icons.
- * - Floats comfortably upward (bottom = 24dp) with fluid spring physics.
+ * Bottom navigation: elevated floating greyish-green capsule dock matching reference design:
+ * - Solid opaque greyish-green dock container (#353E2C) with ambient glow.
+ * - Always ordered left-to-right starting with Home tab, regardless of active locale.
+ * - Tactile spring press feedback and fluid expanding active pill (#556441).
+ * - Glowing lime active icon (#C7EFA0) and refined inactive icons (#A4AA9C).
+ * - Generous, bold height (~68dp) elevated cleanly above system navigation bar.
  */
 @Composable
 fun AtharNavBar(
@@ -219,41 +231,44 @@ fun AtharNavBar(
         return currentDestination?.hierarchy?.any { it.route == screen.route } == true
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 24.dp),
-        contentAlignment = Alignment.Center
-    ) {
+    // Force Left-to-Right layout order regardless of active language (Arabic or English)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
-            modifier = Modifier
-                .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(38.dp),
-                    spotColor = AtharPrimary.copy(alpha = 0.28f),
-                    ambientColor = Color.Black.copy(alpha = 0.90f)
-                )
-                .clip(RoundedCornerShape(38.dp))
-                .background(AtharNavbarBg.copy(alpha = 0.94f))
-                .border(
-                    width = 1.2.dp,
-                    color = AtharNavbarBorder.copy(alpha = 0.90f),
-                    shape = RoundedCornerShape(38.dp)
-                )
-                .padding(horizontal = 8.dp, vertical = 7.dp),
+            modifier = modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 14.dp, vertical = 26.dp),
             contentAlignment = Alignment.Center
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
-            ) {
-                allNavScreens.forEach { screen ->
-                    NavDockItem(
-                        screen = screen,
-                        selected = isSelected(screen),
-                        onClick = { navController.navigateToTab(screen) }
+            Box(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 18.dp,
+                        shape = RoundedCornerShape(38.dp),
+                        spotColor = AtharNavGlow.copy(alpha = 0.35f),
+                        ambientColor = Color.Black.copy(alpha = 0.70f)
                     )
+                    .clip(RoundedCornerShape(38.dp))
+                    .background(AtharNavbarBg)
+                    .border(
+                        width = 1.2.dp,
+                        color = AtharNavbarBorder,
+                        shape = RoundedCornerShape(38.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+                ) {
+                    allNavScreens.forEach { screen ->
+                        NavDockItem(
+                            screen = screen,
+                            selected = isSelected(screen),
+                            onClick = { navController.navigateToTab(screen) }
+                        )
+                    }
                 }
             }
         }
@@ -266,44 +281,61 @@ private fun NavDockItem(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val iconTint = if (selected) AtharPrimaryLight else AtharNavIconInactive
-    val labelColor = if (selected) AtharPrimaryLight else AtharNavIconInactive
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
 
-    val pillBackground = if (selected) {
-        AtharNavPillSelected.copy(alpha = 0.98f)
-    } else {
-        Color.Transparent
-    }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "navItemScale"
+    )
 
-    val pillBorderModifier = if (selected) {
-        Modifier.border(
-            width = 1.dp,
-            color = AtharPrimary.copy(alpha = 0.45f),
-            shape = RoundedCornerShape(26.dp)
-        )
-    } else {
-        Modifier
-    }
+    val pillBackground by animateColorAsState(
+        targetValue = if (selected) AtharNavPillSelected else Color.Transparent,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "pillBg"
+    )
+
+    val pillBorderColor by animateColorAsState(
+        targetValue = if (selected) AtharNavPillBorder else Color.Transparent,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "pillBorder"
+    )
+
+    val iconTint by animateColorAsState(
+        targetValue = if (selected) AtharNavIconActive else AtharNavIconInactive,
+        animationSpec = tween(200, easing = FastOutSlowInEasing),
+        label = "iconTint"
+    )
+
+    val labelColor by animateColorAsState(
+        targetValue = if (selected) AtharNavIconActive else AtharNavIconInactive,
+        animationSpec = tween(200, easing = FastOutSlowInEasing),
+        label = "labelColor"
+    )
 
     Box(
         modifier = Modifier
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = 0.78f,
-                    stiffness = 400f
-                )
-            )
-            .clip(RoundedCornerShape(26.dp))
+            .scale(scale)
+            .height(50.dp)
+            .clip(RoundedCornerShape(25.dp))
             .background(pillBackground)
-            .then(pillBorderModifier)
+            .border(
+                width = if (selected) 1.dp else 0.dp,
+                color = pillBorderColor,
+                shape = RoundedCornerShape(25.dp)
+            )
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
             .padding(
                 horizontal = if (selected) 16.dp else 12.dp,
-                vertical = 12.dp
+                vertical = 0.dp
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -311,23 +343,61 @@ private fun NavDockItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            ScreenIcon(
-                screen = screen,
-                selected = selected,
-                tint = iconTint,
+            // Icon container with ambient glowing halo on selected tab
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier.size(24.dp)
-            )
-
-            if (selected) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(screen.labelResId),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = labelColor,
-                    maxLines = 1
+            ) {
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .shadow(
+                                elevation = 10.dp,
+                                shape = CircleShape,
+                                spotColor = AtharNavGlow.copy(alpha = 0.85f),
+                                ambientColor = AtharNavGlow.copy(alpha = 0.50f)
+                            )
+                    )
+                }
+                ScreenIcon(
+                    screen = screen,
+                    selected = selected,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
                 )
+            }
+
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing)) +
+                        expandHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = 0.82f,
+                                stiffness = 380f
+                            ),
+                            expandFrom = Alignment.Start
+                        ),
+                exit = fadeOut(animationSpec = tween(120, easing = FastOutSlowInEasing)) +
+                       shrinkHorizontally(
+                           animationSpec = spring(
+                               dampingRatio = 0.95f,
+                               stiffness = 450f
+                           ),
+                           shrinkTowards = Alignment.Start
+                       )
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(screen.labelResId),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp,
+                        color = labelColor,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }

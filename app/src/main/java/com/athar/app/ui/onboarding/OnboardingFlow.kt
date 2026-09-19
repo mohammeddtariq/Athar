@@ -311,13 +311,26 @@ private fun GreetingStep(
             color = AtharTextSecondary,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(18.dp))
-        Image(
-            painter = painterResource(R.drawable.athar_logo),
-            contentDescription = "أَثَر — ATHAR",
-            modifier = Modifier.size(116.dp)
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = "أَثَر",
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Black,
+            fontSize = 50.sp,
+            color = AtharPrimaryLight,
+            textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = "ATHAR",
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            color = AtharTextSecondary,
+            letterSpacing = 6.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(14.dp))
         // Streaming bio — replays when the language changes.
         TypewriterText(
             text = tagline,

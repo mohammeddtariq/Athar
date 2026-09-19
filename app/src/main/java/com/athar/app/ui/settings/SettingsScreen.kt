@@ -60,6 +60,7 @@ import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.LocationHelper
+import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.HanafiAsrSetting
@@ -86,6 +87,7 @@ fun SettingsScreen() {
     val prefs = remember { AppPreferences(context.applicationContext) }
 
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
+    val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val city by prefs.cityLabel.collectAsState(initial = null)
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val schoolId by prefs.schoolId.collectAsState(initial = "SHAFII")
@@ -195,6 +197,37 @@ fun SettingsScreen() {
                                 scope.launch {
                                     prefs.setLanguage("en")
                                     (context as? Activity)?.recreate()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // ── Number Format (Western vs. Arabic-Indic) ──
+            item {
+                SectionCard(title = stringResource(R.string.settings_number_format)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        LangChip(
+                            label = stringResource(R.string.number_format_western),
+                            selected = numberStyle == NumberStylePreference.WESTERN,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setNumberStyle(NumberStylePreference.WESTERN)
+                                }
+                            }
+                        )
+                        LangChip(
+                            label = stringResource(R.string.number_format_arabic),
+                            selected = numberStyle == NumberStylePreference.ARABIC_INDIC,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setNumberStyle(NumberStylePreference.ARABIC_INDIC)
                                 }
                             }
                         )
@@ -436,12 +469,25 @@ fun SettingsScreen() {
                         .padding(top = 18.dp, bottom = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.athar_logo),
-                        contentDescription = "أَثَر — ATHAR",
-                        modifier = Modifier.size(110.dp)
+                    Text(
+                        text = "أَثَر",
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 40.sp,
+                        color = AtharPrimaryLight,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "A T H A R",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp,
+                        letterSpacing = 6.sp,
+                        color = AtharTextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.onboarding_tagline_short),
                         fontFamily = ThmanyahSans,
@@ -518,7 +564,7 @@ fun SettingsScreen() {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "لا غالب إلا الله.",
+                        text = "لا غالب إلا الله",
                         fontFamily = ThmanyahSerifDisplay,
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
@@ -530,7 +576,7 @@ fun SettingsScreen() {
                         androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr
                     ) {
                         Text(
-                            text = "\"There is no victor except Allah.\"",
+                            text = "\"There is no victor except Allah\"",
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Medium,
                             fontSize = 12.5.sp,

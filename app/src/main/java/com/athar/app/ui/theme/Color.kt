@@ -31,12 +31,14 @@ val AtharTextSecondary = Color(0xFF93A086)    // Muted olive-grey
 val AtharTextMuted = Color(0xFF4A5A43)        // Very low-emphasis captions
 val AtharTextOnPrimary = Color(0xFF141A10)    // Dark text over pale accent
 
-// ─── Navigation Bar (glassmorphism dock) ───
-val AtharNavbarBg = Color(0xFF0D110B)         // Dock background (alpha applied in UI)
-val AtharNavbarBorder = Color(0xFF233020)     // Dock hairline border
-val AtharNavPillSelected = Color(0xFF1C2615)  // Selected tab olive pill
-val AtharNavIconActive = Color(0xFFEBEFE3)    // Active tab icon / text
-val AtharNavIconInactive = Color(0xFF6B7D60)  // Inactive tab icon / text
+// ─── Navigation Bar (Greyish-Green Capsule Dock — exact from reference) ───
+val AtharNavbarBg = Color(0xFF353E2C)         // Solid greyish-green dock container
+val AtharNavbarBorder = Color(0xFF48543B)     // Subtle greyish-green dock border
+val AtharNavPillSelected = Color(0xFF556441)  // Active tab greyish-green pill
+val AtharNavPillBorder = Color(0xFF6B7E52)    // Active pill border
+val AtharNavIconActive = Color(0xFFC7EFA0)    // Glowing pale lime-sage active icon & text
+val AtharNavIconInactive = Color(0xFFA4AA9C)  // Refined grey-sage inactive icon
+val AtharNavGlow = Color(0xFFBCE484)          // Ambient glow lime green
 
 // ─── Featured Service Card Accents ───
 val AtharEmerald = Color(0xFF417858)          // Quran — dark sage emerald

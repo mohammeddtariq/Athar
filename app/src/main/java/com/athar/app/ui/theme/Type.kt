@@ -49,6 +49,10 @@ val QuranSurahNames = FontFamily(
     Font(R.font.quran_surah_names, FontWeight.Normal)
 )
 
+val QuranBismillah = FontFamily(
+    Font(R.font.bismillah, FontWeight.Normal)
+)
+
 val Typography = Typography(
     // ─── Display styles — Refined Sizes ───
     displayLarge = TextStyle(

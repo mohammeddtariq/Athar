@@ -63,9 +63,11 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.DayPrayers
 import com.athar.app.data.MadhabOption
+import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
+import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -103,6 +105,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val madhabId by prefs.madhabId.collectAsState(initial = "SHAFI")
     val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
+    val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
 
     // Minute-granularity clock for the "next" highlight — cheap, recomposes rarely.
     var nowMinute by remember { mutableStateOf(LocalTime.now()) }
@@ -177,7 +180,8 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
                     NextPrayerCard(
                         nextKey = next.key,
                         nextTime = next.time,
-                        isTomorrow = next.isTomorrow
+                        isTomorrow = next.isTomorrow,
+                        numberStyle = numberStyle
                     )
                 }
             }
@@ -211,7 +215,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
                     enter = fadeIn(tween(350, 250 + index * 50)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { 30 }
                 ) {
-                    PrayerItem(row)
+                    PrayerItem(row, numberStyle = numberStyle)
                 }
             }
         }
@@ -294,7 +298,8 @@ private fun TopBar(
 fun NextPrayerCard(
     nextKey: String,
     nextTime: LocalTime,
-    isTomorrow: Boolean
+    isTomorrow: Boolean,
+    numberStyle: NumberStylePreference = NumberStylePreference.WESTERN
 ) {
     // Second ticker scoped to this card only.
     var now by remember { mutableStateOf(LocalTime.now()) }
@@ -338,12 +343,13 @@ fun NextPrayerCard(
         }
         Duration.ofSeconds(diff)
     }
-    val remainingText = String.format(
+    val rawRemainingText = String.format(
         "%02d:%02d:%02d",
         remaining.toHours(),
         remaining.toMinutesPart(),
         remaining.toSecondsPart()
     )
+    val remainingText = formatDigits(rawRemainingText, numberStyle)
 
     Box(
         modifier = Modifier
@@ -424,7 +430,7 @@ fun NextPrayerCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                nextTime.format(timeFmt),
+                formatDigits(nextTime.format(timeFmt), numberStyle),
                 color = AtharPrimaryLight,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
@@ -496,7 +502,10 @@ private fun BoxScope.CardGlowBorder() {
 }
 
 @Composable
-fun PrayerItem(row: PrayerRow) {
+fun PrayerItem(
+    row: PrayerRow,
+    numberStyle: NumberStylePreference = NumberStylePreference.WESTERN
+) {
     Box(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 3.dp)
@@ -525,7 +534,7 @@ fun PrayerItem(row: PrayerRow) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                row.time.format(timeFmt),
+                formatDigits(row.time.format(timeFmt), numberStyle),
                 color = if (row.isNext) AtharPrimaryLight else AtharTextSecondary,
                 fontFamily = ThmanyahSans,
                 fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,

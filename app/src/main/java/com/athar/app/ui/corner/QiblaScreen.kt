@@ -8,8 +8,13 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,12 +56,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -66,7 +74,9 @@ import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.LocationHelper
+import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.QiblaCalculator
+import com.athar.app.data.formatDigits
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -95,6 +105,7 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
     val lat by prefs.latitude.collectAsState(initial = null)
     val lng by prefs.longitude.collectAsState(initial = null)
     val city by prefs.cityLabel.collectAsState(initial = null)
+    val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
 
     var liveLoc by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var providersOn by remember { mutableStateOf(LocationHelper.isProvidersOn(context)) }
@@ -322,7 +333,7 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
         val bearingInt = bearing.toInt()
 
         Text(
-            "$bearingInt°",
+            "${formatDigits(bearingInt.toString(), numberStyle)}°",
             fontFamily = ThmanyahSerifDisplay,
             fontWeight = FontWeight.Black,
             fontSize = 64.sp,
@@ -340,18 +351,84 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(18.dp))
+        // Angular difference to detect when phone faces the Qibla (within +-4 degrees)
+        val diff = kotlin.math.abs((bearing.toFloat() - smoothAzimuth + 540f) % 360f - 180f)
+        val isAligned = diff <= 4f
 
-        // Compass dial — rotates with the phone; qibla marker fixed at bearing.
-        Box(
+        Spacer(Modifier.height(14.dp))
+
+        // Compass dial with top-centered alignment target icon outside the dial
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Kaaba alignment target badge (outside dial at 12 o'clock position)
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(if (isAligned) AtharPrimary.copy(alpha = 0.28f) else AtharCardSurface)
+                    .border(
+                        width = if (isAligned) 2.dp else 1.dp,
+                        color = if (isAligned) AtharPrimaryLight else AtharCardBorder,
+                        shape = CircleShape
+                    )
+                    .shadow(
+                        elevation = if (isAligned) 14.dp else 0.dp,
+                        shape = CircleShape,
+                        spotColor = AtharPrimaryLight,
+                        ambientColor = AtharPrimaryLight.copy(alpha = 0.6f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_kaaba),
+                    contentDescription = "Qibla Target",
+                    tint = if (isAligned) Color.Unspecified else AtharTextSecondary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // Subtle vertical alignment pointer guide downward toward compass ring
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(10.dp)
+                    .background(if (isAligned) AtharPrimaryLight else AtharCardBorder)
+            )
+
+            // Compass Dial (needle points toward 12 o'clock when aligned)
             QiblaDial(
                 azimuth = smoothAzimuth,
                 qiblaBearing = bearing.toFloat(),
+                isAligned = isAligned,
                 modifier = Modifier.size(300.dp)
             )
+
+            // Locked-on feedback banner
+            AnimatedVisibility(
+                visible = isAligned,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(AtharPrimary.copy(alpha = 0.22f))
+                        .border(1.dp, AtharPrimaryLight, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 18.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.qibla_facing_target),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharPrimaryLight,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -368,7 +445,7 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
                 color = AtharTextSecondary
             )
             Text(
-                "$signalPct%",
+                "${formatDigits(signalPct.toString(), numberStyle)}%",
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Black,
                 fontSize = 15.sp,
@@ -424,8 +501,9 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
 
         if (distanceKm != null) {
             Spacer(Modifier.height(10.dp))
+            val formattedDistance = formatDigits("%,.0f".format(distanceKm), numberStyle)
             Text(
-                stringResource(R.string.qibla_distance, "%,.0f".format(distanceKm)),
+                stringResource(R.string.qibla_distance, formattedDistance),
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
@@ -545,6 +623,7 @@ private fun QiblaGhostButton(label: String, onClick: () -> Unit) {
 private fun QiblaDial(
     azimuth: Float,
     qiblaBearing: Float,
+    isAligned: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val measurer = rememberTextMeasurer()
@@ -552,15 +631,15 @@ private fun QiblaDial(
         val c = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension / 2f - 8.dp.toPx()
 
-        // Outer progress-style ring (pale pistachio, like the reference).
+        // Outer progress-style ring (highlights with emerald gold when aligned)
         drawArc(
-            color = AtharPrimaryLight.copy(alpha = 0.9f),
+            color = if (isAligned) AtharPrimaryLight else AtharPrimaryLight.copy(alpha = 0.85f),
             startAngle = -90f,
             sweepAngle = 360f,
             useCenter = false,
             topLeft = Offset(c.x - radius, c.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
-            style = Stroke(width = 5.dp.toPx())
+            style = Stroke(width = if (isAligned) 6.dp.toPx() else 4.5.dp.toPx())
         )
         // Faint track underneath for depth.
         drawArc(
@@ -652,17 +731,18 @@ private fun QiblaDial(
 
         // Needle: points toward the Qibla relative to phone heading.
         val relative = qiblaBearing - azimuth
+        val needleColor = if (isAligned) AtharPrimaryLight else AtharPrimaryLight.copy(alpha = 0.95f)
         rotate(degrees = relative, pivot = c) {
-            // Needle shaft upward.
+            // Needle shaft upward toward the 12 o'clock target
             drawLine(
-                AtharPrimaryLight,
+                needleColor,
                 Offset(c.x, c.y + 26.dp.toPx()),
                 Offset(c.x, c.y - (radius - 78.dp.toPx())),
-                strokeWidth = 4.dp.toPx()
+                strokeWidth = if (isAligned) 5.dp.toPx() else 4.dp.toPx()
             )
             // Kaaba-end cap (rounded weight at the bottom).
             drawCircle(
-                AtharPrimaryLight,
+                needleColor,
                 radius = 9.dp.toPx(),
                 center = Offset(c.x, c.y + 34.dp.toPx())
             )
@@ -673,8 +753,8 @@ private fun QiblaDial(
             )
             // Center pivot.
             drawCircle(AtharBackground, radius = 8.dp.toPx(), center = c)
-            drawCircle(AtharPrimaryLight, radius = 8.dp.toPx(), center = c, style = Stroke(3.dp.toPx()))
-            drawCircle(AtharPrimaryLight, radius = 2.5.dp.toPx(), center = c)
+            drawCircle(needleColor, radius = 8.dp.toPx(), center = c, style = Stroke(if (isAligned) 3.5.dp.toPx() else 3.dp.toPx()))
+            drawCircle(needleColor, radius = 2.5.dp.toPx(), center = c)
         }
     }
 }

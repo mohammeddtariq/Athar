@@ -39,12 +39,19 @@ class AppPreferences(private val context: Context) {
         private val NOTIF_MASTER_KEY = booleanPreferencesKey("notif_master")
         private val NOTIF_PREFIX = "notif_prayer_"
 
-        // Quran Appearance
+        // Number formatting preference
+        private val NUMBER_STYLE_KEY = stringPreferencesKey("number_style")
+
+        // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
         private val QURAN_FONT_SCALE_KEY = doublePreferencesKey("quran_font_scale")
+        private val QURAN_RECITER_KEY = stringPreferencesKey("quran_reciter")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
+    val numberStyle: Flow<NumberStylePreference> = context.dataStore.data.map {
+        NumberStylePreference.fromId(it[NUMBER_STYLE_KEY] ?: "western")
+    }
     val isOnboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_COMPLETED_KEY] ?: false }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
@@ -63,6 +70,9 @@ class AppPreferences(private val context: Context) {
     }
     val quranFontScale: Flow<Float> = context.dataStore.data.map {
         (it[QURAN_FONT_SCALE_KEY] ?: 1.0).toFloat()
+    }
+    val quranReciter: Flow<QuranReciter> = context.dataStore.data.map {
+        QuranReciter.fromId(it[QURAN_RECITER_KEY] ?: "minshawi")
     }
 
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
@@ -140,6 +150,59 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setQuranFontScale(scale: Float) {
         context.dataStore.edit { it[QURAN_FONT_SCALE_KEY] = scale.toDouble() }
+    }
+
+    suspend fun setQuranReciter(reciter: QuranReciter) {
+        context.dataStore.edit { it[QURAN_RECITER_KEY] = reciter.id }
+    }
+
+    suspend fun setNumberStyle(style: NumberStylePreference) {
+        context.dataStore.edit { it[NUMBER_STYLE_KEY] = style.id }
+    }
+}
+
+enum class NumberStylePreference(val id: String) {
+    WESTERN("western"),
+    ARABIC_INDIC("arabic");
+
+    companion object {
+        fun fromId(id: String): NumberStylePreference = entries.firstOrNull { it.id == id } ?: WESTERN
+    }
+}
+
+fun formatDigits(text: String, style: NumberStylePreference): String {
+    return when (style) {
+        NumberStylePreference.WESTERN -> text.map { c ->
+            if (c in '٠'..'٩') ('0' + (c - '٠')) else c
+        }.joinToString("")
+        NumberStylePreference.ARABIC_INDIC -> text.map { c ->
+            if (c in '0'..'9') ('٠' + (c - '0')) else c
+        }.joinToString("")
+    }
+}
+
+/** Quran Reciters (Sheikh Mohamed Siddiq Al-Minshawi & Sheikh Mishary Alafasy) */
+enum class QuranReciter(
+    val id: String,
+    val arabicName: String,
+    val englishName: String,
+    val baseUrl: String
+) {
+    MINSHAWI(
+        id = "minshawi",
+        arabicName = "الشيخ محمد صديق المنشاوي (مرتل)",
+        englishName = "Mohamed Siddiq Al-Minshawi",
+        baseUrl = "https://server10.mp3quran.net/minsh"
+    ),
+    ALAFASY(
+        id = "alafasy",
+        arabicName = "الشيخ مشاري راشد العفاسي",
+        englishName = "Mishary Rashid Alafasy",
+        baseUrl = "https://server8.mp3quran.net/afs"
+    );
+
+    companion object {
+        fun fromId(id: String): QuranReciter = entries.firstOrNull { it.id == id } ?: MINSHAWI
     }
 }
 

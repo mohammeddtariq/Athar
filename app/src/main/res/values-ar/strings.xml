@@ -87,6 +87,9 @@
     <!-- Settings -->
     <string name="settings_title">الإعدادات</string>
     <string name="settings_language">اللغة</string>
+    <string name="settings_number_format">نمط الأرقام</string>
+    <string name="number_format_western">1 2 3 (غربية)</string>
+    <string name="number_format_arabic">١ ٢ ٣ (مشرقية)</string>
     <string name="settings_location">الموقع</string>
     <string name="settings_method">طريقة الحساب</string>
     <string name="settings_madhab">المذهب</string>
@@ -137,4 +140,15 @@
     <string name="quran_font_size">حجم الخط</string>
     <string name="quran_font_bold">عريض</string>
     <string name="quran_audio_playing">تشغيل تلاوة السورة…</string>
+    <string name="quran_tab_surahs">السور</string>
+    <string name="quran_tab_juz">الأجزاء</string>
+    <string name="quran_juz_label">الجزء %1$d</string>
+    <string name="quran_page_label">صفحة %1$d</string>
+    <string name="quran_revelation_meccan">مكية</string>
+    <string name="quran_revelation_medinan">مدنية</string>
+    <string name="qibla_facing_target">أنت تواجه القبلة الآن</string>
+    <string name="quran_reciter_title">القارئ</string>
+    <string name="quran_next_surah_title">السورة التالية • NEXT SURAH</string>
+    <string name="quran_go_to_next">الانتقال إلى سورة %1$s</string>
+    <string name="quran_scroll_hint">مرّر للأسفل لمتابعة القراءة</string>
 </resources>
