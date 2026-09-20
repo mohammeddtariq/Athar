@@ -161,9 +161,9 @@ fun SettingsScreen() {
                 Text(
                     stringResource(R.string.settings_title),
                     color = AtharTextPrimary,
-                    fontFamily = ThmanyahSerifDisplay,
+                    fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Black,
-                    fontSize = 24.sp,
+                    fontSize = 22.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -290,9 +290,9 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 stringResource(R.string.duas_title),
-                                fontFamily = ThmanyahSerifDisplay,
+                                fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Black,
-                                fontSize = 20.sp,
+                                fontSize = 22.sp,
                                 color = AtharTextPrimary
                             )
                             Text(
@@ -394,9 +394,10 @@ private fun CategoryHeaderBanner(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 10.dp),
+            .padding(horizontal = 24.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(Modifier.height(18.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -411,7 +412,7 @@ private fun CategoryHeaderBanner(
             )
             Box(Modifier.weight(1f).height(1.dp).background(AtharCardBorder))
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(14.dp))
         Text(
             text = titleAr,
             fontFamily = ThmanyahSerifDisplay,
@@ -634,7 +635,7 @@ private fun DuaItemCard(
             Text(
                 text = dua.arabic,
                 fontFamily = ThmanyahSerifText,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 19.sp,
                 lineHeight = 36.sp,
                 color = AtharTextPrimary,

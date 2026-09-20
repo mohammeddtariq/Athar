@@ -162,6 +162,15 @@ object QuranRepository {
             chunkVerses(verses, chunkSize)
         }
 
+    /**
+     * Loads surah verses grouped by canonical Madani Mushaf pages (1..604).
+     */
+    suspend fun getSurahPageChunks(context: Context, number: Int): List<QuranPageChunk>? =
+        withContext(Dispatchers.IO) {
+            val verses = getSurahVerses(context, number) ?: return@withContext null
+            QuranPages.getSurahPageChunks(number, verses)
+        }
+
     fun chunkVerses(verses: List<QuranVerse>, chunkSize: Int = 18): List<VerseChunk> {
         if (verses.isEmpty()) return emptyList()
         // Surahs with 25 or fewer verses (e.g. Al-Fatihah, Al-Ikhlas, etc.) stay in a single continuous chunk

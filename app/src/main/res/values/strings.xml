@@ -134,9 +134,10 @@
     <string name="qibla_stale">Location is off — showing the last saved location. Turn it on for an accurate Qibla.</string>
     <string name="qibla_turn_on">Turn on</string>
     <!-- Quran Appearance -->
-    <string name="quran_theme_amoled">AMOLED</string>
-    <string name="quran_theme_olive">App Theme</string>
-    <string name="quran_theme_light">Light Paper</string>
+    <string name="quran_theme_amoled">AMOLED Dark</string>
+    <string name="quran_theme_olive">Athar\'s Theme</string>
+    <string name="quran_theme_light">Classic Light</string>
+    <string name="quran_reader_controls_hint">Tap to adjust font, appearance, reciter &amp; recitation</string>
     <string name="quran_font_size">Font Size</string>
     <string name="quran_font_bold">Bold</string>
     <string name="quran_audio_playing">Playing Surah recitation…</string>
@@ -151,4 +152,17 @@
     <string name="quran_next_surah_title">Next Surah</string>
     <string name="quran_go_to_next">Read Surah %1$s</string>
     <string name="quran_scroll_hint">Scroll down for continuous reading</string>
+    <string name="quran_nav_font">Font</string>
+    <string name="quran_nav_theme">Theme</string>
+    <string name="quran_nav_reciter">Reciter</string>
+    <string name="quran_nav_recitation">Recite</string>
+    <string name="quran_nav_arrows_hint">Navigate between Surahs</string>
+    <string name="quran_menu_hint">Quran Index &amp; Search</string>
+    <string name="quran_menu_title">Quran Index</string>
+    <string name="quran_menu_full_index">Main Index</string>
+    <string name="quran_previous_surah">Previous Surah</string>
+    <string name="quran_next_surah">Next Surah</string>
+    <string name="quran_index_hint">Tap to open Quran index</string>
+    <string name="quran_index">Index</string>
+    <string name="quran_back_press_again">Swipe back again to return to Quran index</string>
 </resources>

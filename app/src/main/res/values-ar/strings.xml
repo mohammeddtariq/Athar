@@ -136,7 +136,8 @@
     <!-- Quran Appearance -->
     <string name="quran_theme_amoled">أسود نقي (AMOLED)</string>
     <string name="quran_theme_olive">طابع أثر</string>
-    <string name="quran_theme_light">ورق مصحف فاتح</string>
+    <string name="quran_theme_light">الأبيض الكلاسيكي</string>
+    <string name="quran_reader_controls_hint">تحكّم بحجم الخط والمظهر والقارئ والتلاوة</string>
     <string name="quran_font_size">حجم الخط</string>
     <string name="quran_font_bold">عريض</string>
     <string name="quran_audio_playing">تشغيل تلاوة السورة…</string>
@@ -148,7 +149,20 @@
     <string name="quran_revelation_medinan">مدنية</string>
     <string name="qibla_facing_target">أنت تواجه القبلة الآن</string>
     <string name="quran_reciter_title">القارئ</string>
-    <string name="quran_next_surah_title">السورة التالية • NEXT SURAH</string>
+    <string name="quran_next_surah_title">السورة التالية</string>
     <string name="quran_go_to_next">الانتقال إلى سورة %1$s</string>
     <string name="quran_scroll_hint">مرّر للأسفل لمتابعة القراءة</string>
+    <string name="quran_nav_font">الخط</string>
+    <string name="quran_nav_theme">المظهر</string>
+    <string name="quran_nav_reciter">القارئ</string>
+    <string name="quran_nav_recitation">التلاوة</string>
+    <string name="quran_nav_arrows_hint">الانتقال بين السور</string>
+    <string name="quran_menu_hint">فهرس السور والأجزاء</string>
+    <string name="quran_menu_title">فهرس القرآن الكريم</string>
+    <string name="quran_menu_full_index">عرض الفهرس الكامل</string>
+    <string name="quran_previous_surah">السورة السابقة</string>
+    <string name="quran_next_surah">السورة التالية</string>
+    <string name="quran_index_hint">اضغط هنا لفتح فهرس القرآن</string>
+    <string name="quran_index">الفهرس</string>
+    <string name="quran_back_press_again">اسحب مرة أخرى للرجوع إلى الفهرس</string>
 </resources>
