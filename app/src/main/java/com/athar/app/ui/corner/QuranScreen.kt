@@ -19,6 +19,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -54,6 +55,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,6 +72,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -1017,16 +1020,21 @@ private fun SurahReader(
                         // Calligraphic Basmala ligature for surahs other than 1 and 9
                         if (surah.number != 1 && surah.number != 9) {
                             item(key = "basmala_${surah.number}") {
-                                Text(
-                                    text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
-                                    fontFamily = QuranBismillah,
-                                    fontSize = (42 * fontScale).sp,
-                                    color = colors.text,
-                                    textAlign = TextAlign.Center,
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 10.dp, bottom = 26.dp)
-                                )
+                                        .padding(top = 12.dp, bottom = 26.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_bismillah),
+                                        contentDescription = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                                        tint = colors.text,
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.95f)
+                                            .height(52.dp)
+                                    )
+                                }
                             }
                         }
 

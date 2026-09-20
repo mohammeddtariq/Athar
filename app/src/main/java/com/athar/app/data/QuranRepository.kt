@@ -71,7 +71,7 @@ object QuranRepository {
      */
     fun getSurahFullTitleGlyphs(surahNumber: Int): String {
         val nameGlyph = getSurahTitleGlyph(surahNumber)
-        return "$nameGlyph\u00A0\uE903"
+        return "$nameGlyph\uE903"
     }
 
     private fun cacheFile(context: Context, number: Int): File =
