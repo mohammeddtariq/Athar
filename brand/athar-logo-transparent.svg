@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <title>Athar — Transparent Brand Mark</title>
+  <desc>Transparent vector lockup: ATHAR calligraphy mark, ATHAR wordmark and bio.</desc>
+  <!-- Subtle eight-pointed star lattice backdrop -->
+  <g stroke="#C9D8B4" stroke-width="1.5" opacity="0.15" fill="none">
+    <g id="star">
+      <rect x="-46" y="-46" width="92" height="92"/>
+      <rect x="-46" y="-46" width="92" height="92" transform="rotate(45)"/>
+    </g>
+    <use href="#star" x="200" y="300"/>
+    <use href="#star" x="1000" y="300"/>
+    <use href="#star" x="200" y="900"/>
+    <use href="#star" x="1000" y="900"/>
+    <use href="#star" x="600" y="150"/>
+    <use href="#star" x="600" y="1050"/>
+  </g>
+  <!-- App name -->
+  <text x="600" y="520" text-anchor="middle" font-family="'Thmanyah Serif Display', 'Amiri', 'Traditional Arabic', serif" font-weight="900" font-size="220" fill="#E6EEDA">أَثَر</text>
+  <!-- Wordmark -->
+  <text x="600" y="640" text-anchor="middle" font-family="'Thmanyah Sans', 'Segoe UI', system-ui, sans-serif" font-weight="500" font-size="64" letter-spacing="28" fill="#93A086">ATHAR</text>
+  <!-- Bio -->
+  <text x="600" y="760" text-anchor="middle" font-family="'Thmanyah Sans', 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="52" fill="#E6EEDA">Your Muslim companion app.</text>
+</svg>

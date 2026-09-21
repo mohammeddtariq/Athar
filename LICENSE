@@ -1,0 +1,50 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The GNU General Public License is a free, copyleft license for
+software and other kinds of works.
+
+  The licenses for most software and other practical works are designed
+to take away your freedom to share and change the works.  By contrast,
+the GNU General Public License is intended to guarantee your freedom to
+share and change all versions of a program--to make sure it remains free
+software for all its users.  We, the Free Software Foundation, use the
+GNU General Public License for most of our software; it applies also to
+any other work released this way by its authors.  You can apply it to
+your programs, too.
+
+[... Standard GNU General Public License v3 terms apply ...]
+
+==============================================================================
+ATHAR (أَثَر) BRANDING & TRADEMARK POLICY
+==============================================================================
+Copyright (C) 2026 Athar - أثر. All Rights Reserved.
+
+Pursuant to Section 7(e) of the GNU General Public License v3.0, the following
+additional terms apply to this program:
+
+1. TRADEMARK & BRANDING EXCLUSION:
+   No trademark rights are granted to the names "Athar", "أَثَر", the official
+   Athar logo, application icon, or associated visual brand assets. These remain
+   the sole proprietary property of Athar - أثر.
+
+2. FORKS AND DERIVATIVE WORKS:
+   If you distribute a modified version of this software, or redistribute this
+   software on any public distribution platform (including but not limited to
+   Google Play Store, F-Droid, or other app repositories), you MUST:
+   a) Change the application name to something distinctly different.
+   b) Remove all official Athar logos, brand artwork, and icons.
+   c) Explicitly state that your work is a modification and not an official
+      release endorsed by the original author.
+
+3. FACTUAL ATTRIBUTION:
+   Factual statements indicating that the software is derived from or based on
+   Athar are permitted, provided they do not imply endorsement, affiliation, or
+   sponsorship by the original author.
+==============================================================================

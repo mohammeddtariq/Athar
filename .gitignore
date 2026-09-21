@@ -10,3 +10,10 @@ app/build
 .externalNativeBuild
 .cxx
 *.hprof
+*.jks
+*.keystore
+key.properties
+*.apk
+*.aab
+app/release/
+/app/release/
