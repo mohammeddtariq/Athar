@@ -1,15 +1,20 @@
 <div align="center">
 
-### «بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ»
-*"Bismillāh ir-Rahmān ir-Rahīm"*  
-*"In the Name of Allah, the Entirely Merciful, the Especially Merciful"*
+<p align="center">
+  <img src="brand/bismillah-card.png" alt="Bismillah" width="510" />
+</p>
 
-<br>
+<p align="center">
+  <img src="brand/athar-logo-rounded.png" alt="Athar Logo" width="130" />
+</p>
 
-<img src="brand/athar-logo-rounded.png" alt="Athar Logo" width="130" />
+<p align="center">
+  <font size="6"><b>Athar - أثر</b></font>
+</p>
 
-# Athar - أثر
-### *رفيقك المسلم &nbsp;•&nbsp; Your Muslim companion app*
+<p align="center">
+  <img src="brand/typewriter-bio.gif" alt="Athar Tagline" width="460" />
+</p>
 
 <br>
 
@@ -100,8 +105,9 @@ Athar is currently in its public Beta stage. Community feedback, suggestions, an
 
 <div align="center">
 
-### **«اللَّهُمَّ اجْعَلْهُ فِي مِيزَانِ حَسَنَاتِي، وَصَدَقَةً جَارِيَةً عِنْدَ مَمَاتِي»**
-*"O Allah, place this work upon the scale of my good deeds, and let it be a continuing charity (Sadaqah Jariyah) after my passing."*
+<p align="center">
+  <img src="brand/dua-card.png" alt="Athar Dua" width="680" />
+</p>
 
 </div>
 
@@ -160,17 +166,9 @@ See the [LICENSE](LICENSE) file for full GPLv3 terms and the [NOTICE](NOTICE) fi
 
 <br>
 
-### **أَثَر**
-**A &nbsp;T &nbsp;H &nbsp;A &nbsp;R**
-
-<br>
-
-### «هَذَا هُوَ أَثَرِي»
-*"That's my legacy"*
-
-<br>
-
-<sub>Copyright © 2026 Athar - أثر. All Rights Reserved.</sub>
+<p align="center">
+  <img src="brand/athar-footer.png" alt="Athar Legacy" width="260" />
+</p>
 
 <br>
 
