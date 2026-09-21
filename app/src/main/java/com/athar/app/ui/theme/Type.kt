@@ -42,12 +42,7 @@ val ThmanyahSerifText = FontFamily(
 )
 
 val QuranUthmanicHafs = FontFamily(
-    Font(R.font.quran_uthmanic_hafs, FontWeight.Light),
-    Font(R.font.quran_uthmanic_hafs, FontWeight.Normal),
-    Font(R.font.quran_uthmanic_hafs, FontWeight.Medium),
-    Font(R.font.quran_uthmanic_hafs, FontWeight.SemiBold),
-    Font(R.font.quran_uthmanic_hafs, FontWeight.Bold),
-    Font(R.font.quran_uthmanic_hafs, FontWeight.Black)
+    Font(R.font.quran_uthmanic_hafs, FontWeight.Normal)
 )
 
 val QuranSurahNames = FontFamily(

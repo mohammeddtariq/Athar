@@ -101,6 +101,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -1390,8 +1391,16 @@ private fun SurahReader(
                                         Text(
                                             text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
                                             fontFamily = QuranBismillah,
+                                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
                                             fontSize = (42 * fontScale).sp,
                                             color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                                            style = TextStyle(
+                                                shadow = if (fontBold) Shadow(
+                                                    color = (if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8)).copy(alpha = 0.5f),
+                                                    offset = Offset(0.35f, 0.35f),
+                                                    blurRadius = 0.5f
+                                                ) else null
+                                            ),
                                             textAlign = TextAlign.Center,
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -1471,7 +1480,14 @@ private fun SurahReader(
                                     lineHeight = (42 * fontScale).sp,
                                     color = colors.text,
                                     textAlign = TextAlign.Center,
-                                    style = TextStyle(textDirection = TextDirection.Rtl),
+                                    style = TextStyle(
+                                        textDirection = TextDirection.Rtl,
+                                        shadow = if (fontBold) Shadow(
+                                            color = colors.text.copy(alpha = 0.5f),
+                                            offset = Offset(0.35f, 0.35f),
+                                            blurRadius = 0.5f
+                                        ) else null
+                                    ),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .widthIn(max = 520.dp)
