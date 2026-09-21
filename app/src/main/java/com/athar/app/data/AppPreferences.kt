@@ -46,6 +46,7 @@ class AppPreferences(private val context: Context) {
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
         private val QURAN_FONT_SCALE_KEY = doublePreferencesKey("quran_font_scale")
         private val QURAN_RECITER_KEY = stringPreferencesKey("quran_reciter")
+        private val QURAN_LAYOUT_MODE_KEY = stringPreferencesKey("quran_layout_mode")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -73,6 +74,9 @@ class AppPreferences(private val context: Context) {
     }
     val quranReciter: Flow<QuranReciter> = context.dataStore.data.map {
         QuranReciter.fromId(it[QURAN_RECITER_KEY] ?: "minshawi")
+    }
+    val quranLayoutMode: Flow<QuranLayoutMode> = context.dataStore.data.map {
+        QuranLayoutMode.fromId(it[QURAN_LAYOUT_MODE_KEY] ?: "TEXT")
     }
 
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
@@ -156,6 +160,10 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[QURAN_RECITER_KEY] = reciter.id }
     }
 
+    suspend fun setQuranLayoutMode(mode: QuranLayoutMode) {
+        context.dataStore.edit { it[QURAN_LAYOUT_MODE_KEY] = mode.id }
+    }
+
     suspend fun setNumberStyle(style: NumberStylePreference) {
         context.dataStore.edit { it[NUMBER_STYLE_KEY] = style.id }
     }
@@ -203,6 +211,16 @@ enum class QuranReciter(
 
     companion object {
         fun fromId(id: String): QuranReciter = entries.firstOrNull { it.id == id } ?: MINSHAWI
+    }
+}
+
+/** Quran Reader Layout Modes: Traditional Text Flow (Default) vs Vector Mushaf Pages (Beta) */
+enum class QuranLayoutMode(val id: String) {
+    TEXT("TEXT"),
+    PAGES_SVG("PAGES_SVG");
+
+    companion object {
+        fun fromId(id: String): QuranLayoutMode = entries.firstOrNull { it.id == id } ?: TEXT
     }
 }
 

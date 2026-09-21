@@ -6,6 +6,8 @@ import android.graphics.Picture
 import android.util.LruCache
 import androidx.activity.compose.BackHandler
 import java.util.Locale
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -131,6 +133,7 @@ import com.athar.app.data.QuranReciter
 import com.athar.app.data.QuranRepository
 import com.athar.app.data.QuranRepository.toArabicIndic
 import com.athar.app.data.QuranThemeMode
+import com.athar.app.data.QuranLayoutMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.athar.app.data.VerseChunk
@@ -289,11 +292,13 @@ fun QuranScreen(
     val savedThemeMode by appPrefs.quranThemeMode.collectAsState(initial = QuranThemeMode.AMOLED)
     val savedFontScale by appPrefs.quranFontScale.collectAsState(initial = 1.0f)
     val savedReciter by appPrefs.quranReciter.collectAsState(initial = QuranReciter.MINSHAWI)
+    val savedLayoutMode by appPrefs.quranLayoutMode.collectAsState(initial = QuranLayoutMode.TEXT)
 
     var themeMode by remember(savedThemeMode) { mutableStateOf(savedThemeMode) }
     var fontScale by remember(savedFontScale) { mutableFloatStateOf(savedFontScale) }
     var reciter by remember(savedReciter) { mutableStateOf(savedReciter) }
     var fontBold by remember { mutableStateOf(false) }
+    var layoutMode by remember(savedLayoutMode) { mutableStateOf(savedLayoutMode) }
 
     var openSurah by remember { mutableStateOf<SurahMeta?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -345,6 +350,11 @@ fun QuranScreen(
                     fontScale = fontScale,
                     fontBold = fontBold,
                     reciter = reciter,
+                    layoutMode = layoutMode,
+                    onLayoutModeChange = { newMode ->
+                        layoutMode = newMode
+                        scope.launch { appPrefs.setQuranLayoutMode(newMode) }
+                    },
                     onThemeChange = { newMode ->
                         themeMode = newMode
                         scope.launch { appPrefs.setQuranThemeMode(newMode) }
@@ -981,15 +991,19 @@ private fun LigatureMushafPage(
     }
     val strokeWidth = if (fontBold) "0.24" else "0"
 
+    var isError by remember(pageFileName, ink, markerInk, strokeWidth) { mutableStateOf(false) }
+
     val renderData by produceState<MushafPageRenderData?>(initialValue = null, pageFileName, ink, markerInk, strokeWidth) {
         value = withContext(Dispatchers.IO) {
             try {
+                isError = false
                 val cacheKey = "${pageFileName}_${ink}_${markerInk}_${strokeWidth}"
                 val cached = mushafPageCache.get(cacheKey)
                 if (cached != null) return@withContext cached
 
                 val rawSvg = context.assets.open("mushaf/$pageFileName").bufferedReader().use { it.readText() }
                 val cleanSvg = rawSvg.trimStart('\uFEFF')
+                    .replace("""id="md-page-outer"""", """id="md-page-outer" display="none" visibility="hidden"""")
 
                 // Find Y centers of any surah title groups on this page
                 val headerYFractions = mutableListOf<Float>()
@@ -1010,7 +1024,8 @@ private fun LigatureMushafPage(
                     <style>
                         path { fill: $ink; stroke: $ink; stroke-width: $strokeWidth; stroke-linejoin: round; }
                         [data-type="aya-mark"] path { fill: $markerInk; stroke: $markerInk; }
-                        #md-page-outer path { fill: $markerInk; stroke: $markerInk; }
+                        #md-page-outer { display: none; visibility: hidden; }
+                        #md-page-outer path { display: none; visibility: hidden; }
                     </style>
                 """.trimIndent()
 
@@ -1031,9 +1046,13 @@ private fun LigatureMushafPage(
                     val data = MushafPageRenderData(pic, headerYFractions)
                     mushafPageCache.put(cacheKey, data)
                     data
-                } else null
+                } else {
+                    isError = true
+                    null
+                }
             } catch (e: Throwable) {
                 android.util.Log.e("LigatureMushafPage", "Error rendering SVG page $pageFileName", e)
+                isError = true
                 null
             }
         }
@@ -1050,7 +1069,7 @@ private fun LigatureMushafPage(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(horizontalScrollState),
+                .then(if (pageScale > 1.05f) Modifier.horizontalScroll(horizontalScrollState) else Modifier),
             contentAlignment = Alignment.TopCenter
         ) {
             Box(
@@ -1091,6 +1110,18 @@ private fun LigatureMushafPage(
                                 .offset(y = frameTop)
                         )
                     }
+                } else if (isError) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "تعذر تحميل الصفحة $pageNumber",
+                            fontFamily = ThmanyahSans,
+                            fontSize = 12.sp,
+                            color = colors.dividerText
+                        )
+                    }
                 } else {
                     // Loading placeholder with identical aspect ratio to prevent layout jump
                     Box(
@@ -1117,6 +1148,8 @@ private fun SurahReader(
     fontScale: Float,
     fontBold: Boolean,
     reciter: QuranReciter,
+    layoutMode: QuranLayoutMode,
+    onLayoutModeChange: (QuranLayoutMode) -> Unit,
     onThemeChange: (QuranThemeMode) -> Unit,
     onFontScaleChange: (Float) -> Unit,
     onReciterChange: (QuranReciter) -> Unit,
@@ -1167,6 +1200,14 @@ private fun SurahReader(
         showControlsHint = false
         showIndexHint = false
         showNavHint = false
+    }
+
+    var showJuzInTopBar by remember(surah.number) { mutableStateOf(false) }
+    LaunchedEffect(surah.number) {
+        while (true) {
+            kotlinx.coroutines.delay(3500)
+            showJuzInTopBar = !showJuzInTopBar
+        }
     }
 
     // Pinch-to-zoom: dynamically scales font size with two-finger gesture
@@ -1335,75 +1376,127 @@ private fun SurahReader(
                         ),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Each asset is a complete, authored Mushaf page. It includes the
-                        // Surah title, Bismillah where applicable, exact line breaks and
-                        // ayah markers, so nothing is reflowed by Compose text layout.
-                        items(chunks, key = { "page_${surah.number}_${it.pageNumber}" }) { chunk ->
-                            LigatureMushafPage(
-                                pageNumber = chunk.pageNumber,
-                                colors = colors,
-                                themeMode = themeMode,
-                                fontScale = fontScale,
-                                fontBold = fontBold,
-                                showSurahFrame = chunk.verses.firstOrNull()?.number == 1,
-                                modifier = Modifier
-                            )
-                            /*
-                            val sizeSp = (22 * fontScale).sp
-                            val inlineContent = remember(chunk, fontScale, colors.ayahMarker) {
-                                chunk.verses.associate { verse ->
-                                    "ayah_${verse.number}" to InlineTextContent(
-                                        Placeholder(
-                                            width = sizeSp,
-                                            height = sizeSp,
-                                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                                        )
+                        if (layoutMode == QuranLayoutMode.TEXT) {
+                            // ─── DESIGN 1 (DEFAULT): Traditional Uthmanic Text Flow ───
+                            // Bismillah header (all surahs except Surah 9 At-Tawbah)
+                            if (surah.number != 9) {
+                                item(key = "bismillah_${surah.number}") {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp, bottom = 18.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        AyahEndMedallion(
-                                            number = verse.number,
-                                            fontScale = fontScale,
-                                            color = colors.ayahMarker
+                                        Text(
+                                            text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
+                                            fontFamily = QuranBismillah,
+                                            fontSize = (42 * fontScale).sp,
+                                            color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
-                                    }
-                                }
-                            }
-
-                            val annotated = remember(chunk) {
-                                buildAnnotatedString {
-                                    for (i in chunk.verses.indices) {
-                                        val verse = chunk.verses[i]
-                                        append(verse.text)
-                                        append("\u202F")
-                                        appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
-                                        if (i < chunk.verses.lastIndex) {
-                                            append(" ")
+                                        Spacer(Modifier.height(10.dp))
+                                        // Delicate divider line with center dot
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 48.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(0.6.dp)
+                                                    .background(colors.dividerLine.copy(alpha = 0.6f))
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(horizontal = 10.dp)
+                                                    .size(3.5.dp)
+                                                    .clip(CircleShape)
+                                                    .background(colors.dividerText.copy(alpha = 0.5f))
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(0.6.dp)
+                                                    .background(colors.dividerLine.copy(alpha = 0.6f))
+                                            )
                                         }
                                     }
                                 }
                             }
 
-                            Text(
-                                text = annotated,
-                                inlineContent = inlineContent,
-                                fontFamily = QuranUthmanicHafs,
-                                fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = (22 * fontScale).sp,
-                                lineHeight = (38 * fontScale).sp,
-                                color = colors.text,
-                                textAlign = TextAlign.Justify,
-                                style = TextStyle(textDirection = TextDirection.Rtl),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = 520.dp)
-                                    .padding(horizontal = 8.dp, vertical = 6.dp)
-                            )
+                            // Each chunk represents one authentic Madani Mushaf Page
+                            items(chunks, key = { "text_page_${surah.number}_${it.pageNumber}" }) { chunk ->
+                                val sizeSp = (22 * fontScale).sp
+                                val inlineContent = remember(chunk, fontScale, colors.ayahMarker) {
+                                    chunk.verses.associate { verse ->
+                                        "ayah_${verse.number}" to InlineTextContent(
+                                            Placeholder(
+                                                width = sizeSp,
+                                                height = sizeSp,
+                                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                            )
+                                        ) {
+                                            AyahEndMedallion(
+                                                number = verse.number,
+                                                fontScale = fontScale,
+                                                color = colors.ayahMarker
+                                            )
+                                        }
+                                    }
+                                }
 
-                            // Page Divider (indicates this page ended in the Mushaf — Arabic-Indic numerals only)
-                            QuranPageDivider(
-                                pageNumber = chunk.pageNumber,
-                                colors = colors
-                            )
-                            */
+                                val annotated = remember(chunk) {
+                                    buildAnnotatedString {
+                                        for (i in chunk.verses.indices) {
+                                            val verse = chunk.verses[i]
+                                            append(verse.text)
+                                            append("\u202F")
+                                            appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
+                                            if (i < chunk.verses.lastIndex) {
+                                                append(" ")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    text = annotated,
+                                    inlineContent = inlineContent,
+                                    fontFamily = QuranUthmanicHafs,
+                                    fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = (22 * fontScale).sp,
+                                    lineHeight = (42 * fontScale).sp,
+                                    color = colors.text,
+                                    textAlign = TextAlign.Center,
+                                    style = TextStyle(textDirection = TextDirection.Rtl),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .widthIn(max = 520.dp)
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                )
+
+                                // Page Divider (indicates this page ended in the Mushaf — Arabic-Indic numerals only)
+                                QuranPageDivider(
+                                    pageNumber = chunk.pageNumber,
+                                    colors = colors
+                                )
+                            }
+                        } else {
+                            // ─── DESIGN 2 (BETA): Vector Mushaf Pages ───
+                            items(chunks, key = { "svg_page_${surah.number}_${it.pageNumber}" }) { chunk ->
+                                LigatureMushafPage(
+                                    pageNumber = chunk.pageNumber,
+                                    colors = colors,
+                                    themeMode = themeMode,
+                                    fontScale = fontScale,
+                                    fontBold = fontBold,
+                                    showSurahFrame = chunk.verses.firstOrNull()?.number == 1,
+                                    modifier = Modifier
+                                )
+                            }
                         }
 
                         // Netflix-Style Next Surah Card
@@ -1655,7 +1748,7 @@ private fun SurahReader(
                                 )
                             }
 
-                            // 2. Center: Surah Name button (wide bold font, tapping opens Quran Index dropdown)
+                            // 2. Center: Surah & Juz Name pill (alternating animation, tapping opens Quran Index dropdown)
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.Center)
@@ -1678,15 +1771,36 @@ private fun SurahReader(
                                     .padding(horizontal = 18.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = surahDisplayName,
-                                    fontFamily = ThmanyahSans,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 15.sp,
-                                    color = colors.pillText,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1
-                                )
+                                AnimatedContent(
+                                    targetState = showJuzInTopBar,
+                                    transitionSpec = {
+                                        (fadeIn(animationSpec = tween(380)) + slideInVertically(animationSpec = tween(380)) { height -> height / 2 })
+                                            .togetherWith(fadeOut(animationSpec = tween(280)) + slideOutVertically(animationSpec = tween(280)) { height -> -height / 2 })
+                                    },
+                                    label = "TopBarSurahJuzPill"
+                                ) { isJuz ->
+                                    val textToShow = if (isJuz) {
+                                        if (isArabic) {
+                                            val j = allJuz.firstOrNull { it.number == surah.juz }
+                                            val jName = j?.arabicName?.substringBefore(" (") ?: "الجزء ${surah.juz.toArabicIndic()}"
+                                            jName
+                                        } else {
+                                            "Juz ${surah.juz}"
+                                        }
+                                    } else {
+                                        if (isArabic) "سُورَةُ ${surah.arabicName}" else "Surah ${surah.englishName}"
+                                    }
+
+                                    Text(
+                                        text = textToShow,
+                                        fontFamily = QuranUthmanicHafs,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = colors.pillText,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1
+                                    )
+                                }
                             }
 
                             // 3. Top Right: Next Surah Button (replaces menu button)
@@ -2185,8 +2299,119 @@ private fun SurahReader(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(220.dp)
+                            modifier = Modifier.width(240.dp)
                         ) {
+                            // Layout Mode Switcher inside Font Panel
+                            Text(
+                                text = stringResource(R.string.quran_layout_style),
+                                fontFamily = ThmanyahSans,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.dividerText,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(colors.floatingPillItemBg)
+                                    .padding(3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                val isTextSelected = layoutMode == QuranLayoutMode.TEXT
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(11.dp))
+                                        .background(if (isTextSelected) colors.floatingPillBg else Color.Transparent)
+                                        .border(
+                                            1.dp,
+                                            if (isTextSelected) colors.floatingPillActiveIcon.copy(alpha = 0.5f) else Color.Transparent,
+                                            RoundedCornerShape(11.dp)
+                                        )
+                                        .clickable { onLayoutModeChange(QuranLayoutMode.TEXT) }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.quran_layout_text),
+                                            fontFamily = ThmanyahSans,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isTextSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isTextSelected) colors.floatingPillActiveIcon else colors.floatingPillItemIcon,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.quran_layout_default),
+                                            fontFamily = ThmanyahSans,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = if (isTextSelected) colors.floatingPillActiveIcon.copy(alpha = 0.7f) else colors.dividerText.copy(alpha = 0.6f),
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                val isPagesSelected = layoutMode == QuranLayoutMode.PAGES_SVG
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(11.dp))
+                                        .background(if (isPagesSelected) colors.floatingPillBg else Color.Transparent)
+                                        .border(
+                                            1.dp,
+                                            if (isPagesSelected) colors.floatingPillActiveIcon.copy(alpha = 0.5f) else Color.Transparent,
+                                            RoundedCornerShape(11.dp)
+                                        )
+                                        .clickable { onLayoutModeChange(QuranLayoutMode.PAGES_SVG) }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.quran_layout_pages),
+                                            fontFamily = ThmanyahSans,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isPagesSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isPagesSelected) colors.floatingPillActiveIcon else colors.floatingPillItemIcon,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(if (colors.isLight) Color(0xFFC26E28).copy(alpha = 0.15f) else Color(0xFFE58E3A).copy(alpha = 0.2f))
+                                                .border(
+                                                    0.5.dp,
+                                                    if (colors.isLight) Color(0xFFC26E28).copy(alpha = 0.4f) else Color(0xFFE58E3A).copy(alpha = 0.45f),
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.quran_layout_beta),
+                                                fontFamily = ThmanyahSans,
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (colors.isLight) Color(0xFFC26E28) else Color(0xFFE58E3A),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(12.dp))
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,

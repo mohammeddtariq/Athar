@@ -165,4 +165,9 @@
     <string name="quran_index_hint">Tap to open Quran index</string>
     <string name="quran_index">Index</string>
     <string name="quran_back_press_again">Swipe back again to return to Quran index</string>
+    <string name="quran_layout_style">Reading Mode</string>
+    <string name="quran_layout_text">Reader Mushaf</string>
+    <string name="quran_layout_pages">Uthmanic Script</string>
+    <string name="quran_layout_beta">Beta</string>
+    <string name="quran_layout_default">Default</string>
 </resources>

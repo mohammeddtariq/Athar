@@ -165,4 +165,9 @@
     <string name="quran_index_hint">اضغط هنا لفتح فهرس القرآن</string>
     <string name="quran_index">الفهرس</string>
     <string name="quran_back_press_again">اسحب مرة أخرى للرجوع إلى الفهرس</string>
+    <string name="quran_layout_style">نمط العرض</string>
+    <string name="quran_layout_text">المصحف المقروء</string>
+    <string name="quran_layout_pages">الرسم العثماني</string>
+    <string name="quran_layout_beta">تجريبي</string>
+    <string name="quran_layout_default">افتراضي</string>
 </resources>
