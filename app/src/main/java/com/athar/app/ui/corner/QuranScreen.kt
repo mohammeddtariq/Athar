@@ -2,6 +2,8 @@ package com.athar.app.ui.corner
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.graphics.Picture
+import android.util.LruCache
 import androidx.activity.compose.BackHandler
 import java.util.Locale
 import androidx.compose.animation.AnimatedVisibility
@@ -27,6 +29,7 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -49,6 +52,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -80,6 +84,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -115,6 +120,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.QuranPageChunk
@@ -123,6 +131,8 @@ import com.athar.app.data.QuranReciter
 import com.athar.app.data.QuranRepository
 import com.athar.app.data.QuranRepository.toArabicIndic
 import com.athar.app.data.QuranThemeMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.athar.app.data.VerseChunk
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -884,68 +894,218 @@ private fun QuranPageDivider(
 }
 
 @Composable
-private fun BismillahDivider(colors: QuranReaderColors) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 22.dp, start = 24.dp, end = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(0.8.dp)
-                .background(colors.dividerLine)
-        )
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 14.dp)
-                .size(5.dp)
-                .clip(CircleShape)
-                .background(colors.ayahMarker)
-        )
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(0.8.dp)
-                .background(colors.dividerLine)
-        )
-    }
-}
-
-@Composable
 private fun SurahHeaderBanner(
     surahNumber: Int,
     colors: QuranReaderColors,
+    themeMode: QuranThemeMode = QuranThemeMode.AMOLED,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .widthIn(max = 500.dp)
-            .padding(horizontal = 4.dp)
-            .aspectRatio(687f / 79f),
+    // The frame supplied with the Mushaf artwork is deliberately a compact,
+    // self-contained heading. Letting it fill the reader width distorts both the
+    // ornament and the calligraphy, especially on large phones.
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(R.drawable.ic_surah_banner_frame),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(
-                if (colors.isLight) Color(0xFF6E553F)
-                else Color(0xFFB8BEB7)
-            ),
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.fillMaxSize()
-        )
-        Text(
-            text = QuranRepository.getSurahFullTitleGlyphs(surahNumber),
-            fontFamily = QuranSurahNames,
-            fontSize = 30.sp,
-            color = if (colors.isLight) Color(0xFF1A1D18) else Color.White,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 2.dp)
-        )
+        val bannerWidth = minOf(maxWidth - 24.dp, 300.dp)
+        Box(
+            modifier = Modifier
+                .width(bannerWidth)
+                .aspectRatio(687f / 79f),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_surah_banner_frame),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(
+                    when {
+                        colors.isLight -> Color(0xFF6E553F)
+                        themeMode == QuranThemeMode.DARK_OLIVE -> Color(0xFF8E9B86)
+                        else -> Color(0xFFC8CEC6)
+                    }
+                ),
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
+            Text(
+                text = QuranRepository.getSurahFullTitleGlyphs(surahNumber),
+                fontFamily = QuranSurahNames,
+                fontWeight = FontWeight.Normal,
+                fontSize = 21.sp,
+                lineHeight = 21.sp,
+                color = if (colors.isLight) Color(0xFF1A1D18) else Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 72.dp)
+                    .offset(y = (-1).dp)
+            )
+        }
+    }
+}
+
+private data class MushafPageRenderData(
+    val picture: Picture,
+    val surahHeaderYFractions: List<Float>
+)
+
+private val mushafPageCache = LruCache<String, MushafPageRenderData>(24)
+
+/**
+ * Renders a single Ligature Basd Mushaf page exactly as supplied by the
+ * bundled SVG layout, using AndroidSvg for native Canvas rendering.
+ *
+ * The SVG paths already include the Uthmani glyph shapes, surah headers,
+ * Bismillah, ayah medallions, line breaks and page spacing — no WebView needed.
+ */
+@Composable
+private fun LigatureMushafPage(
+    pageNumber: Int,
+    colors: QuranReaderColors,
+    themeMode: QuranThemeMode,
+    fontScale: Float,
+    fontBold: Boolean,
+    showSurahFrame: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val pageFileName = remember(pageNumber) { pageNumber.toString().padStart(3, '0') + ".svg" }
+
+    // Ink and marker colors based on theme
+    val ink = if (colors.isLight) "#1A1D18" else "#F7F8F5"
+    val markerInk = when (themeMode) {
+        QuranThemeMode.AMOLED -> "#B4BCB0"
+        QuranThemeMode.DARK_OLIVE -> "#8E9B86"
+        QuranThemeMode.LIGHT -> "#4E5846"
+    }
+    val strokeWidth = if (fontBold) "0.24" else "0"
+
+    val renderData by produceState<MushafPageRenderData?>(initialValue = null, pageFileName, ink, markerInk, strokeWidth) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val cacheKey = "${pageFileName}_${ink}_${markerInk}_${strokeWidth}"
+                val cached = mushafPageCache.get(cacheKey)
+                if (cached != null) return@withContext cached
+
+                val rawSvg = context.assets.open("mushaf/$pageFileName").bufferedReader().use { it.readText() }
+                val cleanSvg = rawSvg.trimStart('\uFEFF')
+
+                // Find Y centers of any surah title groups on this page
+                val headerYFractions = mutableListOf<Float>()
+                val surahGroups = Regex("""<g\s+id="[^"]+"[^>]*data-type="surah-name">(.*?)</g>\s*</g>""", RegexOption.DOT_MATCHES_ALL)
+                    .findAll(cleanSvg)
+                for (match in surahGroups) {
+                    val body = match.groupValues[1]
+                    val ys = Regex("""M\s*[-+]?\d*\.?\d+[\s,]+([-+]?\d*\.?\d+)""").findAll(body)
+                        .mapNotNull { it.groupValues[1].toFloatOrNull() }
+                        .toList()
+                    if (ys.isNotEmpty()) {
+                        val avgY = ys.average().toFloat()
+                        headerYFractions.add(avgY / 547.09f)
+                    }
+                }
+
+                val cssBlock = """
+                    <style>
+                        path { fill: $ink; stroke: $ink; stroke-width: $strokeWidth; stroke-linejoin: round; }
+                        [data-type="aya-mark"] path { fill: $markerInk; stroke: $markerInk; }
+                        #md-page-outer path { fill: $markerInk; stroke: $markerInk; }
+                    </style>
+                """.trimIndent()
+
+                val svgStart = cleanSvg.indexOf("<svg")
+                val styledSvg = if (svgStart != -1) {
+                    val svgTagEnd = cleanSvg.indexOf('>', svgStart)
+                    if (svgTagEnd != -1) {
+                        cleanSvg.substring(0, svgTagEnd + 1) + "\n" + cssBlock + "\n" + cleanSvg.substring(svgTagEnd + 1)
+                    } else cleanSvg
+                } else cleanSvg
+
+                val svg = com.caverock.androidsvg.SVG.getFromString(styledSvg)
+                svg.documentWidth = 382.68f
+                svg.documentHeight = 547.09f
+                val pic = svg.renderToPicture()
+
+                if (pic != null) {
+                    val data = MushafPageRenderData(pic, headerYFractions)
+                    mushafPageCache.put(cacheKey, data)
+                    data
+                } else null
+            } catch (e: Throwable) {
+                android.util.Log.e("LigatureMushafPage", "Error rendering SVG page $pageFileName", e)
+                null
+            }
+        }
+    }
+
+    val pageScale = fontScale.coerceIn(0.70f, 2.0f)
+    val horizontalScrollState = rememberScrollState()
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val containerWidth = maxWidth
+        val scaledWidth = containerWidth * pageScale
+        val scaledHeight = scaledWidth * (547.09f / 382.68f)
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(horizontalScrollState),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(scaledWidth)
+                    .height(scaledHeight),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                val data = renderData
+                if (data != null) {
+                    // 1. Medina Mushaf Vector Page (SVG drawn directly on Canvas via hardware-accelerated Picture)
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawIntoCanvas { canvas ->
+                            val scaleX = size.width / 382.68f
+                            val scaleY = size.height / 547.09f
+                            canvas.nativeCanvas.save()
+                            canvas.nativeCanvas.scale(scaleX, scaleY)
+                            canvas.nativeCanvas.drawPicture(data.picture)
+                            canvas.nativeCanvas.restore()
+                        }
+                    }
+
+                    // 2. Ornate Surah Header Cartouche Frame(s) mathematically centered on surah title(s)
+                    for (yFraction in data.surahHeaderYFractions) {
+                        val frameCenterY = scaledHeight * yFraction
+                        val frameWidth = scaledWidth * (314f / 382.68f)
+                        val frameHeight = frameWidth * (79f / 687f)
+                        val frameTop = frameCenterY - (frameHeight / 2f)
+
+                        Image(
+                            painter = painterResource(R.drawable.ic_surah_banner_frame),
+                            contentDescription = null,
+                            colorFilter = ColorFilter.tint(colors.surahHeaderBorder),
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier
+                                .width(frameWidth)
+                                .height(frameHeight)
+                                .offset(y = frameTop)
+                        )
+                    }
+                } else {
+                    // Loading placeholder with identical aspect ratio to prevent layout jump
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = colors.ayahMarker,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1156,7 +1316,7 @@ private fun SurahReader(
             // ─── READER BODY (Verses scroll underneath the floating top bar) ───
             when {
                 pageChunks != null -> {
-                    val chunks = pageChunks!!
+                    val chunks = pageChunks ?: emptyList()
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -1175,20 +1335,21 @@ private fun SurahReader(
                         ),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // 1. Medina Mushaf Ornate Header Frame with Calligraphic Surah Name
-                        item(key = "surah_header_${surah.number}") {
-                            SurahHeaderBanner(
-                                surahNumber = surah.number,
-                                colors = colors,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp, bottom = 12.dp)
-                            )
-                        }
-
-                        // Each chunk represents one authentic Madani Mushaf Page
+                        // Each asset is a complete, authored Mushaf page. It includes the
+                        // Surah title, Bismillah where applicable, exact line breaks and
+                        // ayah markers, so nothing is reflowed by Compose text layout.
                         items(chunks, key = { "page_${surah.number}_${it.pageNumber}" }) { chunk ->
-                            val sizeSp = (20 * fontScale).sp
+                            LigatureMushafPage(
+                                pageNumber = chunk.pageNumber,
+                                colors = colors,
+                                themeMode = themeMode,
+                                fontScale = fontScale,
+                                fontBold = fontBold,
+                                showSurahFrame = chunk.verses.firstOrNull()?.number == 1,
+                                modifier = Modifier
+                            )
+                            /*
+                            val sizeSp = (22 * fontScale).sp
                             val inlineContent = remember(chunk, fontScale, colors.ayahMarker) {
                                 chunk.verses.associate { verse ->
                                     "ayah_${verse.number}" to InlineTextContent(
@@ -1227,12 +1388,14 @@ private fun SurahReader(
                                 fontFamily = QuranUthmanicHafs,
                                 fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = (22 * fontScale).sp,
-                                lineHeight = (44 * fontScale).sp,
+                                lineHeight = (38 * fontScale).sp,
                                 color = colors.text,
-                                textAlign = TextAlign.Center,
+                                textAlign = TextAlign.Justify,
+                                style = TextStyle(textDirection = TextDirection.Rtl),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .widthIn(max = 520.dp)
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
                             )
 
                             // Page Divider (indicates this page ended in the Mushaf — Arabic-Indic numerals only)
@@ -1240,6 +1403,7 @@ private fun SurahReader(
                                 pageNumber = chunk.pageNumber,
                                 colors = colors
                             )
+                            */
                         }
 
                         // Netflix-Style Next Surah Card
@@ -1304,8 +1468,9 @@ private fun SurahReader(
                                     Spacer(Modifier.height(10.dp))
 
                                     // Details subtitle
+                                    val nextSurahSubName = if (isArabic) "سورة ${nextSurah.arabicName}" else nextSurah.englishName
                                     Text(
-                                        text = "${nextSurah.englishName} • ${stringResource(R.string.quran_ayahs, nextSurah.ayahs)} • " +
+                                        text = "$nextSurahSubName • ${stringResource(R.string.quran_ayahs, nextSurah.ayahs)} • " +
                                             (if (nextSurah.revelationType == RevelationType.MECCAN)
                                                 stringResource(R.string.quran_revelation_meccan)
                                             else

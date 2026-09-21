@@ -342,7 +342,6 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                         ) {
                             PrayerSubChip(
                                 title = if (isArabic) "باقي الصلوات" else "Other Prayers",
-                                badgeCount = formatDigits("12", numberStyle),
                                 isSelected = selectedPrayerSubCategory == "other",
                                 onClick = {
                                     if (selectedPrayerSubCategory != "other") {
@@ -354,7 +353,6 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                             Spacer(Modifier.width(8.dp))
                             PrayerSubChip(
                                 title = if (isArabic) "صلاة الفجر" else "Fajr",
-                                badgeCount = formatDigits("15", numberStyle),
                                 isSelected = selectedPrayerSubCategory == "fajr",
                                 onClick = {
                                     if (selectedPrayerSubCategory != "fajr") {
@@ -366,7 +364,6 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                             Spacer(Modifier.width(8.dp))
                             PrayerSubChip(
                                 title = if (isArabic) "صلاة المغرب" else "Maghrib",
-                                badgeCount = formatDigits("14", numberStyle),
                                 isSelected = selectedPrayerSubCategory == "maghrib",
                                 onClick = {
                                     if (selectedPrayerSubCategory != "maghrib") {
@@ -482,7 +479,6 @@ private fun CategoryChip(
 @Composable
 private fun PrayerSubChip(
     title: String,
-    badgeCount: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -512,38 +508,16 @@ private fun PrayerSubChip(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 11.dp, vertical = 5.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Text(
-                text = title,
-                fontFamily = ThmanyahSans,
-                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                fontSize = 11.5.sp,
-                color = if (isSelected) AtharPrimaryLight else AtharTextSecondary
-            )
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (isSelected) AtharPrimaryLight.copy(alpha = 0.25f)
-                        else AtharCardBorder.copy(alpha = 0.4f)
-                    )
-                    .padding(horizontal = 5.dp, vertical = 1.dp)
-            ) {
-                Text(
-                    text = badgeCount,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                    color = if (isSelected) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.8f)
-                )
-            }
-        }
+        Text(
+            text = title,
+            fontFamily = ThmanyahSans,
+            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+            fontSize = 12.sp,
+            color = if (isSelected) AtharPrimaryLight else AtharTextSecondary
+        )
     }
 }
 

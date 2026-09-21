@@ -62,6 +62,8 @@ dependencies {
     implementation("com.batoulapps.adhan:adhan:1.2.1")
     // One-tap location (fresh fix + enable-location dialog) — Google Play Services (free SDK).
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    // AndroidSvg — renders Mushaf SVG pages directly to Canvas (no WebView needed)
+    implementation("com.caverock:androidsvg-aar:1.4")
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

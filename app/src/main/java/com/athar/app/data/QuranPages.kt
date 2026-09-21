@@ -80,6 +80,15 @@ object QuranPages {
     }
 
     /**
+     * Returns the 1-indexed page range (1..604) for a given [surahNumber] and [totalAyahs].
+     */
+    fun getPagesForSurah(surahNumber: Int, totalAyahs: Int): List<Int> {
+        val startPage = getPageForVerse(surahNumber, 1)
+        val endPage = getPageForVerse(surahNumber, totalAyahs)
+        return (startPage..endPage).toList()
+    }
+
+    /**
      * Groups a surah's verses by their canonical Mushaf pages so that verses flow
      * continuously per page and can be separated by authentic page ending dividers.
      */
