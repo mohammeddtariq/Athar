@@ -7,6 +7,9 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.athar.app.MainActivity
@@ -21,24 +24,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalTime
+import java.util.Locale
 
 object PrayerNotifications {
-    const val CHANNEL_ID = "athar_prayer_times"
+    const val CHANNEL_ID = "athar_prayer_times_v2"
+    private const val LEGACY_CHANNEL_ID = "athar_prayer_times"
     const val REQUEST_BASE = 4000
+
+    fun getNotificationSoundUri(context: Context): Uri {
+        return Uri.parse("android.resource://${context.packageName}/${R.raw.athar_notification}")
+    }
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Clean up legacy channel so that the new unique custom sound is applied unconditionally
+        try {
+            manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
+        } catch (_: Exception) {}
+
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_ID,
-                context.getString(R.string.notif_channel_name),
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = context.getString(R.string.notif_channel_desc)
-            }
-        )
+
+        val soundUri = getNotificationSoundUri(context)
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .build()
+
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            context.getString(R.string.notif_channel_name),
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = context.getString(R.string.notif_channel_desc)
+            setSound(soundUri, audioAttributes)
+            enableVibration(true)
+        }
+        manager.createNotificationChannel(channel)
     }
 
     fun prayerRequestCode(key: String): Int = REQUEST_BASE + key.hashCode().rem(900)
@@ -64,7 +87,7 @@ object PrayerNotifications {
                 "fajr" to today.fajr, "sunrise" to today.sunrise, "dhuhr" to today.dhuhr,
                 "asr" to today.asr, "maghrib" to today.maghrib, "isha" to today.isha
             )
-            var target: Pair<String, java.time.LocalTime>? = null
+            var target: Pair<String, LocalTime>? = null
             var tomorrow = false
             for (entry in ordered) {
                 val enabled = prefs.prayerNotificationEnabled(entry.first).first()
@@ -119,40 +142,51 @@ object PrayerNotifications {
         }
     }
 
-    fun showPrayerNotification(context: Context, prayerKey: String) {
+    private fun getLocalizedContext(context: Context, languageCode: String): Context {
+        val locale = Locale.forLanguageTag(languageCode)
+        val config = Configuration(context.resources.configuration).apply {
+            setLocale(locale)
+        }
+        return context.createConfigurationContext(config)
+    }
+
+    fun showPrayerNotification(context: Context, prayerKey: String, languageCode: String = "ar") {
         ensureChannel(context)
+        val localizedContext = getLocalizedContext(context, languageCode)
+
         val openIntent = Intent(context.applicationContext, MainActivity::class.java)
         val openPending = PendingIntent.getActivity(
             context.applicationContext, 100,
             openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val title = prayerTitle(context, prayerKey)
+
+        val (titleRes, bodyRes) = when (prayerKey) {
+            "fajr" -> R.string.notif_fajr_title to R.string.notif_fajr_body
+            "sunrise" -> R.string.notif_sunrise_title to R.string.notif_sunrise_body
+            "dhuhr" -> R.string.notif_dhuhr_title to R.string.notif_dhuhr_body
+            "asr" -> R.string.notif_asr_title to R.string.notif_asr_body
+            "maghrib" -> R.string.notif_maghrib_title to R.string.notif_maghrib_body
+            "isha" -> R.string.notif_isha_title to R.string.notif_isha_body
+            else -> R.string.notif_fajr_title to R.string.notif_fajr_body
+        }
+
+        val title = localizedContext.getString(titleRes)
+        val body = localizedContext.getString(bodyRes)
+        val soundUri = getNotificationSoundUri(context)
+
         val notification = NotificationCompat.Builder(context.applicationContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText(
-                if (prayerKey == "sunrise") context.getString(R.string.notif_sunrise_body)
-                else context.getString(R.string.notif_prayer_body)
-            )
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setSound(soundUri)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(openPending)
             .build()
+
         val manager = context.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(prayerRequestCode(prayerKey), notification)
-    }
-
-    private fun prayerTitle(context: Context, key: String): String {
-        val res = when (key) {
-            "fajr" -> R.string.home_prayer_fajr
-            "sunrise" -> R.string.home_prayer_sunrise
-            "dhuhr" -> R.string.home_prayer_dhuhr
-            "asr" -> R.string.home_prayer_asr
-            "maghrib" -> R.string.home_prayer_maghrib
-            "isha" -> R.string.home_prayer_isha
-            else -> R.string.home_prayer_fajr
-        }
-        return context.getString(R.string.notif_prayer_title, context.getString(res))
     }
 }
 
@@ -163,9 +197,17 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val key = intent.getStringExtra(EXTRA_PRAYER_KEY) ?: return
-        PrayerNotifications.showPrayerNotification(context, key)
-        // Chain the following prayer.
-        PrayerNotifications.scheduleNext(context)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val prefs = AppPreferences(context.applicationContext)
+                val langCode = prefs.selectedLanguage.first()
+                PrayerNotifications.showPrayerNotification(context, key, langCode)
+                PrayerNotifications.scheduleNext(context)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 }
 

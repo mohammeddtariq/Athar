@@ -101,11 +101,22 @@
     <string name="settings_version">الإصدار 1.0 (تجريبي)</string>
 
     <!-- Notifications -->
-    <string name="notif_channel_name">مواقيت الصلاة</string>
-    <string name="notif_channel_desc">تذكير عند دخول وقت الصلاة</string>
+    <string name="notif_channel_name">أَثَر • نداء الصلاة</string>
+    <string name="notif_channel_desc">تنبيهات أوقات الصلاة بنبرة هادئة ملهمة</string>
     <string name="notif_prayer_title">حان وقت %s</string>
     <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
     <string name="notif_sunrise_body">الشروق — انتهى وقت الفجر.</string>
+    <string name="notif_fajr_title">صلاة الفجر • نورٌ في مطلع يومك</string>
+    <string name="notif_fajr_body">الصلاة خيرٌ من النوم • استفتح يومك بسكينة الفجر، واجعل أول أثرك لقاء ربك.</string>
+    <string name="notif_sunrise_title">شروق الشمس • إشراقة يوم جديد</string>
+    <string name="notif_dhuhr_title">صلاة الظهر • واحة في منتصف اليوم</string>
+    <string name="notif_dhuhr_body">أرح بها فؤادك • قف في زحام يومك وقفة سكينة، وجدد العهد بلقاء ربك.</string>
+    <string name="notif_asr_title">صلاة العصر • وقفة الصلاة الوسطى</string>
+    <string name="notif_asr_body">حافظ على صلاتك • محطة سلام ترتب شتات النفس وتفيض بالبركات.</string>
+    <string name="notif_maghrib_title">صلاة المغرب • شكرٌ مع الغروب</string>
+    <string name="notif_maghrib_body">أقبل الليل بحمد الله • ارفع كفيك شاكراً على يومٍ انقضى في حفظه وكرمه.</string>
+    <string name="notif_isha_title">صلاة العشاء • ختام اليوم وسكينته</string>
+    <string name="notif_isha_body">أودع ليلتك لله • اختم يومك بسجدة سكينة تُبدد التعب، وتمنح قلبك الطمأنينة.</string>
     <!-- Onboarding tagline -->
     <string name="onboarding_tagline_short">رفيقك المسلم</string>
     <string name="onboarding_notif_title">تنبيهات الصلاة</string>

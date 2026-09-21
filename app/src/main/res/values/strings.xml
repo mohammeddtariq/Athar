@@ -101,11 +101,22 @@
     <string name="settings_version">Version 1.0 (beta)</string>
 
     <!-- Notifications -->
-    <string name="notif_channel_name">Prayer times</string>
-    <string name="notif_channel_desc">Reminders at prayer time</string>
+    <string name="notif_channel_name">Athar • Prayer Reminders</string>
+    <string name="notif_channel_desc">Serene reminders for each prayer time</string>
     <string name="notif_prayer_title">Time for %s</string>
     <string name="notif_prayer_body">May your prayer be accepted.</string>
     <string name="notif_sunrise_body">Sunrise — the time of Fajr has ended.</string>
+    <string name="notif_fajr_title">Fajr • Dawn of Tranquility</string>
+    <string name="notif_fajr_body">Prayer is better than sleep • Begin your day in sacred stillness and divine light.</string>
+    <string name="notif_sunrise_title">Sunrise • A Grateful Morning</string>
+    <string name="notif_dhuhr_title">Dhuhr • Midday Sanctuary</string>
+    <string name="notif_dhuhr_body">Pause the rush of life • Reconnect your heart in quiet devotion before your Creator.</string>
+    <string name="notif_asr_title">Asr • The Middle Prayer</string>
+    <string name="notif_asr_body">An oasis of afternoon peace • Center your soul and welcome the blessings of remembrance.</string>
+    <string name="notif_maghrib_title">Maghrib • Gratitude at Dusk</string>
+    <string name="notif_maghrib_body">Sunset arrives with peace • Lift your heart in praise for another day granted by God.</string>
+    <string name="notif_isha_title">Isha • Stillness of the Night</string>
+    <string name="notif_isha_body">Crown your day with serenity • Surrender all weary thoughts in a quiet prayer before rest.</string>
     <!-- Onboarding tagline -->
     <string name="onboarding_tagline_short">Your Muslim companion app</string>
     <string name="onboarding_notif_title">Prayer reminders</string>
