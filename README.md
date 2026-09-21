@@ -1,16 +1,15 @@
 <div align="center">
 
-> ## **«بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ»**
-> *"Bismillāh ir-Rahmān ir-Rahīm"*  
-> <sub>*"\"In the Name of Allah, the Entirely Merciful, the Especially Merciful\""*</sub>
+### «بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ»
+*"Bismillāh ir-Rahmān ir-Rahīm"*  
+*"In the Name of Allah, the Entirely Merciful, the Especially Merciful"*
 
 <br>
 
 <img src="brand/athar-logo-rounded.png" alt="Athar Logo" width="130" />
 
 # Athar - أثر
-
-<img src="brand/typewriter-tagline.svg" alt="Athar Tagline" height="28" />
+### *رفيقك المسلم &nbsp;•&nbsp; Your Muslim companion app*
 
 <br>
 
@@ -101,8 +100,8 @@ Athar is currently in its public Beta stage. Community feedback, suggestions, an
 
 <div align="center">
 
-> ### **«اللَّهُمَّ اجْعَلْهُ فِي مِيزَانِ حَسَنَاتِي، وَصَدَقَةً جَارِيَةً عِنْدَ مَمَاتِي»**
-> *"O Allah, place this work upon the scale of my good deeds, and let it be a continuing charity (Sadaqah Jariyah) after my passing."*
+### **«اللَّهُمَّ اجْعَلْهُ فِي مِيزَانِ حَسَنَاتِي، وَصَدَقَةً جَارِيَةً عِنْدَ مَمَاتِي»**
+*"O Allah, place this work upon the scale of my good deeds, and let it be a continuing charity (Sadaqah Jariyah) after my passing."*
 
 </div>
 
@@ -161,13 +160,13 @@ See the [LICENSE](LICENSE) file for full GPLv3 terms and the [NOTICE](NOTICE) fi
 
 <br>
 
-<h1 style="font-size: 34px; margin-bottom: 2px;">أَثَر</h1>
-<p style="letter-spacing: 6px; font-weight: bold; font-size: 13px; color: #889080; margin-top: 0;">A T H A R</p>
+### **أَثَر**
+**A &nbsp;T &nbsp;H &nbsp;A &nbsp;R**
 
 <br>
 
-<h3>«هَذَا هُوَ أَثَرِي»</h3>
-<p><i>"That's my legacy"</i></p>
+### «هَذَا هُوَ أَثَرِي»
+*"That's my legacy"*
 
 <br>
 
