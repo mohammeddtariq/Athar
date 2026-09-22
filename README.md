@@ -73,6 +73,11 @@ Completely offline-capable and free of third-party analytics, account mandates, 
 ---
 
 ### 2. The Holy Quran
+| Arabic (العربية) | English |
+| :---: | :---: |
+| <img src="screenshots/quran_ar.jpg" width="340" alt="Quran Arabic" /> | <img src="screenshots/quran_en.jpg" width="340" alt="Quran English" /> |
+
+<br>
 
 | <img src="screenshots/quran_theme_amoled.jpg" width="245" alt="AMOLED Dark" /> | <img src="screenshots/quran_theme_light.jpg" width="245" alt="Classic Light" /> | <img src="screenshots/quran_theme_olive.jpg" width="245" alt="Athar's Theme" /> |
 | :---: | :---: | :---: |
