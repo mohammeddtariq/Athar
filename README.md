@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <img src="brand/bismillah-card.png" alt="Bismillah" width="510" />
+  <img src="brand/bismillah-card.png" alt="Bismillah" width="600" />
 </p>
 
 <p align="center">
@@ -73,9 +73,10 @@ Completely offline-capable and free of third-party analytics, account mandates, 
 ---
 
 ### 2. The Holy Quran
-| Arabic (العربية) | English |
-| :---: | :---: |
-| <img src="screenshots/quran_ar.jpg" width="340" alt="Quran Arabic" /> | <img src="screenshots/quran_en.jpg" width="340" alt="Quran English" /> |
+
+| <img src="screenshots/quran_theme_amoled.jpg" width="245" alt="AMOLED Dark" /> | <img src="screenshots/quran_theme_light.jpg" width="245" alt="Classic Light" /> | <img src="screenshots/quran_theme_olive.jpg" width="245" alt="Athar's Theme" /> |
+| :---: | :---: | :---: |
+| **أسود نقي (AMOLED)**<br>AMOLED Dark | **الأبيض الكلاسيكي**<br>Classic Light | **طابع أثر**<br>Athar's Theme |
 
 <br>
 
@@ -106,7 +107,7 @@ Athar is currently in its public Beta stage. Community feedback, suggestions, an
 <div align="center">
 
 <p align="center">
-  <img src="brand/dua-card.png" alt="Athar Dua" width="680" />
+  <img src="brand/dua-card.png" alt="Athar Dua" width="100%" />
 </p>
 
 </div>
