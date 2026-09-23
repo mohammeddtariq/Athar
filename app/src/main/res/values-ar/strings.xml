@@ -106,7 +106,9 @@
     <string name="settings_about">عن أَثَر</string>
     <string name="settings_about_sub">مبني بمكتبات مفتوحة — انظر الشكر والتقدير</string>
     <string name="settings_github">أَثَر على GitHub</string>
-    <string name="settings_version">الإصدار %s</string>
+    <string name="settings_version">الإصدار \u2066%s\u2069</string>
+    <string name="settings_version_beta">الإصدار %1$s (تجريبي %2$s)</string>
+    <string name="settings_version_beta_simple">الإصدار %s (تجريبي)</string>
 
     <!-- Notifications -->
     <string name="notif_channel_name">أَثَر • نداء الصلاة</string>

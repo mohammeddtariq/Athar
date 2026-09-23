@@ -577,7 +577,7 @@ fun SettingsScreen(
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                        formatAppVersion(BuildConfig.VERSION_NAME),
                         fontFamily = ThmanyahSans,
                         fontSize = 11.sp,
                         color = AtharTextSecondary,
@@ -787,4 +787,21 @@ private fun methodDisplayName(m: CalcMethod): String = when (m) {
     CalcMethod.UMM_AL_QURA -> "Umm al-Qura"
     CalcMethod.ISNA -> "ISNA (North America)"
     CalcMethod.MOON_SIGHTING -> "Moonsighting Committee"
+}
+
+@Composable
+private fun formatAppVersion(versionName: String): String {
+    val betaMatch = remember(versionName) {
+        Regex("""^v?(\d+\.\d+(?:\.\d+)?)-beta\.?(\d+)?$""", RegexOption.IGNORE_CASE).matchEntire(versionName)
+    }
+    if (betaMatch != null) {
+        val base = betaMatch.groupValues[1]
+        val num = betaMatch.groupValues.getOrNull(2)
+        return if (!num.isNullOrEmpty()) {
+            stringResource(R.string.settings_version_beta, base, num)
+        } else {
+            stringResource(R.string.settings_version_beta_simple, base)
+        }
+    }
+    return stringResource(R.string.settings_version, versionName)
 }
