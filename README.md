@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <font size="6"><b>Athar - أثر</b></font>
+  <font size="14"><b>Athar - أَثَـــر</b></font>
 </p>
 
 <p align="center">
