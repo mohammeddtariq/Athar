@@ -25,6 +25,7 @@
     <string name="home_friday_prayer">Jumu\'ah</string>
     <string name="home_prayers_title">Prayer Times</string>
     <string name="home_view_details">View Details</string>
+    <string name="home_after_prayer_adhkar">After Prayer Adhkar</string>
 
     <!-- Services Screen -->
     <string name="services_title">Essence</string>
@@ -83,6 +84,13 @@
     <!-- Duas -->
     <string name="duas_title">Duas</string>
     <string name="duas_sub">From Hisnul Muslim</string>
+    <string name="dua_action_open_duas">Open Duas Tab</string>
+    <string name="dua_action_close">Close</string>
+    <string name="dua_tap_to_count">Tap to count</string>
+    <string name="dua_completed">Completed</string>
+    <string name="dua_keep_counting">Keep counting</string>
+    <string name="dua_previous">Previous</string>
+    <string name="dua_next">Next</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -46,6 +47,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -388,6 +391,14 @@ private fun CategoryHeaderBanner(
     isArabic: Boolean,
     numberStyle: NumberStylePreference
 ) {
+    val countLabel = if (isArabic) {
+        if (itemCount in 3..10) "أذكار" else "ذكر"
+    } else {
+        if (itemCount == 1) "Dua" else "Duas"
+    }
+    val countText = "${formatDigits("$itemCount", numberStyle)} $countLabel"
+    val mainTitle = if (isArabic) titleAr else titleEn
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -411,7 +422,7 @@ private fun CategoryHeaderBanner(
         }
         Spacer(Modifier.height(14.dp))
         Text(
-            text = titleAr,
+            text = mainTitle,
             fontFamily = ThmanyahSerifDisplay,
             fontWeight = FontWeight.Black,
             fontSize = 20.sp,
@@ -419,10 +430,10 @@ private fun CategoryHeaderBanner(
             textAlign = TextAlign.Center
         )
         Text(
-            text = titleEn + " • " + formatDigits("$itemCount", numberStyle) + " " + (if (isArabic) "أذكار" else "Duas"),
+            text = countText,
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 11.5.sp,
+            fontSize = 12.sp,
             letterSpacing = 1.sp,
             color = AtharPrimaryLight,
             textAlign = TextAlign.Center
@@ -577,13 +588,15 @@ private fun DuaItemCard(
                         .border(1.dp, AtharPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 9.dp, vertical = 4.dp)
                 ) {
-                    Text(
-                        text = "${formatDigits((index + 1).toString(), numberStyle)} / ${formatDigits(totalCount.toString(), numberStyle)}",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 11.sp,
-                        color = AtharPrimaryLight
-                    )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            text = "${formatDigits((index + 1).toString(), numberStyle)} / ${formatDigits(totalCount.toString(), numberStyle)}",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 11.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
                 }
 
                 // Source badge
@@ -705,9 +718,13 @@ private fun DuaItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (count == 0) "اضغط للعدّ • Tap to count"
-                           else if (isDone) "اكتمل الذكر • Completed"
-                           else "استمر في العد • Keep counting",
+                    text = if (count == 0) {
+                        if (isArabic) "اضغط للعدّ" else "Tap to count"
+                    } else if (isDone) {
+                        if (isArabic) "اكتمل الذكر" else "Completed"
+                    } else {
+                        if (isArabic) "استمر في العد" else "Keep counting"
+                    },
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Medium,
                     fontSize = 10.5.sp,
@@ -729,15 +746,17 @@ private fun DuaItemCard(
                         )
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    Text(
-                        text = if (count == 0) formatDigits("×$target", numberStyle)
-                               else if (isDone) "${formatDigits(target.toString(), numberStyle)} ✓"
-                               else "${formatDigits(count.toString(), numberStyle)} / ${formatDigits(target.toString(), numberStyle)}",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 12.sp,
-                        color = if (isDone) AtharTextOnPrimary else AtharPrimaryLight
-                    )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            text = if (count == 0) formatDigits("×$target", numberStyle)
+                                   else if (isDone) "${formatDigits(target.toString(), numberStyle)} ✓"
+                                   else "${formatDigits(count.toString(), numberStyle)} / ${formatDigits(target.toString(), numberStyle)}",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp,
+                            color = if (isDone) AtharTextOnPrimary else AtharPrimaryLight
+                        )
+                    }
                 }
             }
         }

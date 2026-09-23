@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -173,29 +175,12 @@ fun OnboardingFlow(
         modifier = Modifier
             .fillMaxSize()
             .background(AtharBackground)
-            .statusBarsPadding()
     ) {
         IslamicPatternBackground(
             modifier = Modifier.fillMaxSize(),
             alpha = 0.07f,
             animated = false
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(onClick = { finish(skipLocation = true) }) {
-                Text(
-                    text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = AtharTextSecondary
-                )
-            }
-        }
 
         when (step) {
             0 -> GreetingStep(
@@ -256,6 +241,40 @@ fun OnboardingFlow(
                 onStart = { finish(skipLocation = false) }
             )
         }
+
+        // Floating sticky top bar with skip button placed on top of step content
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            AtharBackground,
+                            AtharBackground.copy(alpha = 0.98f),
+                            AtharBackground.copy(alpha = 0.88f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { finish(skipLocation = true) }) {
+                    Text(
+                        text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharTextSecondary
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -270,6 +289,7 @@ private fun GreetingStep(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = 28.dp)
             .padding(bottom = 32.dp, top = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -404,6 +424,7 @@ private fun NotificationStep(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = 28.dp)
             .padding(bottom = 32.dp, top = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -504,11 +525,12 @@ private fun SetupStep(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = 24.dp),
+        contentPadding = PaddingValues(top = 56.dp, bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Spacer(Modifier.height(48.dp))
             Text(
                 text = "أين أنت؟ • Where are you?",
                 fontFamily = ThmanyahSans,

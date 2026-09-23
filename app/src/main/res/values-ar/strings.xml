@@ -25,6 +25,7 @@
     <string name="home_friday_prayer">الجمعة</string>
     <string name="home_prayers_title">مواقيت الصلاة</string>
     <string name="home_view_details">عرض التفاصيل</string>
+    <string name="home_after_prayer_adhkar">أذكار بعد الصلاة</string>
 
     <!-- Services Screen -->
     <string name="services_title">الجوهر</string>
@@ -83,6 +84,13 @@
     <!-- Duas -->
     <string name="duas_title">الأدعية</string>
     <string name="duas_sub">من حصن المسلم</string>
+    <string name="dua_action_open_duas">الانتقال للأدعية</string>
+    <string name="dua_action_close">إغلاق</string>
+    <string name="dua_tap_to_count">اضغط للعدّ</string>
+    <string name="dua_completed">اكتمل الذكر</string>
+    <string name="dua_keep_counting">استمر في العد</string>
+    <string name="dua_previous">السابق</string>
+    <string name="dua_next">التالي</string>
 
     <!-- Settings -->
     <string name="settings_title">الإعدادات</string>

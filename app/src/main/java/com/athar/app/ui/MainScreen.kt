@@ -161,7 +161,10 @@ fun MainScreen() {
             }
         ) {
             composable(Screen.Home.route) {
-                HomeScreen(onOpenSettings = { navController.navigateToTab(Screen.Settings) })
+                HomeScreen(
+                    onOpenSettings = { navController.navigateToTab(Screen.Settings) },
+                    onNavigateToDuas = { navController.navigateToTab(Screen.Duas) }
+                )
             }
             composable(Screen.Quran.route) {
                 QuranScreen(
