@@ -29,7 +29,7 @@
 
 ## Overview
 
-Athar - أثر is an open source Islamic companion created to offer a sanctuary of stillness in modern daily life. Built natively with Jetpack Compose, the application pairs sacred Islamic traditions with an organic, thoughtful design language.
+Athar - أَثَـــر is an open source Islamic companion app created to offer a sanctuary of stillness in modern daily life. Built natively with Jetpack Compose, the application pairs sacred Islamic traditions with an organic, thoughtful design language.
 
 Free from commercial advertisements, tracking algorithms, and noisy interfaces, Athar centers on the timeless essentials of a believer's day.
 
