@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,17 +28,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,15 +80,32 @@ import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
+import com.athar.app.BuildConfig
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 const val ATHAR_GITHUB_URL = "https://github.com/mohammeddtariq/Athar"
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    targetSection: String? = null,
+    onTargetSectionConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { AppPreferences(context.applicationContext) }
+    val listState = rememberLazyListState()
+    var isNotifHighlighted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(targetSection) {
+        if (targetSection == "notifications") {
+            listState.animateScrollToItem(6)
+            isNotifHighlighted = true
+            onTargetSectionConsumed()
+            delay(2000)
+            isNotifHighlighted = false
+        }
+    }
 
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
@@ -154,6 +175,7 @@ fun SettingsScreen() {
 
     PatternScaffold(patternAlpha = 0.05f) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
@@ -447,8 +469,11 @@ fun SettingsScreen() {
             }
 
             // ── Notifications ──
-            item {
-                SectionCard(title = stringResource(R.string.settings_notifications)) {
+            item(key = "notifications") {
+                SectionCard(
+                    title = stringResource(R.string.settings_notifications),
+                    isHighlighted = isNotifHighlighted
+                ) {
                     Text(
                         stringResource(R.string.settings_notifications_sub),
                         fontFamily = ThmanyahSans,
@@ -544,7 +569,7 @@ fun SettingsScreen() {
                                 color = AtharPrimaryLight
                             )
                             Icon(
-                                Icons.Rounded.OpenInNew, null,
+                                Icons.AutoMirrored.Rounded.OpenInNew, null,
                                 tint = AtharTextSecondary,
                                 modifier = Modifier.size(17.dp)
                             )
@@ -552,7 +577,7 @@ fun SettingsScreen() {
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        stringResource(R.string.settings_version),
+                        stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                         fontFamily = ThmanyahSans,
                         fontSize = 11.sp,
                         color = AtharTextSecondary,
@@ -656,14 +681,29 @@ private fun NotifRow(label: String, checked: Boolean, onChange: (Boolean) -> Uni
 }
 
 @Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
+private fun SectionCard(
+    title: String,
+    isHighlighted: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val borderColor by animateColorAsState(
+        targetValue = if (isHighlighted) AtharPrimary else AtharCardBorder,
+        animationSpec = tween(500),
+        label = "cardBorder"
+    )
+    val glowColor by animateColorAsState(
+        targetValue = if (isHighlighted) AtharPrimary.copy(alpha = 0.14f) else Color.Transparent,
+        animationSpec = tween(500),
+        label = "cardGlow"
+    )
     Box(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 5.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(AtharCardSurface.copy(alpha = 0.85f))
-            .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+            .background(glowColor)
+            .border(1.dp, borderColor, RoundedCornerShape(18.dp))
             .padding(16.dp)
     ) {
         Column {

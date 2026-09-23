@@ -274,12 +274,12 @@ private enum class QuranTabIndex {
 }
 
 /**
- * Built-in Quran reader screen matching the Islamic Mushaf reference design:
+ * Holy Quran reader screen with Mushaf presentation:
  * - Authentic Uthmani Hafs calligraphy text with ornate \u06DD ayah markers.
- * - Calligraphic Surah titles via QuranSurahNames font (0-indexed exact match).
- * - Dual-tab index: Surahs (1..114) and Juz (1..30) in exact canonical order.
- * - 3 Appearance Modes: AMOLED, Dark Olive (app theme), and Light Mushaf Paper.
- * - Floating bottom capsule with TT (font scale/weight), Palette (theme switcher), and Play (recitation audio).
+ * - Calligraphic Surah titles via QuranSurahNames font.
+ * - Dual-tab index: Surahs (1..114) and Juz (1..30) in canonical order.
+ * - 3 Appearance Modes: AMOLED, Dark Olive, and Light Mushaf Paper.
+ * - Floating bottom capsule with typography, theme switcher, and audio controls.
  */
 @Composable
 fun QuranScreen(
@@ -964,11 +964,11 @@ private data class MushafPageRenderData(
 private val mushafPageCache = LruCache<String, MushafPageRenderData>(24)
 
 /**
- * Renders a single Ligature Basd Mushaf page exactly as supplied by the
- * bundled SVG layout, using AndroidSvg for native Canvas rendering.
+ * Renders a single ligature-based Mushaf page using the bundled SVG layout,
+ * with native Canvas rendering via AndroidSVG.
  *
  * The SVG paths already include the Uthmani glyph shapes, surah headers,
- * Bismillah, ayah medallions, line breaks and page spacing — no WebView needed.
+ * Bismillah, ayah medallions, line breaks and page spacing.
  */
 @Composable
 private fun LigatureMushafPage(
@@ -2642,7 +2642,7 @@ private fun SurahReader(
                     }
                 }
 
-                // Floating Dock with Labels (Matching AtharNavBar styling)
+                // Floating bottom controls dock
                 AnimatedVisibility(
                     visible = shouldShowBars,
                     enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it },

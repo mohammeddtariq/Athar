@@ -125,6 +125,7 @@ private val timeFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 @Composable
 fun HomeScreen(
     onOpenSettings: () -> Unit = {},
+    onOpenNotifications: () -> Unit = onOpenSettings,
     onNavigateToDuas: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -141,7 +142,7 @@ fun HomeScreen(
 
     var showAfterPrayerDialog by remember { mutableStateOf(false) }
 
-    // Dynamic resolution of actual user location in the selected language
+    // Dynamic resolution of device location in the selected language
     var resolvedCity by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(lat, lng, selectedLanguage) {
         if (lat != null && lng != null) {
@@ -238,7 +239,7 @@ fun HomeScreen(
                     TopBar(
                         cityLabel = currentCityLabel,
                         notificationsOn = notifMaster,
-                        onBellClick = onOpenSettings,
+                        onBellClick = onOpenNotifications,
                         onLocationClick = onOpenSettings,
                         onAfterPrayerClick = { showAfterPrayerDialog = true }
                     )

@@ -4,21 +4,19 @@ import androidx.compose.ui.graphics.Color
 
 // ══════════════════════════════════════════════════════════════
 // ATHAR — Deep Olive Palette
-// near-black olive
-// surfaces (#141712 family) + pale pistachio accent (#D9E4CB family).
-// Dark-first, AMOLED-friendly, olive forest character.
+// Dark-first, AMOLED-friendly palette with olive forest tones
+// and muted pistachio accents.
 // ══════════════════════════════════════════════════════════════
 
 // ─── Core Backgrounds (AMOLED olive-black) ───
 val AtharBackground = Color(0xFF0A0C08)       // App base — olive-tinted black
 val AtharSurface = Color(0xFF10130D)          // Secondary surface
-val AtharCardSurface = Color(0xFF151A11)      // Card fill — keyboard key tone
+val AtharCardSurface = Color(0xFF151A11)      // Card surface fill
 val AtharCardBorder = Color(0xFF1E281B)       // Hairline olive border
 val AtharCardGlow = Color(0xFF1A2214)         // Subtle card highlight
 
 // ─── Primary Accent — Pale Pistachio / Olive Forest ───
-// AtharPrimary is the light accent (keyboard "done" key family),
-// readable on dark surfaces; dark text sits on top of it.
+// High-contrast primary accent readable across dark surfaces.
 val AtharPrimary = Color(0xFFC9D8B4)          // Pale pistachio accent
 val AtharPrimaryMuted = Color(0xFF7C9070)     // Olive forest green
 val AtharPrimaryLight = Color(0xFFE6EEDA)     // Near-white sage highlight
@@ -31,7 +29,7 @@ val AtharTextSecondary = Color(0xFF93A086)    // Muted olive-grey
 val AtharTextMuted = Color(0xFF4A5A43)        // Very low-emphasis captions
 val AtharTextOnPrimary = Color(0xFF141A10)    // Dark text over pale accent
 
-// ─── Navigation Bar (Greyish-Green Capsule Dock — exact from reference) ───
+// ─── Navigation Bar (Floating Capsule Dock) ───
 val AtharNavbarBg = Color(0xFF353E2C)         // Solid greyish-green dock container
 val AtharNavbarBorder = Color(0xFF48543B)     // Subtle greyish-green dock border
 val AtharNavPillSelected = Color(0xFF556441)  // Active tab greyish-green pill

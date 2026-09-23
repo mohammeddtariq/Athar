@@ -137,6 +137,7 @@ val allNavScreens = listOf(
 fun MainScreen() {
     val navController = rememberNavController()
     var isQuranReading by remember { mutableStateOf(false) }
+    var targetSettingsSection by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -163,6 +164,10 @@ fun MainScreen() {
             composable(Screen.Home.route) {
                 HomeScreen(
                     onOpenSettings = { navController.navigateToTab(Screen.Settings) },
+                    onOpenNotifications = {
+                        targetSettingsSection = "notifications"
+                        navController.navigateToTab(Screen.Settings)
+                    },
                     onNavigateToDuas = { navController.navigateToTab(Screen.Duas) }
                 )
             }
@@ -182,7 +187,10 @@ fun MainScreen() {
                 )
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    targetSection = targetSettingsSection,
+                    onTargetSectionConsumed = { targetSettingsSection = null }
+                )
             }
         }
 
@@ -215,12 +223,12 @@ private fun NavHostController.navigateToTab(screen: Screen) {
 }
 
 /**
- * Bottom navigation: elevated floating greyish-green capsule dock matching reference design:
- * - Solid opaque greyish-green dock container (#353E2C) with ambient glow.
+ * Bottom navigation: elevated floating capsule dock:
+ * - Solid opaque dock container with ambient glow.
  * - Always ordered left-to-right starting with Home tab, regardless of active locale.
- * - Tactile spring press feedback and fluid expanding active pill (#556441).
- * - Glowing lime active icon (#C7EFA0) and refined inactive icons (#A4AA9C).
- * - Generous, bold height (~68dp) elevated cleanly above system navigation bar.
+ * - Tactile spring press feedback and fluid expanding active pill.
+ * - High-contrast active icon indicator and refined inactive icons.
+ * - Elevated cleanly above system navigation bar.
  */
 @Composable
 fun AtharNavBar(

@@ -247,7 +247,7 @@ val afterPrayerMaghribDuas: List<Dua> = listOf(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ALL 31 MORNING ADHKAR (Exact photo sequence 1..31 from user folder)
+// MORNING ADHKAR (Authentic Sunnah & Hisnul Muslim)
 // ─────────────────────────────────────────────────────────────────────────────
 
 val morningAdhkarList: List<Dua> = listOf(
@@ -502,7 +502,7 @@ val morningAdhkarList: List<Dua> = listOf(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ALL 30 EVENING ADHKAR (Exact photo sequence 1..30 from user folder)
+// EVENING ADHKAR (Authentic Sunnah & Hisnul Muslim)
 // ─────────────────────────────────────────────────────────────────────────────
 
 val eveningAdhkarList: List<Dua> = listOf(

@@ -496,7 +496,7 @@ private fun NotificationStep(
         Spacer(Modifier.height(16.dp))
         TextButton(onClick = onBack) {
             Text(
-                text = "رجوع • Back",
+                text = if (isAr) "رجوع" else "Back",
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
@@ -505,6 +505,13 @@ private fun NotificationStep(
         }
     }
 }
+
+/**
+ * Formats bilingual Arabic and English titles with bidirectional isolation
+ * (RLI / LRI / LRM) preventing punctuation marks from flipping across RTL/LTR contexts.
+ */
+private fun bidiBilingual(ar: String, en: String): String =
+    "\u2067$ar\u2069 • \u2066$en\u200E\u2069"
 
 @Composable
 private fun SetupStep(
@@ -532,7 +539,7 @@ private fun SetupStep(
     ) {
         item {
             Text(
-                text = "أين أنت؟ • Where are you?",
+                text = bidiBilingual("أين أنت؟", "Where are you?"),
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
@@ -540,7 +547,7 @@ private fun SetupStep(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "نستخدم موقعك فقط لحساب مواقيت الصلاة بدقة. • Used only for prayer accuracy.",
+                text = bidiBilingual("نستخدم موقعك فقط لحساب مواقيت الصلاة بدقة.", "Used only for prayer accuracy."),
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
@@ -590,7 +597,7 @@ private fun SetupStep(
         item {
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "طريقة الحساب • Calculation method",
+                text = bidiBilingual("طريقة الحساب", "Calculation method"),
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Black,
                 fontSize = 15.sp,
@@ -629,7 +636,7 @@ private fun SetupStep(
                         .height(52.dp)
                 ) {
                     Text(
-                        text = "رجوع • Back",
+                        text = bidiBilingual("رجوع", "Back"),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -648,7 +655,7 @@ private fun SetupStep(
                     )
                 ) {
                     Text(
-                        text = "ابدأ • Begin",
+                        text = bidiBilingual("ابدأ", "Begin"),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp
@@ -662,12 +669,12 @@ private fun SetupStep(
 
 @Composable
 private fun methodTitle(m: CalcMethod): String = when (m) {
-    CalcMethod.MWL -> "Muslim World League • رابطة العالم الإسلامي"
-    CalcMethod.EGYPTIAN -> "Egyptian Authority • الهيئة المصرية"
-    CalcMethod.KARACHI -> "Karachi • جامعة كراتشي"
-    CalcMethod.UMM_AL_QURA -> "Umm al-Qura • أم القرى"
-    CalcMethod.ISNA -> "ISNA North America • أمريكا الشمالية"
-    CalcMethod.MOON_SIGHTING -> "Moonsighting Committee • لجنة الرؤية"
+    CalcMethod.MWL -> bidiBilingual("رابطة العالم الإسلامي", "Muslim World League")
+    CalcMethod.EGYPTIAN -> bidiBilingual("الهيئة المصرية", "Egyptian Authority")
+    CalcMethod.KARACHI -> bidiBilingual("جامعة كراتشي", "Karachi")
+    CalcMethod.UMM_AL_QURA -> bidiBilingual("أم القرى", "Umm al-Qura")
+    CalcMethod.ISNA -> bidiBilingual("أمريكا الشمالية", "ISNA North America")
+    CalcMethod.MOON_SIGHTING -> bidiBilingual("لجنة الرؤية", "Moonsighting Committee")
 }
 
 @Composable
@@ -720,7 +727,7 @@ private fun GpsButton(
             Spacer(Modifier.padding(6.dp))
             Column {
                 Text(
-                    text = "استخدم موقعي • Use my location",
+                    text = bidiBilingual("استخدم موقعي", "Use my location"),
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Black,
                     fontSize = 14.sp,
@@ -728,7 +735,7 @@ private fun GpsButton(
                 )
                 if (locating) {
                     Text(
-                        text = "جارٍ التحديد • Locating…",
+                        text = bidiBilingual("جارٍ التحديد", "Locating…"),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 11.sp,
@@ -736,7 +743,7 @@ private fun GpsButton(
                     )
                 } else if (active) {
                     Text(
-                        text = if (!capturedText.isNullOrBlank()) "تم الالتقاط: $capturedText" else "تم الالتقاط • Captured",
+                        text = if (!capturedText.isNullOrBlank()) "تم الالتقاط: $capturedText" else bidiBilingual("تم الالتقاط", "Captured"),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 11.sp,

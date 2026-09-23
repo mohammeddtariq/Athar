@@ -94,8 +94,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Qibla compass matching the reference: big bearing from north,
- * circular dial with degree ring + needle, signal + help texts.
+ * Qibla compass screen: bearing from true north,
+ * circular dial with degree ring + needle, and orientation guidance.
  */
 @Composable
 fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {

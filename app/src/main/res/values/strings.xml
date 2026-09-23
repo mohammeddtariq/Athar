@@ -106,7 +106,7 @@
     <string name="settings_about">About Athar</string>
     <string name="settings_about_sub">Built with open libraries — see credits</string>
     <string name="settings_github">Athar on GitHub</string>
-    <string name="settings_version">Version 1.0 (beta)</string>
+    <string name="settings_version">Version %s</string>
 
     <!-- Notifications -->
     <string name="notif_channel_name">Athar • Prayer Reminders</string>

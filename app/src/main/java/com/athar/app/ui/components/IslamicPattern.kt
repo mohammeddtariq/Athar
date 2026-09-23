@@ -25,7 +25,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Modern Islamic Geometric Lattice Pattern based on user reference:
+ * Modern Islamic Geometric Lattice Pattern:
  * - 8-pointed star (khatam) rosettes with interlocking chevron/strapwork ribbons.
  * - Architectural embossed feel with delicate sage geometry.
  * - Smooth corner/edge gradient fade so text and cards remain effortlessly readable.
@@ -72,7 +72,7 @@ fun IslamicPatternBackground(
 
 /**
  * Draws the Arabesque geometric star & strapwork mosaic with a smooth gradient fade
- * from top-right to bottom-left (matching media_1789827589824.jpg).
+ * from top-right to bottom-left.
  */
 private fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellPx: Float, phase: Float) {
     val w = size.width
