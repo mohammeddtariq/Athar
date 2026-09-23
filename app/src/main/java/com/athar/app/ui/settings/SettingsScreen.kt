@@ -35,6 +35,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -81,6 +83,10 @@ import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.BuildConfig
+import com.athar.app.ui.components.AppUpdateDialog
+import com.athar.app.updater.AppReleaseInfo
+import com.athar.app.updater.AppUpdateManager
+import com.athar.app.updater.UpdateCheckResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -96,6 +102,10 @@ fun SettingsScreen(
     val prefs = remember { AppPreferences(context.applicationContext) }
     val listState = rememberLazyListState()
     var isNotifHighlighted by remember { mutableStateOf(false) }
+
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateStatusMessage by remember { mutableStateOf<String?>(null) }
+    var availableUpdate by remember { mutableStateOf<AppReleaseInfo?>(null) }
 
     LaunchedEffect(targetSection) {
         if (targetSection == "notifications") {
@@ -576,6 +586,76 @@ fun SettingsScreen(
                         }
                     }
                     Spacer(Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(12.dp))
+                            .clickable(
+                                enabled = !isCheckingUpdate,
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    isCheckingUpdate = true
+                                    updateStatusMessage = null
+                                    scope.launch {
+                                        val result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
+                                        isCheckingUpdate = false
+                                        when (result) {
+                                            is UpdateCheckResult.UpdateAvailable -> {
+                                                availableUpdate = result.releaseInfo
+                                            }
+                                            is UpdateCheckResult.UpToDate -> {
+                                                updateStatusMessage = context.getString(R.string.update_already_latest)
+                                            }
+                                            is UpdateCheckResult.Error -> {
+                                                updateStatusMessage = context.getString(R.string.update_status_error)
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.settings_check_updates),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.5.sp,
+                                    color = AtharPrimaryLight
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    if (isCheckingUpdate) stringResource(R.string.update_checking)
+                                    else updateStatusMessage ?: stringResource(R.string.settings_check_updates_sub),
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 11.5.sp,
+                                    color = if (updateStatusMessage != null) AtharPrimary else AtharTextSecondary
+                                )
+                            }
+                            if (isCheckingUpdate) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = AtharPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Rounded.CloudDownload,
+                                    contentDescription = null,
+                                    tint = AtharPrimaryLight,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
                     Text(
                         formatAppVersion(BuildConfig.VERSION_NAME),
                         fontFamily = ThmanyahSans,
@@ -619,6 +699,13 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (availableUpdate != null) {
+        AppUpdateDialog(
+            releaseInfo = availableUpdate!!,
+            onDismiss = { availableUpdate = null }
+        )
     }
 }
 

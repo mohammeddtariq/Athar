@@ -304,109 +304,81 @@ private fun TopBar(
     onLocationClick: () -> Unit,
     onAfterPrayerClick: () -> Unit
 ) {
-    BoxWithConstraints(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        val isNarrow = maxWidth < 380.dp
+        Row(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .clip(RoundedCornerShape(18.dp))
+                .background(AtharCardSurface)
+                .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onLocationClick
+            )
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.LocationOn,
+                contentDescription = null,
+                tint = AtharPrimaryLight,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                cityLabel ?: stringResource(R.string.home_location_not_set),
+                color = AtharTextPrimary,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 12.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 modifier = Modifier
-                    .weight(1f, fill = false)
-                    .clip(RoundedCornerShape(18.dp))
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(19.dp))
                     .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, AtharCardBorder, RoundedCornerShape(19.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = onLocationClick
+                        onClick = onAfterPrayerClick
                     )
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    Icons.Outlined.LocationOn,
+                    painter = painterResource(R.drawable.ic_prayer_hands),
                     contentDescription = null,
                     tint = AtharPrimaryLight,
                     modifier = Modifier.size(15.dp)
                 )
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    cityLabel ?: stringResource(R.string.home_location_not_set),
+                    stringResource(R.string.home_after_prayer_adhkar),
                     color = AtharTextPrimary,
                     fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 12.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
                 )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isNarrow) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(AtharCardSurface)
-                            .border(1.dp, AtharCardBorder, CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onAfterPrayerClick
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_prayer_hands),
-                            contentDescription = stringResource(R.string.home_after_prayer_adhkar),
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier
-                            .height(38.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .background(AtharCardSurface)
-                            .border(1.dp, AtharCardBorder, RoundedCornerShape(19.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onAfterPrayerClick
-                            )
-                            .padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_prayer_hands),
-                            contentDescription = null,
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            stringResource(R.string.home_after_prayer_adhkar),
-                            color = AtharTextPrimary,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
 
                 Box(
                     modifier = Modifier
@@ -431,7 +403,6 @@ private fun TopBar(
             }
         }
     }
-}
 
 /**
  * Featured Next Prayer card with the Islamic lattice baked in.

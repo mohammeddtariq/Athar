@@ -191,4 +191,26 @@
     <string name="quran_layout_pages">Uthmanic Script</string>
     <string name="quran_layout_beta">Beta</string>
     <string name="quran_layout_default">Default</string>
+
+    <!-- App Updates -->
+    <string name="update_notif_channel_name">Athar • App Updates</string>
+    <string name="update_notif_channel_desc">Notifications for new app updates and enhancements</string>
+    <string name="update_notif_title">New Athar Update Available</string>
+    <string name="update_notif_body">Version %s is available with new enhancements and blessings. Tap to explore.</string>
+    <string name="update_dialog_title">New Update Available</string>
+    <string name="update_dialog_subtitle">A new step forward to enrich your journey</string>
+    <string name="update_version_badge">Version %s</string>
+    <string name="update_changelog_title">What\'s new in this release</string>
+    <string name="update_changelog_loading">Fetching release notes…</string>
+    <string name="update_github_link">View Release on GitHub</string>
+    <string name="update_action_now">Update Now</string>
+    <string name="update_action_later">Later</string>
+    <string name="update_status_downloading">Downloading update… %d%%</string>
+    <string name="update_status_installing">Download complete, preparing installation…</string>
+    <string name="update_status_error">Failed to download update. Tap to try again.</string>
+    <string name="settings_check_updates">Check for Updates</string>
+    <string name="settings_check_updates_sub">Check if a newer version of Athar is available</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_already_latest">You are using the latest version of Athar</string>
+    <string name="update_permission_required">Please allow installing apps from this source to update Athar</string>
 </resources>

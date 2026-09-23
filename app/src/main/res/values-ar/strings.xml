@@ -191,4 +191,26 @@
     <string name="quran_layout_pages">الرسم العثماني</string>
     <string name="quran_layout_beta">تجريبي</string>
     <string name="quran_layout_default">افتراضي</string>
+
+    <!-- App Updates -->
+    <string name="update_notif_channel_name">أَثَر • تحديثات التطبيق</string>
+    <string name="update_notif_channel_desc">إشعارات بتوفر تحديثات جديدة وتحسينات لتطبيق أَثَر</string>
+    <string name="update_notif_title">تحديث جديد لتطبيق أَثَر</string>
+    <string name="update_notif_body">الإصدار %s متوفر الآن بتحديثات وتحسينات مباركة. اضغط للتحديث.</string>
+    <string name="update_dialog_title">إشراقة تحديث جديد</string>
+    <string name="update_dialog_subtitle">خطوة جديدة ترتقي بتجربتك وتزيد أثرك سكينة وبهاءً</string>
+    <string name="update_version_badge">الإصدار \u2066%s\u2069</string>
+    <string name="update_changelog_title">ما الجديد في هذا التحديث</string>
+    <string name="update_changelog_loading">جاري جلب تفاصيل التحديث…</string>
+    <string name="update_github_link">عرض تفاصيل التحديث على GitHub</string>
+    <string name="update_action_now">تحديث الآن</string>
+    <string name="update_action_later">لاحقاً</string>
+    <string name="update_status_downloading">جاري تحميل التحديث… %d%%</string>
+    <string name="update_status_installing">اكتمل التحميل، جاري فتح التثبيت…</string>
+    <string name="update_status_error">تعذر تحميل التحديث. اضغط لإعادة المحاولة.</string>
+    <string name="settings_check_updates">التحقق من التحديثات</string>
+    <string name="settings_check_updates_sub">التأكد من توفر أحدث إصدار من أَثَر</string>
+    <string name="update_checking">جاري التحقق من التحديثات…</string>
+    <string name="update_already_latest">أنت تستخدم أحدث إصدار من أَثَر</string>
+    <string name="update_permission_required">يرجى السماح بتثبيت التطبيقات من هذا المصدر لتحديث أَثَر</string>
 </resources>
