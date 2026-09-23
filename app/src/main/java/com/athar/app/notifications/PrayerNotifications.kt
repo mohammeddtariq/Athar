@@ -23,6 +23,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
 
@@ -64,67 +66,104 @@ object PrayerNotifications {
         manager.createNotificationChannel(channel)
     }
 
-    fun prayerRequestCode(key: String): Int = REQUEST_BASE + key.hashCode().rem(900)
+    fun prayerRequestCode(key: String): Int = when (key) {
+        "fajr" -> 4001
+        "sunrise" -> 4002
+        "dhuhr" -> 4003
+        "asr" -> 4004
+        "maghrib" -> 4005
+        "isha" -> 4006
+        else -> REQUEST_BASE
+    }
 
-    /** Schedule an exact alarm for the next enabled prayer. Call after prefs change & on boot. */
-    fun scheduleNext(context: Context) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val prefs = AppPreferences(context.applicationContext)
-            val master = prefs.notificationsMaster.first()
-            if (!master) {
-                cancelAll(context)
-                return@launch
-            }
-            val lat = prefs.latitude.first() ?: return@launch
-            val lng = prefs.longitude.first() ?: return@launch
-            val method = CalcMethod.fromId(prefs.calcMethodId.first())
-            val madhab = MadhabOption.fromId(prefs.madhabId.first())
-            val today = runCatching { computeDayPrayers(lat, lng, method = method, madhab = madhab) }
-                .getOrNull() ?: return@launch
+    /**
+     * Schedules exact alarms for all enabled prayers across the next 24-48 hours.
+     * Computes prayer times for both today and tomorrow to ensure every enabled prayer
+     * is registered in AlarmManager with its distinct PendingIntent.
+     */
+    suspend fun scheduleNext(context: Context) = withContext(Dispatchers.IO) {
+        val prefs = AppPreferences(context.applicationContext)
+        val master = prefs.notificationsMaster.first()
+        if (!master) {
+            cancelAll(context)
+            return@withContext
+        }
+        val lat = prefs.latitude.first() ?: return@withContext
+        val lng = prefs.longitude.first() ?: return@withContext
+        val method = CalcMethod.fromId(prefs.calcMethodId.first())
+        val madhab = MadhabOption.fromId(prefs.madhabId.first())
 
-            val now = LocalTime.now()
-            val ordered = listOf(
-                "fajr" to today.fajr, "sunrise" to today.sunrise, "dhuhr" to today.dhuhr,
-                "asr" to today.asr, "maghrib" to today.maghrib, "isha" to today.isha
-            )
-            var target: Pair<String, LocalTime>? = null
-            var tomorrow = false
-            for (entry in ordered) {
-                val enabled = prefs.prayerNotificationEnabled(entry.first).first()
-                if (!enabled) continue
-                if (!entry.second.isBefore(now)) {
-                    target = entry
-                    break
-                }
-            }
-            if (target == null) {
-                for (entry in ordered) {
-                    val enabled = prefs.prayerNotificationEnabled(entry.first).first()
-                    if (!enabled) continue
-                    target = entry
-                    tomorrow = true
-                    break
-                }
-            }
-            val chosen = target ?: return@launch
-            val triggerAt = prayerDateToday(chosen.second, tomorrow).time
-            if (triggerAt <= System.currentTimeMillis()) return@launch
+        val todayDate = LocalDate.now()
+        val tomorrowDate = todayDate.plusDays(1)
 
+        val today = runCatching {
+            computeDayPrayers(lat, lng, date = todayDate, method = method, madhab = madhab)
+        }.getOrNull() ?: return@withContext
+
+        val tomorrow = runCatching {
+            computeDayPrayers(lat, lng, date = tomorrowDate, method = method, madhab = madhab)
+        }.getOrNull() ?: return@withContext
+
+        val nowMs = System.currentTimeMillis()
+        val alarmManager = context.applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val prayerKeys = listOf("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")
+
+        for (key in prayerKeys) {
+            val enabled = prefs.prayerNotificationEnabled(key).first()
             val intent = Intent(context.applicationContext, PrayerAlarmReceiver::class.java).apply {
-                putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, chosen.first)
+                putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, key)
             }
             val pending = PendingIntent.getBroadcast(
                 context.applicationContext,
-                prayerRequestCode(chosen.first),
+                prayerRequestCode(key),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            val alarm = context.applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            try {
-                alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-            } catch (_: SecurityException) {
-                alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+
+            if (!enabled) {
+                alarmManager.cancel(pending)
+                continue
             }
+
+            val todayTime = when (key) {
+                "fajr" -> today.fajr
+                "sunrise" -> today.sunrise
+                "dhuhr" -> today.dhuhr
+                "asr" -> today.asr
+                "maghrib" -> today.maghrib
+                "isha" -> today.isha
+                else -> today.fajr
+            }
+
+            val tomorrowTime = when (key) {
+                "fajr" -> tomorrow.fajr
+                "sunrise" -> tomorrow.sunrise
+                "dhuhr" -> tomorrow.dhuhr
+                "asr" -> tomorrow.asr
+                "maghrib" -> tomorrow.maghrib
+                "isha" -> tomorrow.isha
+                else -> tomorrow.fajr
+            }
+
+            val todayTriggerMs = prayerDateToday(todayTime, tomorrow = false).time
+            val triggerAt = if (todayTriggerMs > nowMs + 1000L) {
+                todayTriggerMs
+            } else {
+                prayerDateToday(tomorrowTime, tomorrow = true).time
+            }
+
+            try {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+            } catch (_: SecurityException) {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+            }
+        }
+    }
+
+    /** Helper for non-suspending callers (e.g. Activity callbacks) to trigger scheduling asynchronously. */
+    fun scheduleNextAsync(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            scheduleNext(context)
         }
     }
 
@@ -213,12 +252,21 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
-            intent.action == Intent.ACTION_MY_PACKAGE_REPLACED ||
-            intent.action == Intent.ACTION_TIME_CHANGED ||
-            intent.action == Intent.ACTION_TIMEZONE_CHANGED
+        val action = intent.action ?: return
+        if (action == Intent.ACTION_BOOT_COMPLETED ||
+            action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+            action == Intent.ACTION_TIME_CHANGED ||
+            action == Intent.ACTION_TIMEZONE_CHANGED ||
+            action == "android.intent.action.TIME_SET"
         ) {
-            PrayerNotifications.scheduleNext(context)
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    PrayerNotifications.scheduleNext(context)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
         }
     }
 }

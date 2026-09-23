@@ -189,7 +189,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = if (selectedCategoryId == "after_prayer") 170.dp else 125.dp,
-                    bottom = 130.dp
+                    bottom = 150.dp
                 )
             ) {
                 // Category Banner Header
@@ -339,8 +339,9 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
                                 .padding(horizontal = 14.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.Center,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             PrayerSubChip(
@@ -353,7 +354,6 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                     }
                                 }
                             )
-                            Spacer(Modifier.width(8.dp))
                             PrayerSubChip(
                                 title = if (isArabic) "صلاة الفجر" else "Fajr",
                                 isSelected = selectedPrayerSubCategory == "fajr",
@@ -364,7 +364,6 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                     }
                                 }
                             )
-                            Spacer(Modifier.width(8.dp))
                             PrayerSubChip(
                                 title = if (isArabic) "صلاة المغرب" else "Maghrib",
                                 isSelected = selectedPrayerSubCategory == "maghrib",

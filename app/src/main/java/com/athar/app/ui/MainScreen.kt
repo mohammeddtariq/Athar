@@ -21,6 +21,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,7 +59,9 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -244,15 +247,26 @@ fun AtharNavBar(
 
     // Force Left-to-Right layout order regardless of active language (Arabic or English)
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Box(
+        BoxWithConstraints(
             modifier = modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 26.dp),
+                .navigationBarsPadding(),
             contentAlignment = Alignment.Center
         ) {
+            val isCompact = maxWidth < 380.dp
+            val outerPadHorizontal = if (isCompact) 8.dp else 14.dp
+            val outerPadVertical = if (isCompact) 10.dp else 14.dp
+            val dockInnerPadH = if (isCompact) 6.dp else 8.dp
+            val dockInnerPadV = if (isCompact) 5.dp else 7.dp
+            val itemSpacing = if (isCompact) 2.dp else 4.dp
+            val unselectedPadH = if (isCompact) 8.dp else 12.dp
+            val selectedPadH = if (isCompact) 12.dp else 16.dp
+            val iconSize = if (isCompact) 21.dp else 24.dp
+            val fontSize = if (isCompact) 12.sp else 13.5.sp
+
             Box(
                 modifier = Modifier
+                    .padding(horizontal = outerPadHorizontal, vertical = outerPadVertical)
                     .shadow(
                         elevation = 18.dp,
                         shape = RoundedCornerShape(38.dp),
@@ -266,17 +280,21 @@ fun AtharNavBar(
                         color = AtharNavbarBorder,
                         shape = RoundedCornerShape(38.dp)
                     )
-                    .padding(horizontal = 8.dp, vertical = 7.dp),
+                    .padding(horizontal = dockInnerPadH, vertical = dockInnerPadV),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+                    horizontalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.CenterHorizontally)
                 ) {
                     allNavScreens.forEach { screen ->
                         NavDockItem(
                             screen = screen,
                             selected = isSelected(screen),
+                            unselectedPadH = unselectedPadH,
+                            selectedPadH = selectedPadH,
+                            iconSize = iconSize,
+                            fontSize = fontSize,
                             onClick = { navController.navigateToTab(screen) }
                         )
                     }
@@ -290,6 +308,10 @@ fun AtharNavBar(
 private fun NavDockItem(
     screen: Screen,
     selected: Boolean,
+    unselectedPadH: Dp = 12.dp,
+    selectedPadH: Dp = 16.dp,
+    iconSize: Dp = 24.dp,
+    fontSize: TextUnit = 13.5.sp,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -331,13 +353,13 @@ private fun NavDockItem(
     Box(
         modifier = Modifier
             .scale(scale)
-            .height(50.dp)
-            .clip(RoundedCornerShape(25.dp))
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
             .background(pillBackground)
             .border(
                 width = if (selected) 1.dp else 0.dp,
                 color = pillBorderColor,
-                shape = RoundedCornerShape(25.dp)
+                shape = RoundedCornerShape(24.dp)
             )
             .clickable(
                 interactionSource = interactionSource,
@@ -345,7 +367,7 @@ private fun NavDockItem(
                 onClick = onClick
             )
             .padding(
-                horizontal = if (selected) 16.dp else 12.dp,
+                horizontal = if (selected) selectedPadH else unselectedPadH,
                 vertical = 0.dp
             ),
         contentAlignment = Alignment.Center
@@ -357,12 +379,12 @@ private fun NavDockItem(
             // Icon container with ambient glowing halo on selected tab
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(iconSize)
             ) {
                 if (selected) {
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(iconSize * 0.7f)
                             .shadow(
                                 elevation = 10.dp,
                                 shape = CircleShape,
@@ -375,7 +397,7 @@ private fun NavDockItem(
                     screen = screen,
                     selected = selected,
                     tint = iconTint,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(iconSize)
                 )
             }
 
@@ -399,14 +421,15 @@ private fun NavDockItem(
                        )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = stringResource(screen.labelResId),
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp,
+                        fontSize = fontSize,
                         color = labelColor,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }

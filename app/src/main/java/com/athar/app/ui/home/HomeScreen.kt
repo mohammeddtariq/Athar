@@ -18,6 +18,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -223,30 +224,26 @@ fun HomeScreen(
             )
         }
 
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 120.dp)
+                .statusBarsPadding()
         ) {
-            item {
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = fadeIn(tween(400)) + slideInVertically(
-                        spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                    ) { -30 }
-                ) {
-                    TopBar(
-                        cityLabel = currentCityLabel,
-                        notificationsOn = notifMaster,
-                        onBellClick = onOpenNotifications,
-                        onLocationClick = onOpenSettings,
-                        onAfterPrayerClick = { showAfterPrayerDialog = true }
-                    )
-                }
-            }
+            TopBar(
+                cityLabel = currentCityLabel,
+                notificationsOn = notifMaster,
+                onBellClick = onOpenNotifications,
+                onLocationClick = onOpenSettings,
+                onAfterPrayerClick = { showAfterPrayerDialog = true }
+            )
 
-            item {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(bottom = 150.dp)
+            ) {
+                item {
                 AnimatedVisibility(
                     visible = isVisible,
                     enter = fadeIn(tween(500, 80)) + slideInVertically(
@@ -297,6 +294,7 @@ fun HomeScreen(
         }
     }
 }
+}
 
 @Composable
 private fun TopBar(
@@ -306,101 +304,130 @@ private fun TopBar(
     onLocationClick: () -> Unit,
     onAfterPrayerClick: () -> Unit
 ) {
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .clip(RoundedCornerShape(18.dp))
-                .background(AtharCardSurface)
-                .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onLocationClick
-                )
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Outlined.LocationOn,
-                contentDescription = null,
-                tint = AtharPrimaryLight,
-                modifier = Modifier.size(15.dp)
-            )
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-                cityLabel ?: stringResource(R.string.home_location_not_set),
-                color = AtharTextPrimary,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
+        val isNarrow = maxWidth < 380.dp
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 modifier = Modifier
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(19.dp))
+                    .weight(1f, fill = false)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, RoundedCornerShape(19.dp))
+                    .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = onAfterPrayerClick
+                        onClick = onLocationClick
                     )
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_prayer_hands),
+                    Icons.Outlined.LocationOn,
                     contentDescription = null,
                     tint = AtharPrimaryLight,
                     modifier = Modifier.size(15.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(5.dp))
                 Text(
-                    stringResource(R.string.home_after_prayer_adhkar),
+                    cityLabel ?: stringResource(R.string.home_location_not_set),
                     color = AtharTextPrimary,
                     fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onBellClick
-                    ),
-                contentAlignment = Alignment.Center
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
-                    contentDescription = null,
-                    tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
+                if (isNarrow) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(AtharCardSurface)
+                            .border(1.dp, AtharCardBorder, CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onAfterPrayerClick
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_prayer_hands),
+                            contentDescription = stringResource(R.string.home_after_prayer_adhkar),
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(19.dp))
+                            .background(AtharCardSurface)
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(19.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onAfterPrayerClick
+                            )
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_prayer_hands),
+                            contentDescription = null,
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            stringResource(R.string.home_after_prayer_adhkar),
+                            color = AtharTextPrimary,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onBellClick
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                        contentDescription = null,
+                        tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }

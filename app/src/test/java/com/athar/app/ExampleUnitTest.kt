@@ -18,6 +18,11 @@ class ExampleUnitTest {
         assertEquals("1.0.0", match1!!.groupValues[1])
         assertEquals("2", match1.groupValues[2])
 
+        val matchBeta1 = regex.matchEntire("1.0.1-beta.1")
+        assertNotNull(matchBeta1)
+        assertEquals("1.0.1", matchBeta1!!.groupValues[1])
+        assertEquals("1", matchBeta1.groupValues[2])
+
         val match2 = regex.matchEntire("1.0.0-beta")
         assertNotNull(match2)
         assertEquals("1.0.0", match2!!.groupValues[1])

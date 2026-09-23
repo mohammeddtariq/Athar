@@ -15,10 +15,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -242,36 +245,29 @@ fun OnboardingFlow(
             )
         }
 
-        // Floating sticky top bar with skip button placed on top of step content
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            AtharBackground,
-                            AtharBackground.copy(alpha = 0.98f),
-                            AtharBackground.copy(alpha = 0.88f),
-                            Color.Transparent
-                        )
-                    )
-                )
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 6.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+        // Sticky top bar with skip button for location setup step
+        if (step == 2) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .background(AtharBackground)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 4.dp)
             ) {
-                TextButton(onClick = { finish(skipLocation = true) }) {
-                    Text(
-                        text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = AtharTextSecondary
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { finish(skipLocation = true) }) {
+                        Text(
+                            text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = AtharTextSecondary
+                        )
+                    }
                 }
             }
         }
@@ -290,8 +286,9 @@ private fun GreetingStep(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp)
-            .padding(bottom = 32.dp, top = 40.dp),
+            .padding(bottom = 32.dp, top = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -425,8 +422,9 @@ private fun NotificationStep(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp)
-            .padding(bottom = 32.dp, top = 40.dp),
+            .padding(bottom = 32.dp, top = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -534,7 +532,7 @@ private fun SetupStep(
             .fillMaxSize()
             .statusBarsPadding()
             .padding(horizontal = 24.dp),
-        contentPadding = PaddingValues(top = 56.dp, bottom = 40.dp),
+        contentPadding = PaddingValues(top = 64.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -573,22 +571,25 @@ private fun SetupStep(
         }
 
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                presetCities.chunked(3).forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        row.forEach { city ->
-                            CityChip(
-                                city = city,
-                                language = language,
-                                selected = selectedCity == city,
-                                onClick = { onPickCity(city) },
-                                modifier = Modifier.weight(1f)
-                            )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val columns = if (maxWidth < 380.dp) 2 else 3
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    presetCities.chunked(columns).forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            row.forEach { city ->
+                                CityChip(
+                                    city = city,
+                                    language = language,
+                                    selected = selectedCity == city,
+                                    onClick = { onPickCity(city) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
-                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }

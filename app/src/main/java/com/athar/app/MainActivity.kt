@@ -11,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.athar.app.data.AppPreferences
+import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.MainScreen
 import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharTheme
@@ -56,6 +57,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        PrayerNotifications.scheduleNextAsync(this)
     }
 
     private fun applyLocale(languageCode: String) {
