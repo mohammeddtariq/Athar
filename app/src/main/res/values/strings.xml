@@ -10,7 +10,7 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Home Screen -->
-    <string name="home_location_label">My location</string>
+    <string name="home_location_label">My Location</string>
     <string name="home_location_not_set">Set location</string>
     <string name="home_next_prayer">Next Prayer</string>
     <string name="home_prayer_iqamah">Iqamah for %s</string>
@@ -105,7 +105,7 @@
     <string name="notif_channel_desc">Serene reminders for each prayer time</string>
     <string name="notif_prayer_title">Time for %s</string>
     <string name="notif_prayer_body">May your prayer be accepted.</string>
-    <string name="notif_sunrise_body">Sunrise — the time of Fajr has ended.</string>
+    <string name="notif_sunrise_body">The earth shines with the light of its Lord • Welcome your day with praise and trust in God, leaving a blessed trace in all you do.</string>
     <string name="notif_fajr_title">Fajr • Dawn of Tranquility</string>
     <string name="notif_fajr_body">Prayer is better than sleep • Begin your day in sacred stillness and divine light.</string>
     <string name="notif_sunrise_title">Sunrise • A Grateful Morning</string>
@@ -141,7 +141,7 @@
 
     <!-- Location -->
     <string name="setup_precise">For accurate prayer times, allow Precise location when asked.</string>
-    <string name="location_mine">My location</string>
+    <string name="location_mine">My Location</string>
     <string name="qibla_stale">Location is off — showing the last saved location. Turn it on for an accurate Qibla.</string>
     <string name="qibla_turn_on">Turn on</string>
     <!-- Quran Appearance -->

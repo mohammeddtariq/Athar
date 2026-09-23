@@ -563,7 +563,7 @@ private fun DuaItemCard(
             .padding(16.dp)
     ) {
         Column {
-            // Top Row: Number badge (e.g. 1/31 matching the user's reference)
+            // Top Row: Number badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

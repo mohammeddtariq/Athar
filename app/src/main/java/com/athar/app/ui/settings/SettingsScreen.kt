@@ -65,7 +65,7 @@ import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
-import com.athar.app.ui.onboarding.presetCities
+import com.athar.app.data.presetCities
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
@@ -114,7 +114,9 @@ fun SettingsScreen() {
         scope.launch {
             val fix = LocationHelper.freshFix(context.applicationContext)
             if (fix != null) {
-                prefs.setLocation(fix.first, fix.second, context.getString(R.string.location_mine))
+                val resolved = LocationHelper.resolveCityName(context, fix.first, fix.second, language)
+                val cityText = resolved ?: if (language == "en") "My Location" else "موقعي"
+                prefs.setLocation(fix.first, fix.second, cityText)
                 PrayerNotifications.scheduleNext(context)
             }
             locLocating = false
@@ -246,8 +248,13 @@ fun SettingsScreen() {
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(Modifier.width(6.dp))
+                        val displayCity = city?.let {
+                            if (it == "موقعي" && language == "en") "My Location"
+                            else if (it.equals("My location", ignoreCase = true) && language == "ar") "موقعي"
+                            else it
+                        } ?: stringResource(R.string.home_location_not_set)
                         Text(
-                            city ?: stringResource(R.string.home_location_not_set),
+                            displayCity,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp,
@@ -274,7 +281,7 @@ fun SettingsScreen() {
                             }
                         )
                         SmallButton(
-                            label = if (showCities) "▲" else "Cities",
+                            label = if (showCities) "▲" else if (language == "ar") "المدن" else "Cities",
                             modifier = Modifier.weight(1f),
                             onClick = { showCities = !showCities }
                         )

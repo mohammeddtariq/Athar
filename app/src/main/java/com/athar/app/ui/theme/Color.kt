@@ -3,8 +3,8 @@ package com.athar.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ══════════════════════════════════════════════════════════════
-// ATHAR — Keyboard-Matched Deep Olive Palette
-// Sampled from the user's keyboard screenshot: near-black olive
+// ATHAR — Deep Olive Palette
+// near-black olive
 // surfaces (#141712 family) + pale pistachio accent (#D9E4CB family).
 // Dark-first, AMOLED-friendly, olive forest character.
 // ══════════════════════════════════════════════════════════════

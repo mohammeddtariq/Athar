@@ -55,11 +55,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.LocationHelper
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.DayPrayers
 import com.athar.app.data.MadhabOption
@@ -102,10 +104,37 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
     val lat by prefs.latitude.collectAsState(initial = null)
     val lng by prefs.longitude.collectAsState(initial = null)
     val city by prefs.cityLabel.collectAsState(initial = null)
+    val selectedLanguage by prefs.selectedLanguage.collectAsState(initial = "ar")
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val madhabId by prefs.madhabId.collectAsState(initial = "SHAFI")
     val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
+
+    // Dynamic resolution of actual user location in the selected language
+    var resolvedCity by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(lat, lng, selectedLanguage) {
+        if (lat != null && lng != null) {
+            val resolved = LocationHelper.resolveCityName(context, lat!!, lng!!, selectedLanguage)
+            if (resolved != null) {
+                resolvedCity = resolved
+                if (city != resolved) {
+                    prefs.setLocation(lat!!, lng!!, resolved)
+                }
+            } else if (city == null || city == "موقعي" || city.equals("My location", ignoreCase = true)) {
+                val fallback = if (selectedLanguage == "en") "My Location" else "موقعي"
+                resolvedCity = fallback
+                if (city != fallback) {
+                    prefs.setLocation(lat!!, lng!!, fallback)
+                }
+            }
+        }
+    }
+
+    val currentCityLabel = resolvedCity ?: city?.let {
+        if (it == "موقعي" && selectedLanguage == "en") "My Location"
+        else if (it.equals("My location", ignoreCase = true) && selectedLanguage == "ar") "موقعي"
+        else it
+    }
 
     // Minute-granularity clock for the "next" highlight — cheap, recomposes rarely.
     var nowMinute by remember { mutableStateOf(LocalTime.now()) }
@@ -162,7 +191,7 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
                     ) { -30 }
                 ) {
                     TopBar(
-                        cityLabel = city,
+                        cityLabel = currentCityLabel,
                         notificationsOn = notifMaster,
                         onBellClick = onOpenSettings,
                         onLocationClick = onOpenSettings
@@ -261,7 +290,9 @@ private fun TopBar(
                 color = AtharTextPrimary,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Black,
-                fontSize = 13.sp
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 

@@ -105,7 +105,7 @@
     <string name="notif_channel_desc">تنبيهات أوقات الصلاة بنبرة هادئة ملهمة</string>
     <string name="notif_prayer_title">حان وقت %s</string>
     <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
-    <string name="notif_sunrise_body">الشروق — انتهى وقت الفجر.</string>
+    <string name="notif_sunrise_body">أشرقت الأرض بنور ربها • استقبل يومك بحمد الله وتوكّل عليه، واجعل أثرك مباركاً.</string>
     <string name="notif_fajr_title">صلاة الفجر • نورٌ في مطلع يومك</string>
     <string name="notif_fajr_body">الصلاة خيرٌ من النوم • استفتح يومك بسكينة الفجر، واجعل أول أثرك لقاء ربك.</string>
     <string name="notif_sunrise_title">شروق الشمس • إشراقة يوم جديد</string>

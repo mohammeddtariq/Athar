@@ -72,25 +72,10 @@ import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
+import com.athar.app.data.PresetCity
+import com.athar.app.data.presetCities
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import kotlinx.coroutines.launch
-
-data class PresetCity(val labelEn: String, val labelAr: String, val lat: Double, val lng: Double) {
-    fun display(lang: String?): String = if (lang == "ar") labelAr else labelEn
-}
-
-val presetCities = listOf(
-    PresetCity("Cairo", "القاهرة", 30.0444, 31.2357),
-    PresetCity("Abu Dhabi", "أبوظبي", 24.4539, 55.6713),
-    PresetCity("Dubai", "دبي", 25.2048, 55.2708),
-    PresetCity("Jerusalem", "القدس", 31.7683, 35.2137),
-    PresetCity("Makkah", "مكة", 21.4225, 39.8262),
-    PresetCity("Madinah", "المدينة", 24.5247, 39.5692),
-    PresetCity("Istanbul", "إسطنبول", 41.0082, 28.9784),
-    PresetCity("Jakarta", "جاكرتا", -6.2088, 106.8456),
-    PresetCity("London", "لندن", 51.5074, -0.1278),
-    PresetCity("New York", "نيويورك", 40.7128, -74.006)
-)
 
 /**
  * First-launch setup on a solid dark background:
@@ -124,7 +109,9 @@ fun OnboardingFlow(
             if (fix != null) {
                 gpsLatLng = fix
                 selectedCity = null
-                gpsLabel = if (language == "en") "My location" else "موقعي"
+                val lang = language ?: "ar"
+                val resolved = LocationHelper.resolveCityName(context, fix.first, fix.second, lang)
+                gpsLabel = resolved ?: if (lang == "en") "My Location" else "موقعي"
             }
             gpsLocating = false
         }
@@ -138,7 +125,9 @@ fun OnboardingFlow(
             if (!skipLocation) {
                 val gps = gpsLatLng
                 if (gps != null) {
-                    prefs.setLocation(gps.first, gps.second, gpsLabel ?: "My location")
+                    val resolved = gpsLabel ?: LocationHelper.resolveCityName(context, gps.first, gps.second, lang)
+                    val cityText = resolved ?: if (lang == "en") "My Location" else "موقعي"
+                    prefs.setLocation(gps.first, gps.second, cityText)
                 } else if (selectedCity != null) {
                     prefs.setLocation(
                         selectedCity!!.lat,
@@ -240,9 +229,11 @@ fun OnboardingFlow(
                 onPickCity = {
                     selectedCity = it
                     gpsLatLng = null
+                    gpsLabel = null
                 },
                 gpsActive = gpsLatLng != null,
                 gpsLocating = gpsLocating,
+                gpsLabel = gpsLabel,
                 language = language,
                 onUseGps = {
                     if (LocationHelper.hasPermission(context)) {
@@ -500,6 +491,7 @@ private fun SetupStep(
     onPickCity: (PresetCity) -> Unit,
     gpsActive: Boolean,
     gpsLocating: Boolean,
+    gpsLabel: String? = null,
     language: String?,
     onUseGps: () -> Unit,
     method: CalcMethod,
@@ -533,7 +525,12 @@ private fun SetupStep(
                 color = AtharTextSecondary
             )
             Spacer(Modifier.height(12.dp))
-            GpsButton(active = gpsActive, locating = gpsLocating, onClick = onUseGps)
+            GpsButton(
+                active = gpsActive,
+                locating = gpsLocating,
+                capturedText = gpsLabel,
+                onClick = onUseGps
+            )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.setup_precise),
@@ -652,7 +649,12 @@ private fun methodTitle(m: CalcMethod): String = when (m) {
 }
 
 @Composable
-private fun GpsButton(active: Boolean, locating: Boolean, onClick: () -> Unit) {
+private fun GpsButton(
+    active: Boolean,
+    locating: Boolean,
+    capturedText: String? = null,
+    onClick: () -> Unit
+) {
     val bg by animateColorAsState(
         targetValue = if (active) AtharPrimary.copy(alpha = 0.16f) else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -712,7 +714,7 @@ private fun GpsButton(active: Boolean, locating: Boolean, onClick: () -> Unit) {
                     )
                 } else if (active) {
                     Text(
-                        text = "تم الالتقاط • Captured",
+                        text = if (!capturedText.isNullOrBlank()) "تم الالتقاط: $capturedText" else "تم الالتقاط • Captured",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 11.sp,

@@ -2,7 +2,7 @@ package com.athar.app.ui.corner
 
 /**
  * Complete, verified supplications and remembrances from the authentic Sunnah
- * (Hisnul Muslim / حصن المسلم) categorized and ordered according to the user's
+ * (Hisnul Muslim / حصن المسلم) categorized and ordered
  * exact collections:
  * - After Prayer (Fajr: 15, Maghrib: 14, Other Prayers: 12)
  * - Morning Adhkar (All 31 in sequence)
