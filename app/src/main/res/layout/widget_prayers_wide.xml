@@ -9,6 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY"
+        android:src="@drawable/bg_widget_theme_surface"
         android:contentDescription="@null" />
 
     <LinearLayout
@@ -50,7 +51,7 @@
                         android:textColor="#FFFFFF"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                     <TextView
                         android:id="@+id/widget_time_fajr"
                         android:layout_width="wrap_content"
@@ -59,7 +60,7 @@
                         android:textColor="#E0E6DF"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                 </LinearLayout>
             </FrameLayout>
 
@@ -84,7 +85,7 @@
                         android:textColor="#FFFFFF"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                     <TextView
                         android:id="@+id/widget_time_sunrise"
                         android:layout_width="wrap_content"
@@ -93,7 +94,7 @@
                         android:textColor="#E0E6DF"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                 </LinearLayout>
             </FrameLayout>
 
@@ -118,7 +119,7 @@
                         android:textColor="#FFFFFF"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                     <TextView
                         android:id="@+id/widget_time_dhuhr"
                         android:layout_width="wrap_content"
@@ -127,7 +128,7 @@
                         android:textColor="#E0E6DF"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                 </LinearLayout>
             </FrameLayout>
 
@@ -152,7 +153,7 @@
                         android:textColor="#FFFFFF"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                     <TextView
                         android:id="@+id/widget_time_asr"
                         android:layout_width="wrap_content"
@@ -161,7 +162,7 @@
                         android:textColor="#E0E6DF"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                 </LinearLayout>
             </FrameLayout>
 
@@ -186,7 +187,7 @@
                         android:textColor="#FFFFFF"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                     <TextView
                         android:id="@+id/widget_time_maghrib"
                         android:layout_width="wrap_content"
@@ -195,7 +196,7 @@
                         android:textColor="#E0E6DF"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                 </LinearLayout>
             </FrameLayout>
 
@@ -220,7 +221,7 @@
                         android:textColor="#FFFFFF"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                     <TextView
                         android:id="@+id/widget_time_isha"
                         android:layout_width="wrap_content"
@@ -229,22 +230,23 @@
                         android:textColor="#E0E6DF"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        android:singleLine="true" />
+                        android:maxLines="1" />
                 </LinearLayout>
             </FrameLayout>
         </LinearLayout>
 
         <!-- Vertical Separator -->
-        <View
+        <ImageView
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:layout_marginTop="4dp"
             android:layout_marginBottom="4dp"
             android:layout_marginStart="6dp"
             android:layout_marginEnd="6dp"
-            android:background="#2C3A2A" />
+            android:background="#2C3A2A"
+            android:contentDescription="@null" />
 
-        <!-- 2. Next Prayer summary and Countdown -->
+        <!-- 2. Next Prayer summary, Countdown & Settings -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -267,7 +269,8 @@
                     android:text="Fajr"
                     android:textColor="#F4F8F3"
                     android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:maxLines="1" />
 
                 <TextView
                     android:id="@+id/widget_next_time"
@@ -277,7 +280,17 @@
                     android:text="05:17"
                     android:textColor="#A5C89E"
                     android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+                <ImageView
+                    android:id="@+id/widget_btn_settings"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="6dp"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_widget_settings"
+                    android:contentDescription="@null" />
             </LinearLayout>
 
             <TextView
@@ -287,7 +300,7 @@
                 android:text="Cairo"
                 android:textColor="#8CA389"
                 android:textSize="10sp"
-                android:singleLine="true"
+                android:maxLines="1"
                 android:maxWidth="90dp"
                 android:ellipsize="end" />
 

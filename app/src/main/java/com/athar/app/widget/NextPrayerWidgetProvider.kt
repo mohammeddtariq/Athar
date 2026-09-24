@@ -13,6 +13,7 @@ class NextPrayerWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        AtharWidgetUpdater.renderImmediate(context, appWidgetManager, appWidgetIds, isWide = false)
         AtharWidgetUpdater.updateAllWidgets(context)
     }
 

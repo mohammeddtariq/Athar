@@ -47,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -142,10 +143,21 @@ val allNavScreens = listOf(
 private val TabMotionEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    openWidgetSettings: Boolean = false,
+    onWidgetSettingsHandled: () -> Unit = {}
+) {
     val navController = rememberNavController()
     var isQuranReading by remember { mutableStateOf(false) }
     var targetSettingsSection by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(openWidgetSettings) {
+        if (openWidgetSettings) {
+            targetSettingsSection = "widgets"
+            navController.navigateToTab(Screen.Settings)
+            onWidgetSettingsHandled()
+        }
+    }
 
     Box(
         modifier = Modifier

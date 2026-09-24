@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var appPreferences: AppPreferences
     private var pendingUpdatePrompt = false
+    private val openWidgetSettingsState = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +38,9 @@ class MainActivity : ComponentActivity() {
 
         appPreferences = AppPreferences(applicationContext)
         pendingUpdatePrompt = intent?.getBooleanExtra(AppUpdateManager.EXTRA_OPEN_UPDATER, false) == true
+        if (intent?.getBooleanExtra("open_widget_settings", false) == true) {
+            openWidgetSettingsState.value = true
+        }
 
         setContent {
             val isOnboardingCompleted by appPreferences.isOnboardingCompleted
@@ -89,7 +93,10 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         true -> {
-                            MainScreen()
+                            MainScreen(
+                                openWidgetSettings = openWidgetSettingsState.value,
+                                onWidgetSettingsHandled = { openWidgetSettingsState.value = false }
+                            )
                         }
                     }
 
@@ -112,6 +119,9 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (intent.getBooleanExtra(AppUpdateManager.EXTRA_OPEN_UPDATER, false)) {
             pendingUpdatePrompt = true
+        }
+        if (intent.getBooleanExtra("open_widget_settings", false)) {
+            openWidgetSettingsState.value = true
         }
     }
 

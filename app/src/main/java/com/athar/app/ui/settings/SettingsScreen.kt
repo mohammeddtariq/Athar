@@ -110,6 +110,7 @@ fun SettingsScreen(
     val prefs = remember { AppPreferences(context.applicationContext) }
     val listState = rememberLazyListState()
     var isNotifHighlighted by remember { mutableStateOf(false) }
+    var isWidgetHighlighted by remember { mutableStateOf(false) }
 
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateStatusMessage by remember { mutableStateOf<String?>(null) }
@@ -122,6 +123,12 @@ fun SettingsScreen(
             onTargetSectionConsumed()
             delay(2000)
             isNotifHighlighted = false
+        } else if (targetSection == "widgets") {
+            listState.animateScrollToItem(7)
+            isWidgetHighlighted = true
+            onTargetSectionConsumed()
+            delay(2000)
+            isWidgetHighlighted = false
         }
     }
 
@@ -516,8 +523,11 @@ fun SettingsScreen(
             }
 
             // ── App Widgets ──
-            item {
-                SectionCard(title = stringResource(R.string.settings_widget_title)) {
+            item(key = "widgets") {
+                SectionCard(
+                    title = stringResource(R.string.settings_widget_title),
+                    isHighlighted = isWidgetHighlighted
+                ) {
                     Text(
                         stringResource(R.string.settings_widget_subtitle),
                         fontFamily = ThmanyahSans,

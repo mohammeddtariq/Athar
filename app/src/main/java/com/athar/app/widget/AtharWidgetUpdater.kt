@@ -79,6 +79,30 @@ object AtharWidgetUpdater {
         }
     }
 
+    fun renderImmediate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        widgetIds: IntArray,
+        isWide: Boolean
+    ) {
+        val isAr = runCatching {
+            context.resources.configuration.locales[0]?.language == "ar"
+        }.getOrDefault(true)
+
+        for (widgetId in widgetIds) {
+            val layoutRes = if (isWide) {
+                if (isAr) R.layout.widget_prayers_wide_rtl else R.layout.widget_prayers_wide
+            } else {
+                R.layout.widget_next_prayer
+            }
+            val views = RemoteViews(context.packageName, layoutRes)
+            setupClickIntent(context, views)
+            runCatching {
+                appWidgetManager.updateAppWidget(widgetId, views)
+            }
+        }
+    }
+
     private fun renderNextPrayerWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -101,7 +125,11 @@ object AtharWidgetUpdater {
             snapshot.widgetBgStyle,
             snapshot.widgetBlurIntensity
         )
-        views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
+        if (bgBitmap != null) {
+            views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
+        } else {
+            views.setImageViewResource(R.id.widget_bg, R.drawable.bg_widget_theme_surface)
+        }
 
         // Labels
         val nextLabel = if (isAr) "الصلاة التالية" else "Next Prayer"
@@ -155,7 +183,11 @@ object AtharWidgetUpdater {
             snapshot.widgetBgStyle,
             snapshot.widgetBlurIntensity
         )
-        views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
+        if (bgBitmap != null) {
+            views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
+        } else {
+            views.setImageViewResource(R.id.widget_bg, R.drawable.bg_widget_theme_surface)
+        }
 
         // Next prayer summary
         val nextName = getPrayerName(next.key, isAr)
@@ -241,6 +273,18 @@ object AtharWidgetUpdater {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+
+        val settingsIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("open_widget_settings", true)
+        }
+        val settingsPending = PendingIntent.getActivity(
+            context,
+            1,
+            settingsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_btn_settings, settingsPending)
     }
 
     private fun scheduleNextAlarm(context: Context, nextTime: LocalTime, isTomorrow: Boolean) {
@@ -290,45 +334,47 @@ object AtharWidgetUpdater {
         heightDp: Int,
         bgStyle: WidgetBgStyle,
         blurIntensity: Int
-    ): Bitmap {
-        val density = context.resources.displayMetrics.density
-        val w = (widthDp * density).toInt().coerceAtLeast(100)
-        val h = (heightDp * density).toInt().coerceAtLeast(100)
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val cornerRadius = 24f * density
+    ): Bitmap? {
+        return runCatching {
+            val density = context.resources.displayMetrics.density
+            val w = (widthDp * density).toInt().coerceIn(100, 1920)
+            val h = (heightDp * density).toInt().coerceIn(60, 1080)
+            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val cornerRadius = 22f * density
 
-        val rect = RectF(1.5f * density, 1.5f * density, w - 1.5f * density, h - 1.5f * density)
+            val rect = RectF(1.5f * density, 1.5f * density, w - 1.5f * density, h - 1.5f * density)
 
-        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            when (bgStyle) {
-                WidgetBgStyle.THEME -> {
-                    color = android.graphics.Color.parseColor("#141913")
-                }
-                WidgetBgStyle.TRANSLUCENT -> {
-                    val alpha = ((blurIntensity / 100f) * 235).toInt().coerceIn(30, 240)
-                    color = android.graphics.Color.argb(alpha, 12, 17, 12)
-                }
-            }
-        }
-        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, bgPaint)
-
-        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 1.2f * density
-            when (bgStyle) {
-                WidgetBgStyle.THEME -> {
-                    color = android.graphics.Color.parseColor("#263224")
-                }
-                WidgetBgStyle.TRANSLUCENT -> {
-                    val strokeAlpha = (((blurIntensity / 100f) * 55) + 20).toInt().coerceIn(25, 95)
-                    color = android.graphics.Color.argb(strokeAlpha, 255, 255, 255)
+            val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                when (bgStyle) {
+                    WidgetBgStyle.THEME -> {
+                        color = android.graphics.Color.parseColor("#141913")
+                    }
+                    WidgetBgStyle.TRANSLUCENT -> {
+                        val alpha = ((blurIntensity / 100f) * 235).toInt().coerceIn(30, 240)
+                        color = android.graphics.Color.argb(alpha, 12, 17, 12)
+                    }
                 }
             }
-        }
-        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, strokePaint)
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, bgPaint)
 
-        return bitmap
+            val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 1.2f * density
+                when (bgStyle) {
+                    WidgetBgStyle.THEME -> {
+                        color = android.graphics.Color.parseColor("#263224")
+                    }
+                    WidgetBgStyle.TRANSLUCENT -> {
+                        val strokeAlpha = (((blurIntensity / 100f) * 55) + 20).toInt().coerceIn(25, 95)
+                        color = android.graphics.Color.argb(strokeAlpha, 255, 255, 255)
+                    }
+                }
+            }
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, strokePaint)
+
+            bitmap
+        }.getOrNull()
     }
 }

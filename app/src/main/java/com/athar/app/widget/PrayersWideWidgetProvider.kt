@@ -13,6 +13,7 @@ class PrayersWideWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        AtharWidgetUpdater.renderImmediate(context, appWidgetManager, appWidgetIds, isWide = true)
         AtharWidgetUpdater.updateAllWidgets(context)
     }
 

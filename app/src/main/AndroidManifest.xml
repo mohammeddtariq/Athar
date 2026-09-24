@@ -78,6 +78,16 @@
             android:name=".widget.WidgetAlarmReceiver"
             android:exported="false" />
 
+        <!-- Widget Configuration Activity (Long-press settings shortcut) -->
+        <activity
+            android:name=".widget.WidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Atharأَثَر">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
