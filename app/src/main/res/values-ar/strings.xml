@@ -213,4 +213,10 @@
     <string name="update_checking">جاري التحقق من التحديثات…</string>
     <string name="update_already_latest">أنت تستخدم أحدث إصدار من أَثَر</string>
     <string name="update_permission_required">يرجى السماح بتثبيت التطبيقات من هذا المصدر لتحديث أَثَر</string>
+
+    <!-- Quran Last Read -->
+    <string name="quran_last_read_title">آخر موضع قرأته</string>
+    <string name="quran_last_read_continue">متابعة القراءة</string>
+    <string name="quran_last_read_page">صفحة %1$d</string>
+    <string name="quran_last_read_surah">سورة %1$s</string>
 </resources>

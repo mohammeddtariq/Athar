@@ -90,6 +90,7 @@ import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
 import com.athar.app.data.formatDigits
+import com.athar.app.ui.components.AtharAnimatedLogo
 import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -304,105 +305,114 @@ private fun TopBar(
     onLocationClick: () -> Unit,
     onAfterPrayerClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    val naturalDirection = LocalLayoutDirection.current
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             modifier = Modifier
-                .weight(1f, fill = false)
-                .clip(RoundedCornerShape(18.dp))
-                .background(AtharCardSurface)
-                .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onLocationClick
-            )
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Outlined.LocationOn,
-                contentDescription = null,
-                tint = AtharPrimaryLight,
-                modifier = Modifier.size(15.dp)
+            AtharAnimatedLogo(
+                modifier = Modifier.padding(start = 2.dp)
             )
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-                cityLabel ?: stringResource(R.string.home_location_not_set),
-                color = AtharTextPrimary,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 12.5.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(19.dp))
-                    .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, RoundedCornerShape(19.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onAfterPrayerClick
-                    )
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_prayer_hands),
-                    contentDescription = null,
-                    tint = AtharPrimaryLight,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.home_after_prayer_adhkar),
-                    color = AtharTextPrimary,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
-                )
-            }
-
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onBellClick
-                        ),
-                    contentAlignment = Alignment.Center
+            CompositionLocalProvider(LocalLayoutDirection provides naturalDirection) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
-                        contentDescription = null,
-                        tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(AtharCardSurface)
+                                .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onLocationClick
+                                )
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.LocationOn,
+                                contentDescription = null,
+                                tint = AtharPrimaryLight,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                cityLabel ?: stringResource(R.string.home_location_not_set),
+                                color = AtharTextPrimary,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AtharCardSurface)
+                                .border(1.dp, AtharCardBorder, CircleShape)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onBellClick
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                                contentDescription = null,
+                                tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AtharCardSurface)
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onAfterPrayerClick
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_prayer_hands),
+                            contentDescription = null,
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            stringResource(R.string.home_after_prayer_adhkar),
+                            color = AtharTextPrimary,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
         }
     }
+}
 
 /**
  * Featured Next Prayer card with the Islamic lattice baked in.

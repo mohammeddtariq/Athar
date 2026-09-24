@@ -302,6 +302,15 @@ fun QuranScreen(
     var layoutMode by remember(savedLayoutMode) { mutableStateOf(savedLayoutMode) }
 
     var openSurah by remember { mutableStateOf<SurahMeta?>(null) }
+    var targetPageToScroll by remember { mutableStateOf<Int?>(null) }
+    var isLastReadDismissed by rememberSaveable { mutableStateOf(false) }
+
+    val lastReadSurahNum by appPrefs.lastReadSurahNumber.collectAsState(initial = null)
+    val lastReadSurahAr by appPrefs.lastReadSurahNameAr.collectAsState(initial = null)
+    val lastReadSurahEn by appPrefs.lastReadSurahNameEn.collectAsState(initial = null)
+    val lastReadPageNum by appPrefs.lastReadPageNumber.collectAsState(initial = null)
+    val numberStyle by appPrefs.numberStyle.collectAsState(initial = com.athar.app.data.NumberStylePreference.WESTERN)
+
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(QuranTabIndex.SURAHS) }
 
@@ -322,6 +331,7 @@ fun QuranScreen(
         if (now - lastBackTime < 2000L) {
             showDoubleBackToast = false
             openSurah = null
+            targetPageToScroll = null
         } else {
             lastBackTime = now
             showDoubleBackToast = true
@@ -352,6 +362,7 @@ fun QuranScreen(
                     fontBold = fontBold,
                     reciter = reciter,
                     layoutMode = layoutMode,
+                    initialPageNumber = targetPageToScroll,
                     onLayoutModeChange = { newMode ->
                         layoutMode = newMode
                         scope.launch { appPrefs.setQuranLayoutMode(newMode) }
@@ -370,11 +381,18 @@ fun QuranScreen(
                         scope.launch { appPrefs.setQuranReciter(newReciter) }
                     },
                     onToggleBold = { fontBold = !fontBold },
-                    onBackToList = { openSurah = null },
-                    onSelectSurah = { openSurah = it },
+                    onBackToList = {
+                        openSurah = null
+                        targetPageToScroll = null
+                    },
+                    onSelectSurah = {
+                        targetPageToScroll = null
+                        openSurah = it
+                    },
                     onNextSurah = {
                         val idx = allSurahs.indexOfFirst { it.number == currentSurah.number }
                         if (idx in 0 until allSurahs.lastIndex) {
+                            targetPageToScroll = null
                             openSurah = allSurahs[idx + 1]
                         }
                     }
@@ -407,16 +425,50 @@ fun QuranScreen(
                 }
             }
         } else {
-            // Surah & Juz Index Screen
-            SurahListScreen(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                selectedTab = selectedTab,
-                onTabSelect = { selectedTab = it },
-                colors = colors,
-                onBack = onBack,
-                onSelectSurah = { openSurah = it }
-            )
+            // Surah & Juz Index Screen with centered floating Last Read card above nav bar
+            Box(modifier = Modifier.fillMaxSize()) {
+                SurahListScreen(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    selectedTab = selectedTab,
+                    onTabSelect = { selectedTab = it },
+                    colors = colors,
+                    onBack = onBack,
+                    onSelectSurah = {
+                        targetPageToScroll = null
+                        openSurah = it
+                    }
+                )
+
+                val lastSurah = remember(lastReadSurahNum) {
+                    allSurahs.firstOrNull { it.number == lastReadSurahNum }
+                }
+                val isArabic = remember { Locale.getDefault().language == "ar" }
+                if (lastSurah != null && lastReadPageNum != null && !isLastReadDismissed && searchQuery.isBlank()) {
+                    val displayName = if (isArabic) "سورة ${lastSurah.arabicName}" else "Surah ${lastSurah.englishName}"
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(tween(250)) + slideInVertically(spring(dampingRatio = 0.85f, stiffness = 350f)) { it },
+                        exit = fadeOut(tween(200)) + slideOutVertically(spring(dampingRatio = 0.85f, stiffness = 350f)) { it },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 98.dp)
+                    ) {
+                        LastReadFloatingCard(
+                            surahName = displayName,
+                            pageNumber = lastReadPageNum!!,
+                            numberStyle = numberStyle,
+                            onContinueReading = {
+                                targetPageToScroll = lastReadPageNum
+                                openSurah = lastSurah
+                            },
+                            onDismiss = {
+                                isLastReadDismissed = true
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -1150,6 +1202,7 @@ private fun SurahReader(
     fontBold: Boolean,
     reciter: QuranReciter,
     layoutMode: QuranLayoutMode,
+    initialPageNumber: Int? = null,
     onLayoutModeChange: (QuranLayoutMode) -> Unit,
     onThemeChange: (QuranThemeMode) -> Unit,
     onFontScaleChange: (Float) -> Unit,
@@ -1160,6 +1213,8 @@ private fun SurahReader(
     onNextSurah: () -> Unit
 )  {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appPrefs = remember { AppPreferences(context.applicationContext) }
     var pageChunks by remember(surah.number) { mutableStateOf<List<QuranPageChunk>?>(null) }
     var loadFailed by remember(surah.number) { mutableStateOf(false) }
     var attempt by remember(surah.number) { mutableIntStateOf(0) }
@@ -1338,12 +1393,61 @@ private fun SurahReader(
             loadFailed = chunks.isNullOrEmpty()
             if (!chunks.isNullOrEmpty()) {
                 try {
-                    listState.scrollToItem(0)
+                    if (initialPageNumber != null) {
+                        val chunkIdx = chunks.indexOfFirst { it.pageNumber == initialPageNumber }
+                        if (chunkIdx >= 0) {
+                            val scrollIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) chunkIdx + 1 else chunkIdx
+                            listState.scrollToItem(scrollIdx)
+                        } else {
+                            listState.scrollToItem(0)
+                        }
+                    } else {
+                        listState.scrollToItem(0)
+                    }
                 } catch (_: Exception) {}
             }
         } catch (e: Throwable) {
             android.util.Log.e("QuranScreen", "Error loading surah ${surah.number}", e)
             loadFailed = true
+        }
+    }
+
+    val currentVisiblePage by remember {
+        derivedStateOf {
+            val chunks = pageChunks
+            if (!chunks.isNullOrEmpty()) {
+                val firstIdx = listState.firstVisibleItemIndex
+                val chunkIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) {
+                    (firstIdx - 1).coerceIn(0, chunks.lastIndex)
+                } else {
+                    firstIdx.coerceIn(0, chunks.lastIndex)
+                }
+                chunks[chunkIdx].pageNumber
+            } else {
+                QuranPages.getPageForVerse(surah.number, 1)
+            }
+        }
+    }
+
+    LaunchedEffect(surah.number, currentVisiblePage) {
+        appPrefs.saveLastReadPosition(
+            surahNumber = surah.number,
+            surahNameAr = surah.arabicName,
+            surahNameEn = surah.englishName,
+            pageNumber = currentVisiblePage
+        )
+    }
+
+    DisposableEffect(surah.number) {
+        onDispose {
+            scope.launch {
+                appPrefs.saveLastReadPosition(
+                    surahNumber = surah.number,
+                    surahNameAr = surah.arabicName,
+                    surahNameEn = surah.englishName,
+                    pageNumber = currentVisiblePage
+                )
+            }
         }
     }
 

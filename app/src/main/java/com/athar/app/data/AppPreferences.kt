@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -47,6 +49,13 @@ class AppPreferences(private val context: Context) {
         private val QURAN_FONT_SCALE_KEY = doublePreferencesKey("quran_font_scale")
         private val QURAN_RECITER_KEY = stringPreferencesKey("quran_reciter")
         private val QURAN_LAYOUT_MODE_KEY = stringPreferencesKey("quran_layout_mode")
+
+        // Quran Last Read Position
+        private val LAST_READ_SURAH_NUMBER_KEY = intPreferencesKey("last_read_surah_number")
+        private val LAST_READ_SURAH_NAME_AR_KEY = stringPreferencesKey("last_read_surah_name_ar")
+        private val LAST_READ_SURAH_NAME_EN_KEY = stringPreferencesKey("last_read_surah_name_en")
+        private val LAST_READ_PAGE_NUMBER_KEY = intPreferencesKey("last_read_page_number")
+        private val LAST_READ_TIMESTAMP_KEY = longPreferencesKey("last_read_timestamp")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -78,6 +87,12 @@ class AppPreferences(private val context: Context) {
     val quranLayoutMode: Flow<QuranLayoutMode> = context.dataStore.data.map {
         QuranLayoutMode.fromId(it[QURAN_LAYOUT_MODE_KEY] ?: "TEXT")
     }
+
+    val lastReadSurahNumber: Flow<Int?> = context.dataStore.data.map { it[LAST_READ_SURAH_NUMBER_KEY] }
+    val lastReadSurahNameAr: Flow<String?> = context.dataStore.data.map { it[LAST_READ_SURAH_NAME_AR_KEY] }
+    val lastReadSurahNameEn: Flow<String?> = context.dataStore.data.map { it[LAST_READ_SURAH_NAME_EN_KEY] }
+    val lastReadPageNumber: Flow<Int?> = context.dataStore.data.map { it[LAST_READ_PAGE_NUMBER_KEY] }
+    val lastReadTimestamp: Flow<Long?> = context.dataStore.data.map { it[LAST_READ_TIMESTAMP_KEY] }
 
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
         context.dataStore.data.map { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] ?: true }
@@ -166,6 +181,31 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setNumberStyle(style: NumberStylePreference) {
         context.dataStore.edit { it[NUMBER_STYLE_KEY] = style.id }
+    }
+
+    suspend fun saveLastReadPosition(
+        surahNumber: Int,
+        surahNameAr: String,
+        surahNameEn: String,
+        pageNumber: Int
+    ) {
+        context.dataStore.edit {
+            it[LAST_READ_SURAH_NUMBER_KEY] = surahNumber
+            it[LAST_READ_SURAH_NAME_AR_KEY] = surahNameAr
+            it[LAST_READ_SURAH_NAME_EN_KEY] = surahNameEn
+            it[LAST_READ_PAGE_NUMBER_KEY] = pageNumber
+            it[LAST_READ_TIMESTAMP_KEY] = System.currentTimeMillis()
+        }
+    }
+
+    suspend fun clearLastReadPosition() {
+        context.dataStore.edit {
+            it.remove(LAST_READ_SURAH_NUMBER_KEY)
+            it.remove(LAST_READ_SURAH_NAME_AR_KEY)
+            it.remove(LAST_READ_SURAH_NAME_EN_KEY)
+            it.remove(LAST_READ_PAGE_NUMBER_KEY)
+            it.remove(LAST_READ_TIMESTAMP_KEY)
+        }
     }
 }
 

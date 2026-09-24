@@ -213,4 +213,10 @@
     <string name="update_checking">Checking for updates…</string>
     <string name="update_already_latest">You are using the latest version of Athar</string>
     <string name="update_permission_required">Please allow installing apps from this source to update Athar</string>
+
+    <!-- Quran Last Read -->
+    <string name="quran_last_read_title">Last Read Position</string>
+    <string name="quran_last_read_continue">Continue</string>
+    <string name="quran_last_read_page">Page %1$d</string>
+    <string name="quran_last_read_surah">Surah %1$s</string>
 </resources>

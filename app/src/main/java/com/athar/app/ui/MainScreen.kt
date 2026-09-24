@@ -2,6 +2,7 @@ package com.athar.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -11,6 +12,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -136,6 +139,8 @@ val allNavScreens = listOf(
     Screen.Settings
 )
 
+private val TabMotionEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
+
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -152,16 +157,28 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(140, easing = LinearEasing))
+                fadeIn(animationSpec = tween(280, easing = TabMotionEasing)) +
+                    scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.84f, stiffness = 380f)) +
+                    slideInVertically(
+                        initialOffsetY = { (it * 0.035f).toInt() },
+                        animationSpec = spring(dampingRatio = 0.84f, stiffness = 380f)
+                    )
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(100, easing = LinearEasing))
+                fadeOut(animationSpec = tween(180, easing = TabMotionEasing)) +
+                    scaleOut(targetScale = 0.97f, animationSpec = tween(180, easing = TabMotionEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(140, easing = LinearEasing))
+                fadeIn(animationSpec = tween(280, easing = TabMotionEasing)) +
+                    scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.84f, stiffness = 380f)) +
+                    slideInVertically(
+                        initialOffsetY = { (it * 0.035f).toInt() },
+                        animationSpec = spring(dampingRatio = 0.84f, stiffness = 380f)
+                    )
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(100, easing = LinearEasing))
+                fadeOut(animationSpec = tween(180, easing = TabMotionEasing)) +
+                    scaleOut(targetScale = 0.97f, animationSpec = tween(180, easing = TabMotionEasing))
             }
         ) {
             composable(Screen.Home.route) {
