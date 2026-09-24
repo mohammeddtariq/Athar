@@ -1379,6 +1379,8 @@ private fun SurahReader(
         }
     }
 
+    var isPositionRestored by remember(surah.number) { mutableStateOf(initialPageNumber == null) }
+
     // Load surah verses chunked by authentic Mushaf pages
     LaunchedEffect(surah.number, attempt) {
         pageChunks = null
@@ -1391,24 +1393,26 @@ private fun SurahReader(
             )
             pageChunks = chunks
             loadFailed = chunks.isNullOrEmpty()
-            if (!chunks.isNullOrEmpty()) {
-                try {
-                    if (initialPageNumber != null) {
-                        val chunkIdx = chunks.indexOfFirst { it.pageNumber == initialPageNumber }
-                        if (chunkIdx >= 0) {
-                            val scrollIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) chunkIdx + 1 else chunkIdx
-                            listState.scrollToItem(scrollIdx)
-                        } else {
-                            listState.scrollToItem(0)
-                        }
-                    } else {
-                        listState.scrollToItem(0)
-                    }
-                } catch (_: Exception) {}
-            }
         } catch (e: Throwable) {
             android.util.Log.e("QuranScreen", "Error loading surah ${surah.number}", e)
             loadFailed = true
+        }
+    }
+
+    // Scroll to initial page when chunks become available
+    LaunchedEffect(pageChunks, initialPageNumber) {
+        val chunks = pageChunks
+        if (!chunks.isNullOrEmpty() && initialPageNumber != null && !isPositionRestored) {
+            val chunkIdx = chunks.indexOfFirst { it.pageNumber == initialPageNumber }
+            if (chunkIdx >= 0) {
+                val scrollIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) chunkIdx + 1 else chunkIdx
+                try {
+                    listState.scrollToItem(scrollIdx)
+                } catch (_: Exception) {}
+            }
+            isPositionRestored = true
+        } else if (chunks != null && initialPageNumber == null) {
+            isPositionRestored = true
         }
     }
 
@@ -1429,24 +1433,28 @@ private fun SurahReader(
         }
     }
 
-    LaunchedEffect(surah.number, currentVisiblePage) {
-        appPrefs.saveLastReadPosition(
-            surahNumber = surah.number,
-            surahNameAr = surah.arabicName,
-            surahNameEn = surah.englishName,
-            pageNumber = currentVisiblePage
-        )
+    LaunchedEffect(surah.number, currentVisiblePage, isPositionRestored, pageChunks) {
+        if (pageChunks != null && isPositionRestored) {
+            appPrefs.saveLastReadPosition(
+                surahNumber = surah.number,
+                surahNameAr = surah.arabicName,
+                surahNameEn = surah.englishName,
+                pageNumber = currentVisiblePage
+            )
+        }
     }
 
     DisposableEffect(surah.number) {
         onDispose {
-            scope.launch {
-                appPrefs.saveLastReadPosition(
-                    surahNumber = surah.number,
-                    surahNameAr = surah.arabicName,
-                    surahNameEn = surah.englishName,
-                    pageNumber = currentVisiblePage
-                )
+            if (pageChunks != null && isPositionRestored) {
+                scope.launch {
+                    appPrefs.saveLastReadPosition(
+                        surahNumber = surah.number,
+                        surahNameAr = surah.arabicName,
+                        surahNameEn = surah.englishName,
+                        pageNumber = currentVisiblePage
+                    )
+                }
             }
         }
     }

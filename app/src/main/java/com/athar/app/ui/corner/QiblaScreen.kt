@@ -58,8 +58,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import com.athar.app.ui.components.PatternScaffold
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -206,14 +208,15 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
         else -> 30
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AtharBackground)
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = 150.dp)
-    ) {
+    PatternScaffold(patternAlpha = 0.05f) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .statusBarsPadding()
+                    .padding(bottom = 150.dp)
+            ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -520,6 +523,27 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+
+            // Translucent gradient status bar overlay
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                AtharBackground,
+                                AtharBackground.copy(alpha = 0.96f),
+                                AtharBackground.copy(alpha = 0.82f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+                    .height(16.dp)
             )
         }
     }

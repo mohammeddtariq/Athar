@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -72,6 +73,7 @@ import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.data.presetCities
+import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
@@ -184,13 +186,12 @@ fun SettingsScreen(
     }
 
     PatternScaffold(patternAlpha = 0.05f) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 150.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 48.dp, bottom = 150.dp)
+            ) {
             item {
                 Text(
                     stringResource(R.string.settings_title),
@@ -699,7 +700,27 @@ fun SettingsScreen(
                 }
             }
         }
+
+        // Translucent gradient status bar overlay matching DuasScreen
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            AtharBackground,
+                            AtharBackground.copy(alpha = 0.96f),
+                            AtharBackground.copy(alpha = 0.82f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .statusBarsPadding()
+                .height(18.dp)
+        )
     }
+}
 
     if (availableUpdate != null) {
         AppUpdateDialog(

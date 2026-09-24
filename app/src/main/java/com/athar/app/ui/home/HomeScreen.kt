@@ -33,6 +33,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
@@ -305,109 +306,105 @@ private fun TopBar(
     onLocationClick: () -> Unit,
     onAfterPrayerClick: () -> Unit
 ) {
-    val naturalDirection = LocalLayoutDirection.current
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AtharAnimatedLogo(
-                modifier = Modifier.padding(start = 2.dp)
-            )
+            AtharAnimatedLogo()
 
-            CompositionLocalProvider(LocalLayoutDirection provides naturalDirection) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Location Pill
+                Row(
+                    modifier = Modifier
+                        .height(35.dp)
+                        .clip(RoundedCornerShape(17.5.dp))
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(17.5.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onLocationClick
+                        )
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(AtharCardSurface)
-                                .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = onLocationClick
-                                )
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Outlined.LocationOn,
-                                contentDescription = null,
-                                tint = AtharPrimaryLight,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                cityLabel ?: stringResource(R.string.home_location_not_set),
-                                color = AtharTextPrimary,
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 11.5.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                    Icon(
+                        Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        cityLabel ?: stringResource(R.string.home_location_not_set),
+                        color = AtharTextPrimary,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 80.dp)
+                    )
+                }
 
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(AtharCardSurface)
-                                .border(1.dp, AtharCardBorder, CircleShape)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = onBellClick
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
-                                contentDescription = null,
-                                tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                // After-Prayer Duas Pill
+                Row(
+                    modifier = Modifier
+                        .height(35.dp)
+                        .clip(RoundedCornerShape(17.5.dp))
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(17.5.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onAfterPrayerClick
+                        )
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_prayer_hands),
+                        contentDescription = null,
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        stringResource(R.string.home_after_prayer_adhkar),
+                        color = AtharTextPrimary,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                }
 
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(AtharCardSurface)
-                            .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onAfterPrayerClick
-                            )
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_prayer_hands),
-                            contentDescription = null,
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            stringResource(R.string.home_after_prayer_adhkar),
-                            color = AtharTextPrimary,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        )
-                    }
+                // Notification Bell
+                Box(
+                    modifier = Modifier
+                        .size(35.dp)
+                        .clip(CircleShape)
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onBellClick
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                        contentDescription = null,
+                        tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }

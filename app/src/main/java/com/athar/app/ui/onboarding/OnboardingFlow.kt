@@ -251,9 +251,18 @@ fun OnboardingFlow(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .background(AtharBackground)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                AtharBackground,
+                                AtharBackground.copy(alpha = 0.96f),
+                                AtharBackground.copy(alpha = 0.82f),
+                                Color.Transparent
+                            )
+                        )
+                    )
                     .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 4.dp)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -530,9 +539,8 @@ private fun SetupStep(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
             .padding(horizontal = 24.dp),
-        contentPadding = PaddingValues(top = 64.dp, bottom = 48.dp),
+        contentPadding = PaddingValues(top = 80.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
