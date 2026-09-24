@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">أَثَر - Athar</string>
+    <string name="app_name">Athar - أَثَر</string>
 
     <!-- Navigation -->
     <string name="nav_home">الرئيسية</string>
@@ -26,6 +26,23 @@
     <string name="home_prayers_title">مواقيت الصلاة</string>
     <string name="home_view_details">عرض التفاصيل</string>
     <string name="home_after_prayer_adhkar">أذكار بعد الصلاة</string>
+    <string name="home_notification_settings">إعدادات التنبيهات</string>
+
+    <!-- App Widgets -->
+    <string name="widget_next_prayer_name">ويدجت الصلاة التالية</string>
+    <string name="widget_next_prayer_desc">يعرض الصلاة القادمة والوقت المتبقي والموقع الحالي.</string>
+    <string name="widget_prayers_wide_name">ويدجت مواقيت الصلاة الكامل</string>
+    <string name="widget_prayers_wide_desc">شريط أفقي لجميع مواقيت اليوم والعد التنازلي للصلاة القادمة.</string>
+    <string name="settings_widget_title">الويدجت (عناصر الشاشة)</string>
+    <string name="settings_widget_subtitle">تخصيص مظهر ونمط وشفافية ويدجت الشاشة الرئيسية</string>
+    <string name="settings_widget_num_style">نمط أرقام الويدجت</string>
+    <string name="settings_widget_num_arabic">عربية (١، ٢، ٣)</string>
+    <string name="settings_widget_num_western">إنجليزية (1, 2, 3)</string>
+    <string name="settings_widget_bg_style">نمط الخلفية</string>
+    <string name="settings_widget_bg_theme">مظهر التطبيق (زيتوني هادئ)</string>
+    <string name="settings_widget_bg_translucent">زجاجي شفاف مموه</string>
+    <string name="settings_widget_blur_intensity">شدة التعتيم والشفافية</string>
+    <string name="settings_widget_preview">معاينة الويدجت</string>
 
     <!-- Services Screen -->
     <string name="services_title">الجوهر</string>

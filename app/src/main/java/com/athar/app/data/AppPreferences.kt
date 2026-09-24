@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "athar_preferences")
@@ -56,6 +57,11 @@ class AppPreferences(private val context: Context) {
         private val LAST_READ_SURAH_NAME_EN_KEY = stringPreferencesKey("last_read_surah_name_en")
         private val LAST_READ_PAGE_NUMBER_KEY = intPreferencesKey("last_read_page_number")
         private val LAST_READ_TIMESTAMP_KEY = longPreferencesKey("last_read_timestamp")
+
+        // App Widgets
+        private val WIDGET_NUMBER_STYLE_KEY = stringPreferencesKey("widget_number_style")
+        private val WIDGET_BG_STYLE_KEY = stringPreferencesKey("widget_bg_style")
+        private val WIDGET_BLUR_INTENSITY_KEY = intPreferencesKey("widget_blur_intensity")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -93,6 +99,32 @@ class AppPreferences(private val context: Context) {
     val lastReadSurahNameEn: Flow<String?> = context.dataStore.data.map { it[LAST_READ_SURAH_NAME_EN_KEY] }
     val lastReadPageNumber: Flow<Int?> = context.dataStore.data.map { it[LAST_READ_PAGE_NUMBER_KEY] }
     val lastReadTimestamp: Flow<Long?> = context.dataStore.data.map { it[LAST_READ_TIMESTAMP_KEY] }
+
+    val widgetNumberStyle: Flow<NumberStylePreference> = context.dataStore.data.map {
+        NumberStylePreference.fromId(it[WIDGET_NUMBER_STYLE_KEY] ?: "western")
+    }
+    val widgetBgStyle: Flow<WidgetBgStyle> = context.dataStore.data.map {
+        WidgetBgStyle.fromId(it[WIDGET_BG_STYLE_KEY] ?: "THEME")
+    }
+    val widgetBlurIntensity: Flow<Int> = context.dataStore.data.map {
+        it[WIDGET_BLUR_INTENSITY_KEY] ?: 70
+    }
+
+    suspend fun getPreferencesSnapshot(): AppPrefsSnapshot {
+        val data = context.dataStore.data.first()
+        return AppPrefsSnapshot(
+            lat = data[LAT_KEY],
+            lng = data[LNG_KEY],
+            city = data[CITY_KEY],
+            methodId = data[METHOD_KEY] ?: "MWL",
+            madhabId = data[MADHAB_KEY] ?: "SHAFI",
+            language = data[LANGUAGE_KEY] ?: "ar",
+            appNumberStyle = NumberStylePreference.fromId(data[NUMBER_STYLE_KEY] ?: "western"),
+            widgetNumberStyle = NumberStylePreference.fromId(data[WIDGET_NUMBER_STYLE_KEY] ?: data[NUMBER_STYLE_KEY] ?: "western"),
+            widgetBgStyle = WidgetBgStyle.fromId(data[WIDGET_BG_STYLE_KEY] ?: "THEME"),
+            widgetBlurIntensity = data[WIDGET_BLUR_INTENSITY_KEY] ?: 70
+        )
+    }
 
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
         context.dataStore.data.map { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] ?: true }
@@ -207,7 +239,41 @@ class AppPreferences(private val context: Context) {
             it.remove(LAST_READ_TIMESTAMP_KEY)
         }
     }
+
+    suspend fun setWidgetNumberStyle(style: NumberStylePreference) {
+        context.dataStore.edit { it[WIDGET_NUMBER_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setWidgetBgStyle(style: WidgetBgStyle) {
+        context.dataStore.edit { it[WIDGET_BG_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setWidgetBlurIntensity(intensity: Int) {
+        context.dataStore.edit { it[WIDGET_BLUR_INTENSITY_KEY] = intensity.coerceIn(20, 100) }
+    }
 }
+
+enum class WidgetBgStyle(val id: String) {
+    THEME("THEME"),
+    TRANSLUCENT("TRANSLUCENT");
+
+    companion object {
+        fun fromId(id: String): WidgetBgStyle = entries.firstOrNull { it.id == id } ?: THEME
+    }
+}
+
+data class AppPrefsSnapshot(
+    val lat: Double?,
+    val lng: Double?,
+    val city: String?,
+    val methodId: String,
+    val madhabId: String,
+    val language: String,
+    val appNumberStyle: NumberStylePreference,
+    val widgetNumberStyle: NumberStylePreference,
+    val widgetBgStyle: WidgetBgStyle,
+    val widgetBlurIntensity: Int
+)
 
 enum class NumberStylePreference(val id: String) {
     WESTERN("western"),

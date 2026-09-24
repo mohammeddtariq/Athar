@@ -233,8 +233,6 @@ fun HomeScreen(
         ) {
             TopBar(
                 cityLabel = currentCityLabel,
-                notificationsOn = notifMaster,
-                onBellClick = onOpenNotifications,
                 onLocationClick = onOpenSettings,
                 onAfterPrayerClick = { showAfterPrayerDialog = true }
             )
@@ -269,8 +267,8 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.End,
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -280,6 +278,37 @@ fun HomeScreen(
                             fontWeight = FontWeight.Black,
                             fontSize = 16.sp
                         )
+
+                        // Notification Settings Pill
+                        Row(
+                            modifier = Modifier
+                                .height(30.dp)
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(AtharCardSurface)
+                                .border(1.dp, AtharCardBorder, RoundedCornerShape(15.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onOpenNotifications
+                                )
+                                .padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (notifMaster) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                                contentDescription = null,
+                                tint = if (notifMaster) AtharPrimaryLight else AtharTextSecondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                stringResource(R.string.home_notification_settings),
+                                color = AtharTextPrimary,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
             }
@@ -301,8 +330,6 @@ fun HomeScreen(
 @Composable
 private fun TopBar(
     cityLabel: String?,
-    notificationsOn: Boolean,
-    onBellClick: () -> Unit,
     onLocationClick: () -> Unit,
     onAfterPrayerClick: () -> Unit
 ) {
@@ -383,28 +410,6 @@ private fun TopBar(
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp
-                    )
-                }
-
-                // 3. Notification Bell
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onBellClick
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
-                        contentDescription = null,
-                        tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
-                        modifier = Modifier.size(15.dp)
                     )
                 }
             }

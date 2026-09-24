@@ -47,6 +47,37 @@
             </intent-filter>
         </receiver>
 
+        <!-- Next Prayer Box Widget -->
+        <receiver
+            android:name=".widget.NextPrayerWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_next_prayer_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_prayer_info" />
+        </receiver>
+
+        <!-- All Prayers Wide Widget -->
+        <receiver
+            android:name=".widget.PrayersWideWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_prayers_wide_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayers_wide_info" />
+        </receiver>
+
+        <!-- Widget Next Prayer Alarm Receiver -->
+        <receiver
+            android:name=".widget.WidgetAlarmReceiver"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

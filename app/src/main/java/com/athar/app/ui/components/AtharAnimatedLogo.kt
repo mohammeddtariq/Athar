@@ -73,7 +73,10 @@ fun AtharAnimatedLogo(
             if (arabic) {
                 AnimatedArabicLogo(color = color)
             } else {
-                AnimatedEnglishLogo(color = color)
+                AnimatedEnglishLogo(
+                    color = color,
+                    modifier = Modifier.offset(x = (-10).dp)
+                )
             }
         }
     }

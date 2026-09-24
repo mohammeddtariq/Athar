@@ -26,6 +26,23 @@
     <string name="home_prayers_title">Prayer Times</string>
     <string name="home_view_details">View Details</string>
     <string name="home_after_prayer_adhkar">After Prayer Adhkar</string>
+    <string name="home_notification_settings">Notification Settings</string>
+
+    <!-- App Widgets -->
+    <string name="widget_next_prayer_name">Next Prayer Widget</string>
+    <string name="widget_next_prayer_desc">Shows the upcoming prayer, time remaining, and location.</string>
+    <string name="widget_prayers_wide_name">All Prayers Widget</string>
+    <string name="widget_prayers_wide_desc">Shows all daily prayer times with next prayer countdown.</string>
+    <string name="settings_widget_title">App Widgets</string>
+    <string name="settings_widget_subtitle">Customize home screen widget appearance and transparency</string>
+    <string name="settings_widget_num_style">Widget Numbers</string>
+    <string name="settings_widget_num_arabic">Arabic (١, ٢, ٣)</string>
+    <string name="settings_widget_num_western">Western (1, 2, 3)</string>
+    <string name="settings_widget_bg_style">Background Style</string>
+    <string name="settings_widget_bg_theme">Theme Accent (Dark Olive)</string>
+    <string name="settings_widget_bg_translucent">Translucent Frosted Blur</string>
+    <string name="settings_widget_blur_intensity">Transparency &amp; Blur Intensity</string>
+    <string name="settings_widget_preview">Widget Preview</string>
 
     <!-- Services Screen -->
     <string name="services_title">Essence</string>

@@ -36,8 +36,11 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -68,7 +71,10 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.NumberStylePreference
+import com.athar.app.data.WidgetBgStyle
+import com.athar.app.data.formatDigits
 import com.athar.app.data.rememberLocationEnabler
+import com.athar.app.widget.AtharWidgetUpdater
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
@@ -125,6 +131,9 @@ fun SettingsScreen(
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val schoolId by prefs.schoolId.collectAsState(initial = "SHAFII")
     val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
+    val widgetNumberStyle by prefs.widgetNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
+    val widgetBgStyle by prefs.widgetBgStyle.collectAsState(initial = WidgetBgStyle.THEME)
+    val widgetBlurIntensity by prefs.widgetBlurIntensity.collectAsState(initial = 70)
 
     var showMethods by remember { mutableStateOf(false) }
     var showCities by remember { mutableStateOf(false) }
@@ -253,6 +262,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setNumberStyle(NumberStylePreference.WESTERN)
+                                    AtharWidgetUpdater.updateAllWidgets(context)
                                 }
                             }
                         )
@@ -263,6 +273,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setNumberStyle(NumberStylePreference.ARABIC_INDIC)
+                                    AtharWidgetUpdater.updateAllWidgets(context)
                                 }
                             }
                         )
@@ -501,6 +512,157 @@ fun SettingsScreen(
                         Spacer(Modifier.height(4.dp))
                         PrayerToggleList(prefs = prefs)
                     }
+                }
+            }
+
+            // ── App Widgets ──
+            item {
+                SectionCard(title = stringResource(R.string.settings_widget_title)) {
+                    Text(
+                        stringResource(R.string.settings_widget_subtitle),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // 1. Number Style
+                    Text(
+                        stringResource(R.string.settings_widget_num_style),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_num_western),
+                            selected = widgetNumberStyle == NumberStylePreference.WESTERN,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetNumberStyle(NumberStylePreference.WESTERN)
+                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                }
+                            }
+                        )
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_num_arabic),
+                            selected = widgetNumberStyle == NumberStylePreference.ARABIC_INDIC,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetNumberStyle(NumberStylePreference.ARABIC_INDIC)
+                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                }
+                            }
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // 2. Background Style
+                    Text(
+                        stringResource(R.string.settings_widget_bg_style),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_bg_theme),
+                            selected = widgetBgStyle == WidgetBgStyle.THEME,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetBgStyle(WidgetBgStyle.THEME)
+                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                }
+                            }
+                        )
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_bg_translucent),
+                            selected = widgetBgStyle == WidgetBgStyle.TRANSLUCENT,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetBgStyle(WidgetBgStyle.TRANSLUCENT)
+                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                }
+                            }
+                        )
+                    }
+
+                    // 3. Blur / Transparency Slider
+                    AnimatedVisibility(visible = widgetBgStyle == WidgetBgStyle.TRANSLUCENT) {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.settings_widget_blur_intensity),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = AtharTextPrimary
+                                )
+                                Text(
+                                    "${formatDigits(widgetBlurIntensity.toString(), numberStyle)}%",
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    color = AtharPrimaryLight
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Slider(
+                                value = widgetBlurIntensity.toFloat(),
+                                onValueChange = { newIntensity ->
+                                    scope.launch {
+                                        prefs.setWidgetBlurIntensity(newIntensity.toInt())
+                                    }
+                                },
+                                onValueChangeFinished = {
+                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                },
+                                valueRange = 20f..100f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = AtharPrimaryLight,
+                                    activeTrackColor = AtharPrimaryLight,
+                                    inactiveTrackColor = AtharCardBorder
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    // 4. Live Mini-Preview
+                    Text(
+                        stringResource(R.string.settings_widget_preview),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    WidgetLivePreviewCard(
+                        bgStyle = widgetBgStyle,
+                        blurIntensity = widgetBlurIntensity,
+                        numberStyle = widgetNumberStyle
+                    )
                 }
             }
 
@@ -912,4 +1074,130 @@ private fun formatAppVersion(versionName: String): String {
         }
     }
     return stringResource(R.string.settings_version, versionName)
+}
+
+@Composable
+private fun WidgetLivePreviewCard(
+    bgStyle: WidgetBgStyle,
+    blurIntensity: Int,
+    numberStyle: NumberStylePreference
+) {
+    val bgColor = when (bgStyle) {
+        WidgetBgStyle.THEME -> Color(0xFF14, 0xFF19, 0xFF13)
+        WidgetBgStyle.TRANSLUCENT -> {
+            val alpha = (blurIntensity / 100f).coerceIn(0.20f, 0.95f)
+            Color(0xFF0C, 0xFF11, 0xFF0C).copy(alpha = alpha)
+        }
+    }
+    val borderColor = when (bgStyle) {
+        WidgetBgStyle.THEME -> AtharCardBorder
+        WidgetBgStyle.TRANSLUCENT -> {
+            val strokeAlpha = ((blurIntensity / 100f) * 0.25f + 0.12f).coerceIn(0.12f, 0.40f)
+            Color.White.copy(alpha = strokeAlpha)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgColor)
+            .border(1.2.dp, borderColor, RoundedCornerShape(20.dp))
+            .padding(14.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.home_next_prayer),
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.5.sp,
+                    color = AtharTextSecondary
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = stringResource(R.string.home_location_label),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AtharTextSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.home_prayer_fajr),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        color = AtharTextPrimary
+                    )
+                    Text(
+                        text = stringResource(R.string.home_prayer_iqamah, stringResource(R.string.home_prayer_fajr)),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 10.5.sp,
+                        color = AtharPrimaryMuted
+                    )
+                }
+
+                Text(
+                    text = formatDigits("05:17", numberStyle),
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    color = AtharTextPrimary
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.home_time_remaining),
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    color = AtharPrimaryLight
+                )
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(AtharPrimary.copy(alpha = 0.18f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = formatDigits("04:32:10", numberStyle),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 11.5.sp,
+                        color = AtharPrimaryLight
+                    )
+                }
+            }
+        }
+    }
 }

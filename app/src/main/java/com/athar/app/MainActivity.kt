@@ -118,6 +118,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         PrayerNotifications.scheduleNextAsync(this)
+        com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(applicationContext)
     }
 
     private fun applyLocale(languageCode: String) {

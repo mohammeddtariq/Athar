@@ -243,6 +243,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 val langCode = prefs.selectedLanguage.first()
                 PrayerNotifications.showPrayerNotification(context, key, langCode)
                 PrayerNotifications.scheduleNext(context)
+                com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
             } finally {
                 pendingResult.finish()
             }
@@ -263,6 +264,7 @@ class BootReceiver : BroadcastReceiver() {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     PrayerNotifications.scheduleNext(context)
+                    com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
                 } finally {
                     pendingResult.finish()
                 }
