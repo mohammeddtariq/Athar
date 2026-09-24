@@ -139,8 +139,7 @@ val allNavScreens = listOf(
     Screen.Settings
 )
 
-private val TabEnterCurve = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-private val TabExitCurve = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+private val TabMotionEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 
 @Composable
 fun MainScreen() {
@@ -158,28 +157,28 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(220, easing = TabEnterCurve)) +
-                    scaleIn(initialScale = 0.96f, animationSpec = tween(220, easing = TabEnterCurve)) +
+                fadeIn(animationSpec = tween(300, easing = TabMotionEasing)) +
+                    scaleIn(initialScale = 0.92f, animationSpec = tween(300, easing = TabMotionEasing)) +
                     slideInVertically(
-                        initialOffsetY = { (it * 0.015f).toInt() },
-                        animationSpec = tween(220, easing = TabEnterCurve)
+                        initialOffsetY = { (it * 0.04f).toInt() },
+                        animationSpec = tween(300, easing = TabMotionEasing)
                     )
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(140, easing = TabExitCurve)) +
-                    scaleOut(targetScale = 0.98f, animationSpec = tween(140, easing = TabExitCurve))
+                fadeOut(animationSpec = tween(200, easing = TabMotionEasing)) +
+                    scaleOut(targetScale = 0.97f, animationSpec = tween(200, easing = TabMotionEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(220, easing = TabEnterCurve)) +
-                    scaleIn(initialScale = 0.96f, animationSpec = tween(220, easing = TabEnterCurve)) +
+                fadeIn(animationSpec = tween(300, easing = TabMotionEasing)) +
+                    scaleIn(initialScale = 0.92f, animationSpec = tween(300, easing = TabMotionEasing)) +
                     slideInVertically(
-                        initialOffsetY = { (it * 0.015f).toInt() },
-                        animationSpec = tween(220, easing = TabEnterCurve)
+                        initialOffsetY = { (it * 0.04f).toInt() },
+                        animationSpec = tween(300, easing = TabMotionEasing)
                     )
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(140, easing = TabExitCurve)) +
-                    scaleOut(targetScale = 0.98f, animationSpec = tween(140, easing = TabExitCurve))
+                fadeOut(animationSpec = tween(200, easing = TabMotionEasing)) +
+                    scaleOut(targetScale = 0.97f, animationSpec = tween(200, easing = TabMotionEasing))
             }
         ) {
             composable(Screen.Home.route) {

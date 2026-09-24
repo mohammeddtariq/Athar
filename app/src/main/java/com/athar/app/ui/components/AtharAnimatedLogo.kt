@@ -89,8 +89,10 @@ private fun AnimatedArabicLogo(
     LaunchedEffect(Unit) {
         delay(90)
         kashidaCount = 2
-        delay(140)
+        delay(130)
         kashidaCount = 3
+        delay(150)
+        kashidaCount = 4
     }
 
     val tatweels = "ـ".repeat(kashidaCount)
@@ -100,8 +102,8 @@ private fun AnimatedArabicLogo(
         text = text,
         fontFamily = ThmanyahSerifDisplay,
         fontWeight = FontWeight.Black,
-        fontSize = 23.sp,
-        letterSpacing = 0.5.sp,
+        fontSize = 38.sp,
+        letterSpacing = 1.sp,
         color = color,
         maxLines = 1,
         modifier = modifier
@@ -125,7 +127,7 @@ private fun AnimatedEnglishLogo(
 
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         letters.forEachIndexed { index, char ->
@@ -136,7 +138,7 @@ private fun AnimatedEnglishLogo(
                 label = "charAlpha_$index"
             )
             val offsetY by animateFloatAsState(
-                targetValue = if (isVisible) 0f else 4f,
+                targetValue = if (isVisible) 0f else 6f,
                 animationSpec = spring(dampingRatio = 0.72f, stiffness = 360f),
                 label = "charOffset_$index"
             )
@@ -145,7 +147,7 @@ private fun AnimatedEnglishLogo(
                 text = char,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Black,
-                fontSize = 15.sp,
+                fontSize = 24.sp,
                 color = color,
                 maxLines = 1,
                 modifier = Modifier

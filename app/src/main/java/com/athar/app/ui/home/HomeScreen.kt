@@ -310,23 +310,25 @@ private fun TopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+                .padding(start = 28.dp, end = 20.dp, top = 6.dp, bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AtharAnimatedLogo()
+            AtharAnimatedLogo(
+                modifier = Modifier.padding(start = 6.dp)
+            )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Location Pill
+                // 1. Location Pill
                 Row(
                     modifier = Modifier
-                        .height(35.dp)
-                        .clip(RoundedCornerShape(17.5.dp))
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(15.dp))
                         .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(17.5.dp))
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(15.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -349,18 +351,17 @@ private fun TopBar(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 80.dp)
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // After-Prayer Duas Pill
+                // 2. After-Prayer Duas Pill
                 Row(
                     modifier = Modifier
-                        .height(35.dp)
-                        .clip(RoundedCornerShape(17.5.dp))
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(15.dp))
                         .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(17.5.dp))
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(15.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -385,10 +386,10 @@ private fun TopBar(
                     )
                 }
 
-                // Notification Bell
+                // 3. Notification Bell
                 Box(
                     modifier = Modifier
-                        .size(35.dp)
+                        .size(30.dp)
                         .clip(CircleShape)
                         .background(AtharCardSurface)
                         .border(1.dp, AtharCardBorder, CircleShape)
@@ -403,7 +404,7 @@ private fun TopBar(
                         if (notificationsOn) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
                         contentDescription = null,
                         tint = if (notificationsOn) AtharPrimaryLight else AtharTextSecondary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
             }
@@ -577,14 +578,14 @@ fun NextPrayerCard(
                     color = AtharPrimaryLight,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontSize = 13.5.sp
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AtharPrimary.copy(alpha = 0.16f))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AtharPrimary.copy(alpha = 0.20f))
+                        .padding(horizontal = 14.dp, vertical = 7.dp)
                 ) {
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         Text(
@@ -592,7 +593,7 @@ fun NextPrayerCard(
                             color = AtharPrimaryLight,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
-                            fontSize = 12.sp
+                            fontSize = 16.sp
                         )
                     }
                 }

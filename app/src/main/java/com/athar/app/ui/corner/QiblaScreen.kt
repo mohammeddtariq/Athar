@@ -61,7 +61,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import com.athar.app.ui.components.PatternScaffold
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -208,8 +207,11 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
         else -> 30
     }
 
-    PatternScaffold(patternAlpha = 0.05f) {
-        Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AtharBackground)
+    ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -546,7 +548,6 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
                     .height(16.dp)
             )
         }
-    }
 }
 
 /** Small red warning: location is off, bearing uses the last saved fix. */
