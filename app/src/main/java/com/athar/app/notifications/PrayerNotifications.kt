@@ -263,8 +263,12 @@ class BootReceiver : BroadcastReceiver() {
             val pendingResult = goAsync()
             CoroutineScope(Dispatchers.IO).launch {
                 try {
+                    if (action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+                        com.athar.app.updater.AppUpdateManager.cleanupDownloadedApks(context)
+                    }
                     PrayerNotifications.scheduleNext(context)
                     com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
+                    com.athar.app.updater.UpdateCheckWorker.schedule(context)
                 } finally {
                     pendingResult.finish()
                 }

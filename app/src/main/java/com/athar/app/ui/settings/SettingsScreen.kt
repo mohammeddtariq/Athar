@@ -34,8 +34,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.athar.app.data.BatteryOptimizationHelper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -85,6 +91,7 @@ import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimaryMuted
+import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -115,6 +122,23 @@ fun SettingsScreen(
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateStatusMessage by remember { mutableStateOf<String?>(null) }
     var availableUpdate by remember { mutableStateOf<AppReleaseInfo?>(null) }
+
+    var isBatteryUnrestricted by remember {
+        mutableStateOf(BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context))
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isBatteryUnrestricted = BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(targetSection) {
         if (targetSection == "notifications") {
@@ -518,6 +542,84 @@ fun SettingsScreen(
                     if (notifMaster) {
                         Spacer(Modifier.height(4.dp))
                         PrayerToggleList(prefs = prefs)
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AtharBackground.copy(alpha = 0.5f))
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(12.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                                }
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isBatteryUnrestricted) AtharPrimarySubtle else AtharCardBorder.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.BatteryChargingFull,
+                                    contentDescription = null,
+                                    tint = if (isBatteryUnrestricted) AtharPrimaryLight else AtharTextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_battery_title),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.5.sp,
+                                    color = AtharTextPrimary
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = stringResource(
+                                        if (isBatteryUnrestricted) R.string.settings_battery_sub_active
+                                        else R.string.settings_battery_sub_restricted
+                                    ),
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 11.5.sp,
+                                    color = if (isBatteryUnrestricted) AtharPrimaryLight else AtharTextSecondary
+                                )
+                            }
+
+                            if (!isBatteryUnrestricted) {
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(AtharPrimary)
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.battery_dialog_allow),
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = AtharTextOnPrimary
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

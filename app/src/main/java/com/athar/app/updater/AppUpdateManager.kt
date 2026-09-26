@@ -350,4 +350,21 @@ object AppUpdateManager {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(UPDATE_NOTIF_ID)
     }
+
+    /**
+     * Clears all cached downloaded APK and temporary files to free up storage space.
+     */
+    fun cleanupDownloadedApks(context: Context) {
+        runCatching {
+            val updatesDir = File(context.cacheDir, "updates")
+            if (updatesDir.exists()) {
+                updatesDir.deleteRecursively()
+            }
+            context.cacheDir.listFiles()?.forEach { file ->
+                if (file.name.endsWith(".apk", ignoreCase = true) || file.name.endsWith(".part", ignoreCase = true)) {
+                    file.delete()
+                }
+            }
+        }
+    }
 }

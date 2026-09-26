@@ -16,14 +16,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.BatteryOptimizationHelper
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.MainScreen
 import com.athar.app.ui.components.AppUpdateDialog
+import com.athar.app.ui.components.BatteryOptimizationDialog
 import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.updater.AppReleaseInfo
 import com.athar.app.updater.AppUpdateManager
 import com.athar.app.updater.UpdateCheckResult
+import com.athar.app.updater.UpdateCheckWorker
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -35,6 +38,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Clean up previously downloaded APK update files and schedule background check
+        AppUpdateManager.cleanupDownloadedApks(applicationContext)
+        UpdateCheckWorker.schedule(applicationContext)
 
         appPreferences = AppPreferences(applicationContext)
         pendingUpdatePrompt = intent?.getBooleanExtra(AppUpdateManager.EXTRA_OPEN_UPDATER, false) == true
@@ -50,8 +57,9 @@ class MainActivity : ComponentActivity() {
 
             var updateInfo by remember { mutableStateOf<AppReleaseInfo?>(null) }
             var showUpdateDialog by remember { mutableStateOf(false) }
+            var showBatteryDialog by remember { mutableStateOf(false) }
 
-            // Check for updates after onboarding is completed
+            // Check for updates and battery optimization after onboarding is completed
             LaunchedEffect(isOnboardingCompleted) {
                 if (isOnboardingCompleted == true) {
                     val result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
@@ -59,6 +67,8 @@ class MainActivity : ComponentActivity() {
                         updateInfo = result.releaseInfo
                         showUpdateDialog = true
                         AppUpdateManager.showUpdateNotification(applicationContext, result.releaseInfo)
+                    } else if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this@MainActivity)) {
+                        showBatteryDialog = true
                     }
                 }
             }
@@ -106,6 +116,21 @@ class MainActivity : ComponentActivity() {
                             onDismiss = {
                                 showUpdateDialog = false
                                 AppUpdateManager.clearUpdateNotification(applicationContext)
+                                if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this@MainActivity)) {
+                                    showBatteryDialog = true
+                                }
+                            }
+                        )
+                    }
+
+                    if (showBatteryDialog && !showUpdateDialog) {
+                        BatteryOptimizationDialog(
+                            onAllow = {
+                                showBatteryDialog = false
+                                BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(this@MainActivity)
+                            },
+                            onDismiss = {
+                                showBatteryDialog = false
                             }
                         )
                     }

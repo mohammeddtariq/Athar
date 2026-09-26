@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.BatteryOptimizationHelper
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.rememberLocationEnabler
@@ -153,13 +155,21 @@ fun OnboardingFlow(
         }
     }
 
+    fun advanceFromNotifications() {
+        if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
+            step = 3
+        } else {
+            step = 2
+        }
+    }
+
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             notifGranted = true
         }
-        step = 2
+        advanceFromNotifications()
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -200,17 +210,26 @@ fun OnboardingFlow(
                         ) == PackageManager.PERMISSION_GRANTED
                         if (granted) {
                             notifGranted = true
-                            step = 2
+                            advanceFromNotifications()
                         } else {
                             notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     } else {
                         notifGranted = true
-                        step = 2
+                        advanceFromNotifications()
                     }
                 },
-                onLater = { step = 2 },
+                onLater = { advanceFromNotifications() },
                 onBack = { step = 0 }
+            )
+            2 -> BatteryStep(
+                language = language,
+                onAllow = {
+                    BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                    step = 3
+                },
+                onLater = { step = 3 },
+                onBack = { step = 1 }
             )
             else -> SetupStep(
                 selectedCity = selectedCity,
@@ -240,13 +259,15 @@ fun OnboardingFlow(
                 onPickMethod = { method = it },
                 school = school,
                 onPickSchool = { school = it },
-                onBack = { step = 1 },
+                onBack = {
+                    step = if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 1 else 2
+                },
                 onStart = { finish(skipLocation = false) }
             )
         }
 
         // Sticky top bar with skip button for location setup step
-        if (step == 2) {
+        if (step == 3) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -446,6 +467,106 @@ private fun NotificationStep(
         ) {
             Icon(
                 Icons.Rounded.NotificationsActive,
+                contentDescription = null,
+                tint = AtharPrimaryLight,
+                modifier = Modifier.size(38.dp)
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = title,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Black,
+            fontSize = 22.sp,
+            color = AtharTextPrimary,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = sub,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp,
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        Spacer(Modifier.height(32.dp))
+        Button(
+            onClick = onAllow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AtharPrimary,
+                contentColor = AtharTextOnPrimary
+            )
+        ) {
+            Text(
+                text = allow,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        TextButton(onClick = onLater) {
+            Text(
+                text = later,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = AtharTextSecondary
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        TextButton(onClick = onBack) {
+            Text(
+                text = if (isAr) "رجوع" else "Back",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                color = AtharTextSecondary.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BatteryStep(
+    language: String?,
+    onAllow: () -> Unit,
+    onLater: () -> Unit,
+    onBack: () -> Unit
+) {
+    val isAr = language != "en"
+    val title = if (isAr) "العمل بدون قيود في الخلفية" else "Unrestricted Background"
+    val sub = if (isAr) "لضمان دقة مواقيت الصلاة ووصول تنبيهات الأذان والتحديثات في وقتها دون أن يوقفها نظام توفير الطاقة، يُرجى السماح لـ «أَثَر» بالعمل بدون قيود."
+        else "To ensure prayer calls and app update alerts arrive precisely on time without system sleep delays, please allow Athar to run unrestricted in battery settings."
+    val allow = if (isAr) "السماح بدون قيود" else "Allow Unrestricted"
+    val later = if (isAr) "ليس الآن" else "Not now"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 28.dp)
+            .padding(bottom = 32.dp, top = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(88.dp)
+                .background(AtharPrimary.copy(alpha = 0.14f), CircleShape)
+                .border(1.dp, AtharPrimary.copy(alpha = 0.4f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.BatteryChargingFull,
                 contentDescription = null,
                 tint = AtharPrimaryLight,
                 modifier = Modifier.size(38.dp)

@@ -236,4 +236,14 @@
     <string name="quran_last_read_continue">Continue</string>
     <string name="quran_last_read_page">Page %1$s</string>
     <string name="quran_last_read_surah">Surah %1$s</string>
+
+    <!-- Battery Optimization -->
+    <string name="battery_dialog_title">Unrestricted Background</string>
+    <string name="battery_dialog_subtitle">Ensure timely prayer calls &amp; updates</string>
+    <string name="battery_dialog_body">To ensure prayer calls and app update alerts arrive precisely on time without system sleep delays, please allow Athar to run unrestricted in battery settings.</string>
+    <string name="battery_dialog_allow">Allow Unrestricted</string>
+    <string name="battery_dialog_later">Maybe later</string>
+    <string name="settings_battery_title">Battery Optimization</string>
+    <string name="settings_battery_sub_active">Unrestricted • Timely alarms guaranteed</string>
+    <string name="settings_battery_sub_restricted">Restricted by system • Tap to allow unrestricted</string>
 </resources>

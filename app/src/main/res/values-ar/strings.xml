@@ -236,4 +236,14 @@
     <string name="quran_last_read_continue">متابعة القراءة</string>
     <string name="quran_last_read_page">صفحة %1$s</string>
     <string name="quran_last_read_surah">سورة %1$s</string>
+
+    <!-- Battery Optimization -->
+    <string name="battery_dialog_title">العمل بدون قيود في الخلفية</string>
+    <string name="battery_dialog_subtitle">لضمان دقة مواقيت الأذان والتحديثات</string>
+    <string name="battery_dialog_body">لضمان دقة مواقيت الصلاة ووصول تنبيهات الأذان والتحديثات في وقتها دون أن يوقفها نظام توفير الطاقة، يُرجى السماح لـ «أَثَر» بالعمل بدون قيود.</string>
+    <string name="battery_dialog_allow">السماح بدون قيود</string>
+    <string name="battery_dialog_later">لاحقاً</string>
+    <string name="settings_battery_title">إدارة طاقة البطارية</string>
+    <string name="settings_battery_sub_active">يعمل بدون قيود • دقة كاملة للتنبيهات</string>
+    <string name="settings_battery_sub_restricted">مقيّد بواسطة النظام • اضغط للإلغاء</string>
 </resources>

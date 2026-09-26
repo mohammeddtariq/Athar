@@ -174,8 +174,8 @@ object AtharWidgetUpdater {
 
         // Dynamic background
         val options = appWidgetManager.getAppWidgetOptions(widgetId)
-        val widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300).coerceAtLeast(260)
-        val heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80).coerceAtLeast(60)
+        val widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300).coerceAtLeast(140)
+        val heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80).coerceAtLeast(45)
         val bgBitmap = generateWidgetBackground(
             context,
             widthDp,
@@ -228,13 +228,13 @@ object AtharWidgetUpdater {
             views.setTextViewText(textIds.second, formatted)
 
             if (isNext) {
-                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_highlight_pill)
-                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#A5C89E"))
-                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#A5C89E"))
+                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_chip_active)
+                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#C9D8B4"))
+                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#F4F8F3"))
             } else {
-                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_normal_pill)
-                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#FFFFFF"))
-                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#C8D6C6"))
+                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_chip_idle)
+                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#A4B8A2"))
+                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#E0E6DF"))
             }
         }
 

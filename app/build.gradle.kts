@@ -16,8 +16,8 @@ android {
         applicationId = "com.athar.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.2-beta"
+        versionCode = 5
+        versionName = "1.0.3-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime.ktx)
     // Prayer times — Batoulapps Adhan (MIT). Credited in README.
     implementation("com.batoulapps.adhan:adhan:1.2.1")
     // One-tap location (fresh fix + enable-location dialog) — Google Play Services (free SDK).
