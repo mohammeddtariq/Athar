@@ -23,42 +23,39 @@ class WidgetConfigureActivity : Activity() {
             return
         }
 
+        // 1. Always render the widget immediately with current preferences so the host receives views
+        val appWidgetManager = AppWidgetManager.getInstance(this)
+        val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
+        val isWide = info?.provider?.className?.contains("Wide") == true
+
+        AtharWidgetUpdater.renderImmediate(this, appWidgetManager, intArrayOf(appWidgetId), isWide)
+        AtharWidgetUpdater.updateAllWidgets(this)
+
+        val resultValue = Intent().apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        }
+        setResult(RESULT_OK, resultValue)
+
+        // 2. Determine if this is a first-time placement or a launcher re-configuration
         val prefs = getSharedPreferences("athar_widgets_meta", Context.MODE_PRIVATE)
         val configuredIds = prefs.getStringSet("configured_ids", emptySet()) ?: emptySet()
-
         val isAlreadyConfigured = configuredIds.contains(appWidgetId.toString())
 
-        if (isAlreadyConfigured) {
-            // User actively held on the widget or tapped settings shortcut from launcher
-            val resultValue = Intent().apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            }
-            setResult(RESULT_OK, resultValue)
-
+        if (!isAlreadyConfigured) {
+            // First-time placement by launcher or floating widget host (e.g. Samsung One Hand Operation+)
+            // Register this ID so future launcher long-press shortcuts can reconfigure it.
+            // Do NOT open MainActivity so the widget is created immediately without interrupting the host.
+            val newSet = configuredIds.toMutableSet().apply { add(appWidgetId.toString()) }
+            prefs.edit().putStringSet("configured_ids", newSet).apply()
+        } else {
+            // User already has this widget placed and explicitly tapped the launcher's "Settings" shortcut
             val mainIntent = Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("open_widget_settings", true)
             }
             startActivity(mainIntent)
-            finish()
-        } else {
-            // First-time addition by launcher or floating widget host (e.g. Samsung One Hand Operation+)
-            // Register ID so subsequent reconfigures open settings
-            val newSet = configuredIds.toMutableSet().apply { add(appWidgetId.toString()) }
-            prefs.edit().putStringSet("configured_ids", newSet).apply()
-
-            val appWidgetManager = AppWidgetManager.getInstance(this)
-            val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
-            val isWide = info?.provider?.className?.contains("Wide") == true
-
-            AtharWidgetUpdater.renderImmediate(this, appWidgetManager, intArrayOf(appWidgetId), isWide)
-            AtharWidgetUpdater.updateAllWidgets(this)
-
-            val resultValue = Intent().apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            }
-            setResult(RESULT_OK, resultValue)
-            finish()
         }
+
+        finish()
     }
 }

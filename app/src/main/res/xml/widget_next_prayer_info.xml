@@ -11,7 +11,7 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_next_prayer"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
+    android:widgetCategory="home_screen|keyguard"
     android:widgetFeatures="reconfigurable|configuration_optional"
     android:configure="com.athar.app.widget.WidgetConfigureActivity"
     android:description="@string/widget_next_prayer_desc">

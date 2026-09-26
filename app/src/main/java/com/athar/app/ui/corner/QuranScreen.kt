@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -452,7 +453,8 @@ fun QuranScreen(
                         exit = fadeOut(tween(200)) + slideOutVertically(spring(dampingRatio = 0.85f, stiffness = 350f)) { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 98.dp)
+                            .navigationBarsPadding()
+                            .padding(bottom = 100.dp)
                     ) {
                         LastReadFloatingCard(
                             surahName = displayName,
@@ -665,7 +667,7 @@ private fun SurahListScreen(
             if (selectedTab == QuranTabIndex.SURAHS) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 120.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 220.dp)
                 ) {
                     items(filteredSurahs, key = { it.number }) { surah ->
                         SurahCardItem(
@@ -678,7 +680,7 @@ private fun SurahListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 120.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 220.dp)
                 ) {
                     items(filteredJuz, key = { it.number }) { juz ->
                         JuzCardItem(

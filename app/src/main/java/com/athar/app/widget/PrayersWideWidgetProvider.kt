@@ -13,12 +13,6 @@ class PrayersWideWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        val prefs = context.getSharedPreferences("athar_widgets_meta", Context.MODE_PRIVATE)
-        val configuredIds = prefs.getStringSet("configured_ids", emptySet()) ?: emptySet()
-        val newSet = configuredIds.toMutableSet()
-        appWidgetIds.forEach { newSet.add(it.toString()) }
-        prefs.edit().putStringSet("configured_ids", newSet).apply()
-
         AtharWidgetUpdater.renderImmediate(context, appWidgetManager, appWidgetIds, isWide = true)
         AtharWidgetUpdater.updateAllWidgets(context)
     }
