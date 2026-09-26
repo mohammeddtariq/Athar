@@ -13,7 +13,7 @@
     <string name="home_location_label">My Location</string>
     <string name="home_location_not_set">Set location</string>
     <string name="home_next_prayer">Next Prayer</string>
-    <string name="home_prayer_iqamah">Iqamah for %s</string>
+    <string name="home_prayer_iqamah">Adhan for %s</string>
     <string name="home_time_remaining">Time Remaining</string>
     <string name="home_tomorrow">Tomorrow</string>
     <string name="home_prayer_fajr">Fajr</string>

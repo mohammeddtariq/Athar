@@ -13,7 +13,7 @@
     <string name="home_location_label">موقعي</string>
     <string name="home_location_not_set">حدّد الموقع</string>
     <string name="home_next_prayer">الصلاة التالية</string>
-    <string name="home_prayer_iqamah">إقامة %s</string>
+    <string name="home_prayer_iqamah">أذان %s</string>
     <string name="home_time_remaining">الوقت المتبقي</string>
     <string name="home_tomorrow">غداً</string>
     <string name="home_prayer_fajr">الفجر</string>

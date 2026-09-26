@@ -141,11 +141,11 @@ object AtharWidgetUpdater {
         val locationText = snapshot.city ?: if (isAr) "موقعي" else "My Location"
         views.setTextViewText(R.id.widget_location_text, locationText)
 
-        // Prayer name & Iqamah
+        // Prayer name & Adhan
         val prayerName = getPrayerName(next.key, isAr)
-        val iqamahText = if (isAr) "إقامة $prayerName" else "Iqamah for $prayerName"
+        val adhanText = if (isAr) "أذان $prayerName" else "Adhan for $prayerName"
         views.setTextViewText(R.id.widget_prayer_name, prayerName)
-        views.setTextViewText(R.id.widget_prayer_sub, iqamahText)
+        views.setTextViewText(R.id.widget_prayer_sub, adhanText)
 
         // Prayer time
         val formattedTime = formatDigits(next.time.format(timeFmt), snapshot.widgetNumberStyle)

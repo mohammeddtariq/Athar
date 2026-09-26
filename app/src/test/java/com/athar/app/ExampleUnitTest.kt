@@ -31,4 +31,21 @@ class ExampleUnitTest {
         val match3 = regex.matchEntire("1.0.0")
         assertNull(match3)
     }
+
+    @Test
+    fun hijriDate_formatsCorrectly() {
+        val date = java.time.LocalDate.of(2026, 9, 26)
+        val arEastern = com.athar.app.data.HijriDateHelper.formatHijriDate(
+            date = date,
+            isArabic = true,
+            numberStyle = com.athar.app.data.NumberStylePreference.ARABIC_INDIC
+        )
+        val enWestern = com.athar.app.data.HijriDateHelper.formatHijriDate(
+            date = date,
+            isArabic = false,
+            numberStyle = com.athar.app.data.NumberStylePreference.WESTERN
+        )
+        assertTrue(arEastern.contains("هـ"))
+        assertTrue(enWestern.contains("AH"))
+    }
 }

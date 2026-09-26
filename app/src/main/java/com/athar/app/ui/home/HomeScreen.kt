@@ -85,6 +85,7 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.DayPrayers
+import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.MadhabOption
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.computeDayPrayers
@@ -254,7 +255,8 @@ fun HomeScreen(
                         nextKey = next.key,
                         nextTime = next.time,
                         isTomorrow = next.isTomorrow,
-                        numberStyle = numberStyle
+                        numberStyle = numberStyle,
+                        language = selectedLanguage
                     )
                 }
             }
@@ -428,7 +430,8 @@ fun NextPrayerCard(
     nextKey: String,
     nextTime: LocalTime,
     isTomorrow: Boolean,
-    numberStyle: NumberStylePreference = NumberStylePreference.WESTERN
+    numberStyle: NumberStylePreference = NumberStylePreference.WESTERN,
+    language: String = "ar"
 ) {
     // Second ticker scoped to this card only.
     var now by remember { mutableStateOf(LocalTime.now()) }
@@ -480,6 +483,15 @@ fun NextPrayerCard(
     } else {
         String.format("%02d:%02d", mins, secs)
     }
+    val targetDate = remember(isTomorrow) { LocalDate.now().plusDays(if (isTomorrow) 1L else 0L) }
+    val hijriDateText = remember(targetDate, language, numberStyle) {
+        HijriDateHelper.formatHijriDate(
+            date = targetDate,
+            isArabic = (language == "ar"),
+            numberStyle = numberStyle
+        )
+    }
+
     val remainingText = formatDigits(rawRemainingText, numberStyle)
 
     Box(
@@ -507,23 +519,35 @@ fun NextPrayerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isTomorrow) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(AtharPrimary.copy(alpha = 0.16f))
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (isTomorrow) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AtharPrimary.copy(alpha = 0.20f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.home_tomorrow),
+                                color = AtharPrimaryLight,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    if (hijriDateText.isNotEmpty()) {
                         Text(
-                            stringResource(R.string.home_tomorrow),
-                            color = AtharPrimaryLight,
+                            text = hijriDateText,
+                            color = AtharTextSecondary,
                             fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
+                            fontWeight = FontWeight.Medium,
                             fontSize = 12.sp
                         )
                     }
-                } else {
-                    Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     stringResource(R.string.home_next_prayer),
