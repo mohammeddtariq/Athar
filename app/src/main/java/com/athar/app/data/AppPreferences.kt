@@ -59,6 +59,7 @@ class AppPreferences(private val context: Context) {
         private val LAST_READ_TIMESTAMP_KEY = longPreferencesKey("last_read_timestamp")
 
         // App Widgets
+        private val WIDGET_LANGUAGE_KEY = stringPreferencesKey("widget_language")
         private val WIDGET_NUMBER_STYLE_KEY = stringPreferencesKey("widget_number_style")
         private val WIDGET_BG_STYLE_KEY = stringPreferencesKey("widget_bg_style")
         private val WIDGET_BLUR_INTENSITY_KEY = intPreferencesKey("widget_blur_intensity")
@@ -100,6 +101,9 @@ class AppPreferences(private val context: Context) {
     val lastReadPageNumber: Flow<Int?> = context.dataStore.data.map { it[LAST_READ_PAGE_NUMBER_KEY] }
     val lastReadTimestamp: Flow<Long?> = context.dataStore.data.map { it[LAST_READ_TIMESTAMP_KEY] }
 
+    val widgetLanguage: Flow<String> = context.dataStore.data.map {
+        it[WIDGET_LANGUAGE_KEY] ?: "match_app"
+    }
     val widgetNumberStyle: Flow<NumberStylePreference> = context.dataStore.data.map {
         NumberStylePreference.fromId(it[WIDGET_NUMBER_STYLE_KEY] ?: "western")
     }
@@ -112,17 +116,21 @@ class AppPreferences(private val context: Context) {
 
     suspend fun getPreferencesSnapshot(): AppPrefsSnapshot {
         val data = context.dataStore.data.first()
+        val appLang = data[LANGUAGE_KEY] ?: "ar"
+        val widgetLangPref = data[WIDGET_LANGUAGE_KEY] ?: "match_app"
+        val effectiveWidgetLang = if (widgetLangPref == "match_app") appLang else widgetLangPref
         return AppPrefsSnapshot(
             lat = data[LAT_KEY],
             lng = data[LNG_KEY],
             city = data[CITY_KEY],
             methodId = data[METHOD_KEY] ?: "MWL",
             madhabId = data[MADHAB_KEY] ?: "SHAFI",
-            language = data[LANGUAGE_KEY] ?: "ar",
+            language = appLang,
             appNumberStyle = NumberStylePreference.fromId(data[NUMBER_STYLE_KEY] ?: "western"),
             widgetNumberStyle = NumberStylePreference.fromId(data[WIDGET_NUMBER_STYLE_KEY] ?: data[NUMBER_STYLE_KEY] ?: "western"),
             widgetBgStyle = WidgetBgStyle.fromId(data[WIDGET_BG_STYLE_KEY] ?: "THEME"),
-            widgetBlurIntensity = data[WIDGET_BLUR_INTENSITY_KEY] ?: 70
+            widgetBlurIntensity = data[WIDGET_BLUR_INTENSITY_KEY] ?: 70,
+            widgetLanguage = effectiveWidgetLang
         )
     }
 
@@ -248,6 +256,10 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[WIDGET_BG_STYLE_KEY] = style.id }
     }
 
+    suspend fun setWidgetLanguage(lang: String) {
+        context.dataStore.edit { it[WIDGET_LANGUAGE_KEY] = lang }
+    }
+
     suspend fun setWidgetBlurIntensity(intensity: Int) {
         context.dataStore.edit { it[WIDGET_BLUR_INTENSITY_KEY] = intensity.coerceIn(20, 100) }
     }
@@ -272,7 +284,8 @@ data class AppPrefsSnapshot(
     val appNumberStyle: NumberStylePreference,
     val widgetNumberStyle: NumberStylePreference,
     val widgetBgStyle: WidgetBgStyle,
-    val widgetBlurIntensity: Int
+    val widgetBlurIntensity: Int,
+    val widgetLanguage: String = language
 )
 
 enum class NumberStylePreference(val id: String) {

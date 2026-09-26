@@ -35,6 +35,8 @@
     <string name="widget_prayers_wide_desc">Shows all daily prayer times with next prayer countdown.</string>
     <string name="settings_widget_title">App Widgets</string>
     <string name="settings_widget_subtitle">Customize home screen widget appearance and transparency</string>
+    <string name="settings_widget_lang">Widget Language</string>
+    <string name="settings_widget_lang_match_app">Match App</string>
     <string name="settings_widget_num_style">Widget Numbers</string>
     <string name="settings_widget_num_arabic">Arabic (١, ٢, ٣)</string>
     <string name="settings_widget_num_western">Western (1, 2, 3)</string>

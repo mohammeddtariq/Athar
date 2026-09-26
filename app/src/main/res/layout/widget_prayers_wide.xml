@@ -2,7 +2,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:layoutDirection="ltr">
 
     <ImageView
         android:id="@+id/widget_bg"
@@ -17,6 +18,7 @@
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:layoutDirection="ltr"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
         android:paddingTop="5dp"
@@ -28,14 +30,16 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center_vertical"
-            android:minWidth="90dp"
+            android:layoutDirection="ltr"
+            android:minWidth="95dp"
             android:paddingEnd="8dp">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:layoutDirection="ltr">
 
                 <TextView
                     android:id="@+id/widget_next_name"
@@ -45,6 +49,7 @@
                     android:textColor="#F4F8F3"
                     android:textSize="14sp"
                     android:textStyle="bold"
+                    android:textAlignment="viewStart"
                     android:maxLines="1" />
 
                 <TextView
@@ -56,6 +61,7 @@
                     android:textColor="#A5C89E"
                     android:textSize="14sp"
                     android:textStyle="bold"
+                    android:textAlignment="viewStart"
                     android:maxLines="1" />
 
                 <ImageView
@@ -76,14 +82,28 @@
                 android:text="Cairo"
                 android:textColor="#8CA389"
                 android:textSize="9.5sp"
+                android:textAlignment="viewStart"
                 android:maxLines="1"
                 android:maxWidth="85dp"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_hijri_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="15 Rabi' al-Thani"
+                android:textColor="#8CA389"
+                android:textSize="8.5sp"
+                android:textAlignment="viewStart"
+                android:maxLines="1"
+                android:maxWidth="95dp"
                 android:ellipsize="end" />
 
             <FrameLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
+                android:layout_marginTop="2dp"
                 android:background="@drawable/bg_widget_countdown_pill"
                 android:paddingStart="7dp"
                 android:paddingEnd="7dp"

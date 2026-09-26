@@ -35,6 +35,8 @@
     <string name="widget_prayers_wide_desc">شريط أفقي لجميع مواقيت اليوم والعد التنازلي للصلاة القادمة.</string>
     <string name="settings_widget_title">الويدجت (عناصر الشاشة)</string>
     <string name="settings_widget_subtitle">تخصيص مظهر ونمط وشفافية ويدجت الشاشة الرئيسية</string>
+    <string name="settings_widget_lang">لغة الويدجت</string>
+    <string name="settings_widget_lang_match_app">تطابق التطبيق</string>
     <string name="settings_widget_num_style">نمط أرقام الويدجت</string>
     <string name="settings_widget_num_arabic">عربية (١، ٢، ٣)</string>
     <string name="settings_widget_num_western">إنجليزية (1, 2, 3)</string>

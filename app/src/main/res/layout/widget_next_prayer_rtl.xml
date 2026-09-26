@@ -3,7 +3,7 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layoutDirection="ltr">
+    android:layoutDirection="rtl">
 
     <ImageView
         android:id="@+id/widget_bg"
@@ -18,15 +18,15 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:padding="12dp"
-        android:layoutDirection="ltr">
+        android:layoutDirection="rtl">
 
-        <!-- Top row: Next Prayer & Hijri date on Start (left), Location & Settings on End (right) -->
+        <!-- Top row: Next Prayer & Hijri date on Start (right), Location & Settings on End (left) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layoutDirection="ltr">
+            android:layoutDirection="rtl">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -34,13 +34,13 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="start|center_vertical"
-                android:layoutDirection="ltr">
+                android:layoutDirection="rtl">
 
                 <TextView
                     android:id="@+id/widget_label_next"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Next Prayer"
+                    android:text="الصلاة التالية"
                     android:textColor="#C8D6C6"
                     android:textSize="11.5sp"
                     android:textStyle="bold"
@@ -52,7 +52,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="1dp"
-                    android:text="15 Rabi' al-Thani 1448 AH"
+                    android:text="١٥ ربيع الآخر ١٤٤٨ هـ"
                     android:textColor="#8CA389"
                     android:textSize="9.5sp"
                     android:textAlignment="viewStart"
@@ -65,7 +65,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layoutDirection="ltr">
+                android:layoutDirection="rtl">
 
                 <ImageView
                     android:layout_width="11dp"
@@ -79,7 +79,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="6dp"
-                    android:text="My Location"
+                    android:text="موقعي"
                     android:textColor="#C8D6C6"
                     android:textSize="10.5sp"
                     android:textStyle="bold"
@@ -105,13 +105,13 @@
             android:orientation="vertical"
             android:gravity="start|center_vertical"
             android:layout_marginTop="2dp"
-            android:layoutDirection="ltr">
+            android:layoutDirection="rtl">
 
             <TextView
                 android:id="@+id/widget_prayer_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Fajr"
+                android:text="الفجر"
                 android:textColor="#F4F8F3"
                 android:textSize="24sp"
                 android:textStyle="bold"
@@ -122,7 +122,7 @@
                 android:id="@+id/widget_prayer_sub"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Adhan for Fajr"
+                android:text="أذان الفجر"
                 android:textColor="#8CA389"
                 android:textSize="11sp"
                 android:textAlignment="viewStart"
@@ -133,7 +133,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="05:17"
+                android:text="٠٥:١٧"
                 android:textColor="#FFFFFF"
                 android:textSize="26sp"
                 android:textStyle="bold"
@@ -148,13 +148,13 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:layout_marginTop="4dp"
-            android:layoutDirection="ltr">
+            android:layoutDirection="rtl">
 
             <TextView
                 android:id="@+id/widget_remaining_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Time Remaining"
+                android:text="الوقت المتبقي"
                 android:textColor="#A5C89E"
                 android:textSize="11.5sp"
                 android:textStyle="bold"

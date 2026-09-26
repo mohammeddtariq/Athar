@@ -18,6 +18,7 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.AppPrefsSnapshot
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.DayPrayers
+import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.MadhabOption
 import com.athar.app.data.WidgetBgStyle
 import com.athar.app.data.computeDayPrayers
@@ -37,45 +38,50 @@ object AtharWidgetUpdater {
 
     private val timeFmt = DateTimeFormatter.ofPattern("H:mm")
 
-    fun updateAllWidgets(context: Context) {
-        val appWidgetManager = AppWidgetManager.getInstance(context) ?: return
-        val nextPrayerComponent = ComponentName(context, NextPrayerWidgetProvider::class.java)
-        val wideComponent = ComponentName(context, PrayersWideWidgetProvider::class.java)
+    suspend fun updateAllWidgetsSuspend(context: Context, overrideSnapshot: AppPrefsSnapshot? = null) {
+        val appContext = context.applicationContext
+        val appWidgetManager = AppWidgetManager.getInstance(appContext) ?: return
+        val nextPrayerComponent = ComponentName(appContext, NextPrayerWidgetProvider::class.java)
+        val wideComponent = ComponentName(appContext, PrayersWideWidgetProvider::class.java)
 
         val nextPrayerIds = appWidgetManager.getAppWidgetIds(nextPrayerComponent)
         val wideIds = appWidgetManager.getAppWidgetIds(wideComponent)
 
         if (nextPrayerIds.isEmpty() && wideIds.isEmpty()) return
 
+        val snapshot = overrideSnapshot ?: AppPreferences(appContext).getPreferencesSnapshot()
+
+        val day = if (snapshot.lat != null && snapshot.lng != null) {
+            runCatching {
+                computeDayPrayers(
+                    snapshot.lat,
+                    snapshot.lng,
+                    date = LocalDate.now(),
+                    method = CalcMethod.fromId(snapshot.methodId),
+                    madhab = MadhabOption.fromId(snapshot.madhabId)
+                )
+            }.getOrNull() ?: fallbackDayPrayers()
+        } else {
+            fallbackDayPrayers()
+        }
+
+        val next = findNextPrayer(day)
+
+        nextPrayerIds.forEach { widgetId ->
+            renderNextPrayerWidget(appContext, appWidgetManager, widgetId, snapshot, day, next)
+        }
+
+        wideIds.forEach { widgetId ->
+            renderPrayersWideWidget(appContext, appWidgetManager, widgetId, snapshot, day, next)
+        }
+
+        scheduleNextAlarm(appContext, next.time, next.isTomorrow)
+    }
+
+    fun updateAllWidgets(context: Context, overrideSnapshot: AppPrefsSnapshot? = null) {
+        val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
-            val prefs = AppPreferences(context.applicationContext)
-            val snapshot = prefs.getPreferencesSnapshot()
-
-            val day = if (snapshot.lat != null && snapshot.lng != null) {
-                runCatching {
-                    computeDayPrayers(
-                        snapshot.lat,
-                        snapshot.lng,
-                        date = LocalDate.now(),
-                        method = CalcMethod.fromId(snapshot.methodId),
-                        madhab = MadhabOption.fromId(snapshot.madhabId)
-                    )
-                }.getOrNull() ?: fallbackDayPrayers()
-            } else {
-                fallbackDayPrayers()
-            }
-
-            val next = findNextPrayer(day)
-
-            nextPrayerIds.forEach { widgetId ->
-                renderNextPrayerWidget(context, appWidgetManager, widgetId, snapshot, day, next)
-            }
-
-            wideIds.forEach { widgetId ->
-                renderPrayersWideWidget(context, appWidgetManager, widgetId, snapshot, day, next)
-            }
-
-            scheduleNextAlarm(context, next.time, next.isTomorrow)
+            updateAllWidgetsSuspend(appContext, overrideSnapshot)
         }
     }
 
@@ -85,20 +91,22 @@ object AtharWidgetUpdater {
         widgetIds: IntArray,
         isWide: Boolean
     ) {
-        val isAr = runCatching {
-            context.resources.configuration.locales[0]?.language == "ar"
-        }.getOrDefault(true)
-
-        for (widgetId in widgetIds) {
-            val layoutRes = if (isWide) {
-                if (isAr) R.layout.widget_prayers_wide_rtl else R.layout.widget_prayers_wide
-            } else {
-                R.layout.widget_next_prayer
-            }
-            val views = RemoteViews(context.packageName, layoutRes)
-            setupClickIntent(context, views)
-            runCatching {
-                appWidgetManager.updateAppWidget(widgetId, views)
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            val prefs = AppPreferences(appContext)
+            val snapshot = prefs.getPreferencesSnapshot()
+            val isAr = (snapshot.widgetLanguage == "ar")
+            for (widgetId in widgetIds) {
+                val layoutRes = if (isWide) {
+                    if (isAr) R.layout.widget_prayers_wide_rtl else R.layout.widget_prayers_wide
+                } else {
+                    if (isAr) R.layout.widget_next_prayer_rtl else R.layout.widget_next_prayer
+                }
+                val views = RemoteViews(appContext.packageName, layoutRes)
+                setupClickIntent(appContext, views)
+                runCatching {
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                }
             }
         }
     }
@@ -111,8 +119,9 @@ object AtharWidgetUpdater {
         day: DayPrayers,
         next: com.athar.app.data.NextPrayer
     ) {
-        val isAr = snapshot.language == "ar"
-        val views = RemoteViews(context.packageName, R.layout.widget_next_prayer)
+        val isAr = (snapshot.widgetLanguage == "ar")
+        val layoutRes = if (isAr) R.layout.widget_next_prayer_rtl else R.layout.widget_next_prayer
+        val views = RemoteViews(context.packageName, layoutRes)
 
         // Dynamic background
         val options = appWidgetManager.getAppWidgetOptions(widgetId)
@@ -136,6 +145,15 @@ object AtharWidgetUpdater {
         val remainingLabel = if (isAr) "الوقت المتبقي" else "Time Remaining"
         views.setTextViewText(R.id.widget_label_next, nextLabel)
         views.setTextViewText(R.id.widget_remaining_label, remainingLabel)
+
+        // Hijri date
+        val targetDate = LocalDate.now().plusDays(if (next.isTomorrow) 1L else 0L)
+        val hijriDateText = HijriDateHelper.formatHijriDate(
+            date = targetDate,
+            isArabic = isAr,
+            numberStyle = snapshot.widgetNumberStyle
+        )
+        views.setTextViewText(R.id.widget_hijri_date, hijriDateText)
 
         // Location
         val locationText = snapshot.city ?: if (isAr) "موقعي" else "My Location"
@@ -168,7 +186,7 @@ object AtharWidgetUpdater {
         day: DayPrayers,
         next: com.athar.app.data.NextPrayer
     ) {
-        val isAr = snapshot.language == "ar"
+        val isAr = (snapshot.widgetLanguage == "ar")
         val layoutRes = if (isAr) R.layout.widget_prayers_wide_rtl else R.layout.widget_prayers_wide
         val views = RemoteViews(context.packageName, layoutRes)
 
@@ -197,6 +215,15 @@ object AtharWidgetUpdater {
 
         val locationText = snapshot.city ?: if (isAr) "موقعي" else "My Location"
         views.setTextViewText(R.id.widget_next_location, locationText)
+
+        // Hijri date
+        val targetDate = LocalDate.now().plusDays(if (next.isTomorrow) 1L else 0L)
+        val hijriDateText = HijriDateHelper.formatHijriDate(
+            date = targetDate,
+            isArabic = isAr,
+            numberStyle = snapshot.widgetNumberStyle
+        )
+        views.setTextViewText(R.id.widget_hijri_date, hijriDateText)
 
         // Live Countdown
         setupChronometer(views, R.id.widget_countdown_chrono, next.time, next.isTomorrow)

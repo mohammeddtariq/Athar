@@ -75,6 +75,7 @@ import androidx.core.net.toUri
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
+import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.WidgetBgStyle
@@ -82,6 +83,7 @@ import com.athar.app.data.formatDigits
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.widget.AtharWidgetUpdater
 import com.athar.app.notifications.PrayerNotifications
+import java.time.LocalDate
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.data.presetCities
@@ -162,6 +164,7 @@ fun SettingsScreen(
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val schoolId by prefs.schoolId.collectAsState(initial = "SHAFII")
     val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
+    val widgetLanguage by prefs.widgetLanguage.collectAsState(initial = "match_app")
     val widgetNumberStyle by prefs.widgetNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val widgetBgStyle by prefs.widgetBgStyle.collectAsState(initial = WidgetBgStyle.THEME)
     val widgetBlurIntensity by prefs.widgetBlurIntensity.collectAsState(initial = 70)
@@ -260,6 +263,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setLanguage("ar")
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                     (context as? Activity)?.recreate()
                                 }
                             }
@@ -271,6 +275,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setLanguage("en")
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                     (context as? Activity)?.recreate()
                                 }
                             }
@@ -293,7 +298,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setNumberStyle(NumberStylePreference.WESTERN)
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                 }
                             }
                         )
@@ -304,7 +309,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setNumberStyle(NumberStylePreference.ARABIC_INDIC)
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                 }
                             }
                         )
@@ -639,7 +644,57 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(14.dp))
 
-                    // 1. Number Style
+                    // 1. Widget Language
+                    Text(
+                        stringResource(R.string.settings_widget_lang),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_lang_match_app),
+                            selected = widgetLanguage == "match_app",
+                            modifier = Modifier.weight(1.2f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetLanguage("match_app")
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                }
+                            }
+                        )
+                        LangChip(
+                            label = "العربية",
+                            selected = widgetLanguage == "ar",
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetLanguage("ar")
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                }
+                            }
+                        )
+                        LangChip(
+                            label = "English",
+                            selected = widgetLanguage == "en",
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetLanguage("en")
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                }
+                            }
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // 2. Number Style
                     Text(
                         stringResource(R.string.settings_widget_num_style),
                         fontFamily = ThmanyahSans,
@@ -659,7 +714,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setWidgetNumberStyle(NumberStylePreference.WESTERN)
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                 }
                             }
                         )
@@ -670,7 +725,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setWidgetNumberStyle(NumberStylePreference.ARABIC_INDIC)
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                 }
                             }
                         )
@@ -678,7 +733,7 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // 2. Background Style
+                    // 3. Background Style
                     Text(
                         stringResource(R.string.settings_widget_bg_style),
                         fontFamily = ThmanyahSans,
@@ -698,7 +753,7 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setWidgetBgStyle(WidgetBgStyle.THEME)
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                 }
                             }
                         )
@@ -709,13 +764,13 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setWidgetBgStyle(WidgetBgStyle.TRANSLUCENT)
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                                 }
                             }
                         )
                     }
 
-                    // 3. Blur / Transparency Slider
+                    // 4. Blur / Transparency Slider
                     AnimatedVisibility(visible = widgetBgStyle == WidgetBgStyle.TRANSLUCENT) {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
                             Row(
@@ -747,7 +802,9 @@ fun SettingsScreen(
                                     }
                                 },
                                 onValueChangeFinished = {
-                                    AtharWidgetUpdater.updateAllWidgets(context)
+                                    scope.launch {
+                                        AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                    }
                                 },
                                 valueRange = 20f..100f,
                                 colors = SliderDefaults.colors(
@@ -761,7 +818,7 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(18.dp))
 
-                    // 4. Live Mini-Preview
+                    // 5. Live Mini-Preview
                     Text(
                         stringResource(R.string.settings_widget_preview),
                         fontFamily = ThmanyahSans,
@@ -773,7 +830,9 @@ fun SettingsScreen(
                     WidgetLivePreviewCard(
                         bgStyle = widgetBgStyle,
                         blurIntensity = widgetBlurIntensity,
-                        numberStyle = widgetNumberStyle
+                        numberStyle = widgetNumberStyle,
+                        widgetLanguage = widgetLanguage,
+                        appLanguage = language
                     )
                 }
             }
@@ -1188,12 +1247,25 @@ private fun formatAppVersion(versionName: String): String {
     return stringResource(R.string.settings_version, versionName)
 }
 
+
 @Composable
 private fun WidgetLivePreviewCard(
     bgStyle: WidgetBgStyle,
     blurIntensity: Int,
-    numberStyle: NumberStylePreference
+    numberStyle: NumberStylePreference,
+    widgetLanguage: String = "match_app",
+    appLanguage: String = "ar"
 ) {
+    val effectiveLang = if (widgetLanguage == "match_app") appLanguage else widgetLanguage
+    val isAr = (effectiveLang == "ar")
+    val hijriDateText = remember(effectiveLang, numberStyle) {
+        HijriDateHelper.formatHijriDate(
+            date = LocalDate.now(),
+            isArabic = isAr,
+            numberStyle = numberStyle
+        )
+    }
+
     val bgColor = when (bgStyle) {
         WidgetBgStyle.THEME -> Color(0xFF14, 0xFF19, 0xFF13)
         WidgetBgStyle.TRANSLUCENT -> {
@@ -1223,13 +1295,23 @@ private fun WidgetLivePreviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.home_next_prayer),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.5.sp,
-                    color = AtharTextSecondary
-                )
+                Column {
+                    Text(
+                        text = if (isAr) "الصلاة التالية" else "Next Prayer",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary
+                    )
+                    if (hijriDateText.isNotEmpty()) {
+                        Text(
+                            text = hijriDateText,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 9.5.sp,
+                            color = AtharPrimaryMuted
+                        )
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Outlined.LocationOn,
@@ -1239,7 +1321,7 @@ private fun WidgetLivePreviewCard(
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(
-                        text = stringResource(R.string.home_location_label),
+                        text = if (isAr) "موقعي" else "My Location",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -1257,14 +1339,14 @@ private fun WidgetLivePreviewCard(
             ) {
                 Column {
                     Text(
-                        text = stringResource(R.string.home_prayer_fajr),
+                        text = if (isAr) "الفجر" else "Fajr",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Black,
                         fontSize = 20.sp,
                         color = AtharTextPrimary
                     )
                     Text(
-                        text = stringResource(R.string.home_prayer_iqamah, stringResource(R.string.home_prayer_fajr)),
+                        text = if (isAr) "أذان الفجر" else "Adhan for Fajr",
                         fontFamily = ThmanyahSans,
                         fontSize = 10.5.sp,
                         color = AtharPrimaryMuted
@@ -1288,7 +1370,7 @@ private fun WidgetLivePreviewCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.home_time_remaining),
+                    text = if (isAr) "الوقت المتبقي" else "Time Remaining",
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
