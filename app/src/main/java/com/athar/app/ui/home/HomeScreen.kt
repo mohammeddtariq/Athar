@@ -491,6 +491,13 @@ fun NextPrayerCard(
             numberStyle = numberStyle
         )
     }
+    val gregorianDateText = remember(targetDate, language, numberStyle) {
+        HijriDateHelper.formatGregorianDate(
+            date = targetDate,
+            isArabic = (language == "ar"),
+            numberStyle = numberStyle
+        )
+    }
 
     val remainingText = formatDigits(rawRemainingText, numberStyle)
 
@@ -539,14 +546,25 @@ fun NextPrayerCard(
                             )
                         }
                     }
-                    if (hijriDateText.isNotEmpty()) {
-                        Text(
-                            text = hijriDateText,
-                            color = AtharTextSecondary,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        if (hijriDateText.isNotEmpty()) {
+                            Text(
+                                text = hijriDateText,
+                                color = AtharTextSecondary,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
+                        }
+                        if (gregorianDateText.isNotEmpty()) {
+                            Text(
+                                text = gregorianDateText,
+                                color = AtharTextSecondary,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
                 Text(

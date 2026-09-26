@@ -20,7 +20,7 @@
         android:padding="12dp"
         android:layoutDirection="rtl">
 
-        <!-- Top row: Next Prayer & Hijri date on Start (right), Location & Settings on End (left) -->
+        <!-- Top row: Hijri & Gregorian dates on Start, Next Prayer label & Location on End -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -28,12 +28,45 @@
             android:gravity="center_vertical"
             android:layoutDirection="rtl">
 
+            <!-- Date column on Start (Right in RTL) -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="start|center_vertical"
+                android:layoutDirection="rtl">
+
+                <TextView
+                    android:id="@+id/widget_hijri_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="١٥ ربيع الآخر ١٤٤٨ هـ"
+                    android:textColor="#8CA389"
+                    android:textSize="9.5sp"
+                    android:textAlignment="viewStart"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_gregorian_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="٢٦ سبتمبر ٢٠٢٦ م"
+                    android:textColor="#8CA389"
+                    android:textSize="9.5sp"
+                    android:textAlignment="viewStart"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Next Prayer & Location & Settings on End (Left in RTL) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="end|center_vertical"
                 android:layoutDirection="rtl">
 
                 <TextView
@@ -44,56 +77,45 @@
                     android:textColor="#C8D6C6"
                     android:textSize="11.5sp"
                     android:textStyle="bold"
-                    android:textAlignment="viewStart"
+                    android:textAlignment="viewEnd"
                     android:maxLines="1" />
 
-                <TextView
-                    android:id="@+id/widget_hijri_date"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="1dp"
-                    android:text="١٥ ربيع الآخر ١٤٤٨ هـ"
-                    android:textColor="#8CA389"
-                    android:textSize="9.5sp"
-                    android:textAlignment="viewStart"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-            </LinearLayout>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layoutDirection="rtl">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layoutDirection="rtl">
+                    <ImageView
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:src="@drawable/ic_location_pin"
+                        android:contentDescription="@null" />
 
-                <ImageView
-                    android:layout_width="11dp"
-                    android:layout_height="11dp"
-                    android:src="@drawable/ic_location_pin"
-                    android:contentDescription="@null" />
+                    <TextView
+                        android:id="@+id/widget_location_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="3dp"
+                        android:layout_marginEnd="6dp"
+                        android:text="موقعي"
+                        android:textColor="#8CA389"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:maxWidth="80dp" />
 
-                <TextView
-                    android:id="@+id/widget_location_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="3dp"
-                    android:layout_marginEnd="6dp"
-                    android:text="موقعي"
-                    android:textColor="#C8D6C6"
-                    android:textSize="10.5sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:maxWidth="80dp" />
-
-                <ImageView
-                    android:id="@+id/widget_btn_settings"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:padding="3dp"
-                    android:src="@drawable/ic_widget_settings"
-                    android:contentDescription="@null" />
+                    <ImageView
+                        android:id="@+id/widget_btn_settings"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:padding="2dp"
+                        android:src="@drawable/ic_widget_settings"
+                        android:contentDescription="@null" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
@@ -118,6 +140,15 @@
                 android:textAlignment="viewStart"
                 android:maxLines="1" />
 
+            <ImageView
+                android:id="@+id/widget_prayer_name_image"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitStart"
+                android:visibility="gone"
+                android:contentDescription="@null" />
+
             <TextView
                 android:id="@+id/widget_prayer_sub"
                 android:layout_width="wrap_content"
@@ -139,6 +170,16 @@
                 android:textStyle="bold"
                 android:textAlignment="viewStart"
                 android:maxLines="1" />
+
+            <ImageView
+                android:id="@+id/widget_prayer_time_image"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:layout_marginTop="2dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitStart"
+                android:visibility="gone"
+                android:contentDescription="@null" />
         </LinearLayout>
 
         <!-- Bottom row: Countdown pill -->

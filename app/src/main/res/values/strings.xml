@@ -44,6 +44,9 @@
     <string name="settings_widget_bg_theme">Theme Accent (Dark Olive)</string>
     <string name="settings_widget_bg_translucent">Translucent Frosted Blur</string>
     <string name="settings_widget_blur_intensity">Transparency &amp; Blur Intensity</string>
+    <string name="settings_widget_font_style">Widget Font</string>
+    <string name="settings_widget_font_app">App Font (Thmanyah)</string>
+    <string name="settings_widget_font_system">System Font</string>
     <string name="settings_widget_preview">Widget Preview</string>
 
     <!-- Services Screen -->
@@ -261,5 +264,8 @@
     <string name="settings_live_status_lang">Live Status Language</string>
     <string name="settings_live_status_num_style">Number Style</string>
     <string name="settings_live_status_preview">Live Status Preview</string>
+    <string name="settings_live_status_nowbar_tip_title">Samsung One UI / Now Bar</string>
+    <string name="settings_live_status_nowbar_tip_desc">To show Live Status in Samsung One UI Now Bar, enable \"Live notifications for all apps\" under Developer Options.</string>
+    <string name="settings_open_developer_options">Open Developer Options</string>
 </resources>
 

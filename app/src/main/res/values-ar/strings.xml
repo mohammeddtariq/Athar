@@ -44,6 +44,9 @@
     <string name="settings_widget_bg_theme">مظهر التطبيق (زيتوني هادئ)</string>
     <string name="settings_widget_bg_translucent">زجاجي شفاف مموه</string>
     <string name="settings_widget_blur_intensity">شدة التعتيم والشفافية</string>
+    <string name="settings_widget_font_style">خط الويدجت</string>
+    <string name="settings_widget_font_app">خط التطبيق (ثمانية)</string>
+    <string name="settings_widget_font_system">خط النظام</string>
     <string name="settings_widget_preview">معاينة الويدجت</string>
 
     <!-- Services Screen -->
@@ -261,5 +264,8 @@
     <string name="settings_live_status_lang">لغة الحالة المباشرة</string>
     <string name="settings_live_status_num_style">نمط الأرقام</string>
     <string name="settings_live_status_preview">معاينة الحالة المباشرة</string>
+    <string name="settings_live_status_nowbar_tip_title">سامسونج One UI / شريط Now Bar</string>
+    <string name="settings_live_status_nowbar_tip_desc">لإظهار الحالة الحية في شريط Now Bar على أجهزة سامسونج، يرجى تفعيل خيار \"إشعارات حية لكافة التطبيقات\" من خيارات المطور.</string>
+    <string name="settings_open_developer_options">فتح خيارات المطور</string>
 </resources>
 

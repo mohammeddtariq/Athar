@@ -11,7 +11,9 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
+import android.view.View
 import android.widget.RemoteViews
+import androidx.core.content.res.ResourcesCompat
 import com.athar.app.MainActivity
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
@@ -21,6 +23,7 @@ import com.athar.app.data.DayPrayers
 import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.MadhabOption
 import com.athar.app.data.WidgetBgStyle
+import com.athar.app.data.WidgetFontStyle
 import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
@@ -155,6 +158,14 @@ object AtharWidgetUpdater {
         )
         views.setTextViewText(R.id.widget_hijri_date, hijriDateText)
 
+        // Gregorian date
+        val gregorianDateText = HijriDateHelper.formatGregorianDate(
+            date = targetDate,
+            isArabic = isAr,
+            numberStyle = snapshot.widgetNumberStyle
+        )
+        views.setTextViewText(R.id.widget_gregorian_date, gregorianDateText)
+
         // Location
         val locationText = snapshot.city ?: if (isAr) "موقعي" else "My Location"
         views.setTextViewText(R.id.widget_location_text, locationText)
@@ -162,12 +173,56 @@ object AtharWidgetUpdater {
         // Prayer name & Adhan
         val prayerName = getPrayerName(next.key, isAr)
         val adhanText = if (isAr) "أذان $prayerName" else "Adhan for $prayerName"
-        views.setTextViewText(R.id.widget_prayer_name, prayerName)
         views.setTextViewText(R.id.widget_prayer_sub, adhanText)
 
         // Prayer time
         val formattedTime = formatDigits(next.time.format(timeFmt), snapshot.widgetNumberStyle)
-        views.setTextViewText(R.id.widget_prayer_time, formattedTime)
+
+        // Typography: App Font bitmap rendering vs System Font
+        if (snapshot.widgetFontStyle == WidgetFontStyle.APP_FONT) {
+            val nameBmp = renderTextToBitmap(
+                context = context,
+                text = prayerName,
+                fontResId = R.font.thmanyah_serif_display_bold,
+                textSizeSp = 24f,
+                textColor = android.graphics.Color.parseColor("#F4F8F3")
+            )
+            val timeBmp = renderTextToBitmap(
+                context = context,
+                text = formattedTime,
+                fontResId = R.font.thmanyah_sans_bold,
+                textSizeSp = 26f,
+                textColor = android.graphics.Color.WHITE
+            )
+
+            if (nameBmp != null) {
+                views.setViewVisibility(R.id.widget_prayer_name, View.GONE)
+                views.setImageViewBitmap(R.id.widget_prayer_name_image, nameBmp)
+                views.setViewVisibility(R.id.widget_prayer_name_image, View.VISIBLE)
+            } else {
+                views.setTextViewText(R.id.widget_prayer_name, prayerName)
+                views.setViewVisibility(R.id.widget_prayer_name, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_prayer_name_image, View.GONE)
+            }
+
+            if (timeBmp != null) {
+                views.setViewVisibility(R.id.widget_prayer_time, View.GONE)
+                views.setImageViewBitmap(R.id.widget_prayer_time_image, timeBmp)
+                views.setViewVisibility(R.id.widget_prayer_time_image, View.VISIBLE)
+            } else {
+                views.setTextViewText(R.id.widget_prayer_time, formattedTime)
+                views.setViewVisibility(R.id.widget_prayer_time, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_prayer_time_image, View.GONE)
+            }
+        } else {
+            views.setTextViewText(R.id.widget_prayer_name, prayerName)
+            views.setViewVisibility(R.id.widget_prayer_name, View.VISIBLE)
+            views.setViewVisibility(R.id.widget_prayer_name_image, View.GONE)
+
+            views.setTextViewText(R.id.widget_prayer_time, formattedTime)
+            views.setViewVisibility(R.id.widget_prayer_time, View.VISIBLE)
+            views.setViewVisibility(R.id.widget_prayer_time_image, View.GONE)
+        }
 
         // Live Countdown via Chronometer
         setupChronometer(views, R.id.widget_countdown_chrono, next.time, next.isTomorrow)
@@ -210,8 +265,51 @@ object AtharWidgetUpdater {
         // Next prayer summary
         val nextName = getPrayerName(next.key, isAr)
         val nextFormattedTime = formatDigits(next.time.format(timeFmt), snapshot.widgetNumberStyle)
-        views.setTextViewText(R.id.widget_next_name, nextName)
-        views.setTextViewText(R.id.widget_next_time, nextFormattedTime)
+
+        if (snapshot.widgetFontStyle == WidgetFontStyle.APP_FONT) {
+            val nameBmp = renderTextToBitmap(
+                context = context,
+                text = nextName,
+                fontResId = R.font.thmanyah_serif_display_bold,
+                textSizeSp = 14f,
+                textColor = android.graphics.Color.parseColor("#F4F8F3")
+            )
+            val timeBmp = renderTextToBitmap(
+                context = context,
+                text = nextFormattedTime,
+                fontResId = R.font.thmanyah_sans_bold,
+                textSizeSp = 14f,
+                textColor = android.graphics.Color.parseColor("#A5C89E")
+            )
+
+            if (nameBmp != null) {
+                views.setViewVisibility(R.id.widget_next_name, View.GONE)
+                views.setImageViewBitmap(R.id.widget_next_name_image, nameBmp)
+                views.setViewVisibility(R.id.widget_next_name_image, View.VISIBLE)
+            } else {
+                views.setTextViewText(R.id.widget_next_name, nextName)
+                views.setViewVisibility(R.id.widget_next_name, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_next_name_image, View.GONE)
+            }
+
+            if (timeBmp != null) {
+                views.setViewVisibility(R.id.widget_next_time, View.GONE)
+                views.setImageViewBitmap(R.id.widget_next_time_image, timeBmp)
+                views.setViewVisibility(R.id.widget_next_time_image, View.VISIBLE)
+            } else {
+                views.setTextViewText(R.id.widget_next_time, nextFormattedTime)
+                views.setViewVisibility(R.id.widget_next_time, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_next_time_image, View.GONE)
+            }
+        } else {
+            views.setTextViewText(R.id.widget_next_name, nextName)
+            views.setViewVisibility(R.id.widget_next_name, View.VISIBLE)
+            views.setViewVisibility(R.id.widget_next_name_image, View.GONE)
+
+            views.setTextViewText(R.id.widget_next_time, nextFormattedTime)
+            views.setViewVisibility(R.id.widget_next_time, View.VISIBLE)
+            views.setViewVisibility(R.id.widget_next_time_image, View.GONE)
+        }
 
         val locationText = snapshot.city ?: if (isAr) "موقعي" else "My Location"
         views.setTextViewText(R.id.widget_next_location, locationText)
@@ -224,6 +322,14 @@ object AtharWidgetUpdater {
             numberStyle = snapshot.widgetNumberStyle
         )
         views.setTextViewText(R.id.widget_hijri_date, hijriDateText)
+
+        // Gregorian date
+        val gregorianDateText = HijriDateHelper.formatGregorianDate(
+            date = targetDate,
+            isArabic = isAr,
+            numberStyle = snapshot.widgetNumberStyle
+        )
+        views.setTextViewText(R.id.widget_gregorian_date, gregorianDateText)
 
         // Live Countdown
         setupChronometer(views, R.id.widget_countdown_chrono, next.time, next.isTomorrow)
@@ -401,6 +507,37 @@ object AtharWidgetUpdater {
             }
             canvas.drawRoundRect(rect, cornerRadius, cornerRadius, strokePaint)
 
+            bitmap
+        }.getOrNull()
+    }
+
+    fun renderTextToBitmap(
+        context: Context,
+        text: String,
+        fontResId: Int,
+        textSizeSp: Float,
+        textColor: Int
+    ): Bitmap? {
+        return runCatching {
+            val density = context.resources.displayMetrics.scaledDensity
+            val pxSize = textSizeSp * density
+            val typeface = ResourcesCompat.getFont(context, fontResId) ?: return null
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                this.typeface = typeface
+                this.textSize = pxSize
+                this.color = textColor
+            }
+            val fontMetrics = paint.fontMetrics
+            val textWidth = paint.measureText(text)
+            val pad = (2f * density).toInt()
+            val width = (textWidth + pad * 2).toInt().coerceAtLeast(1)
+            val height = ((fontMetrics.descent - fontMetrics.ascent) + pad * 2).toInt().coerceAtLeast(1)
+
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val y = -fontMetrics.ascent + pad
+            val x = pad.toFloat()
+            canvas.drawText(text, x, y, paint)
             bitmap
         }.getOrNull()
     }

@@ -66,4 +66,60 @@ object HijriDateHelper {
             ""
         }
     }
+
+    private val ARABIC_GREGORIAN_MONTHS = listOf(
+        "يناير",
+        "فبراير",
+        "مارس",
+        "أبريل",
+        "مايو",
+        "يونيو",
+        "يوليو",
+        "أغسطس",
+        "سبتمبر",
+        "أكتوبر",
+        "نوفمبر",
+        "ديسمبر"
+    )
+
+    private val ENGLISH_GREGORIAN_MONTHS = listOf(
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+    )
+
+    fun formatGregorianDate(
+        date: LocalDate = LocalDate.now(),
+        isArabic: Boolean = true,
+        numberStyle: NumberStylePreference = NumberStylePreference.WESTERN
+    ): String {
+        return try {
+            val day = date.dayOfMonth
+            val month = date.monthValue
+            val year = date.year
+
+            val monthIndex = (month - 1).coerceIn(0, 11)
+            val formattedDay = formatDigits(day.toString(), numberStyle)
+            val formattedYear = formatDigits(year.toString(), numberStyle)
+
+            if (isArabic) {
+                val monthName = ARABIC_GREGORIAN_MONTHS[monthIndex]
+                "$formattedDay $monthName $formattedYear م"
+            } else {
+                val monthName = ENGLISH_GREGORIAN_MONTHS[monthIndex]
+                "$formattedDay $monthName $formattedYear"
+            }
+        } catch (_: Exception) {
+            ""
+        }
+    }
 }

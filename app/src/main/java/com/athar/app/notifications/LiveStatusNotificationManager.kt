@@ -42,24 +42,31 @@ import java.time.format.DateTimeFormatter
 object LiveStatusNotificationManager {
 
     const val NOTIFICATION_ID = 9550
-    const val CHANNEL_ID = "athar_live_status_v1"
+    const val CHANNEL_ID = "athar_live_status_v2"
     private const val ALARM_REQUEST_CODE = 9551
     private val timeFmt = DateTimeFormatter.ofPattern("H:mm")
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+
+        // Clean up v1 channel so new importance and lockscreen settings take effect
+        try {
+            manager.deleteNotificationChannel("athar_live_status_v1")
+        } catch (_: Exception) {}
+
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
 
         val channel = NotificationChannel(
             CHANNEL_ID,
             context.getString(R.string.live_status_channel_name),
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
             description = context.getString(R.string.live_status_channel_desc)
             setShowBadge(false)
             setSound(null, null)
             enableVibration(false)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannel(channel)
     }
@@ -190,6 +197,7 @@ object LiveStatusNotificationManager {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCustomContentView(collapsedViews)
@@ -200,6 +208,7 @@ object LiveStatusNotificationManager {
         // Request promotion for Android 16 Live Updates & Samsung One UI Now Bar
         val extras = Bundle().apply {
             putBoolean("android.requestPromotedOngoing", true)
+            putString("android.substName", appContext.getString(R.string.app_name))
         }
         notifBuilder.addExtras(extras)
 
@@ -233,6 +242,14 @@ object LiveStatusNotificationManager {
         alarmManager?.cancel(pending)
     }
 
+    private data class TimelinePrayerSlot(
+        val key: String,
+        val bgActiveId: Int,
+        val bgIdleId: Int,
+        val nameId: Int,
+        val timeId: Int
+    )
+
     private fun bindTimelineChips(
         views: RemoteViews,
         day: DayPrayers,
@@ -241,18 +258,18 @@ object LiveStatusNotificationManager {
         numberStyle: com.athar.app.data.NumberStylePreference
     ) {
         val prayers = listOf(
-            Triple("fajr", R.id.live_item_fajr, Pair(R.id.live_name_fajr, R.id.live_time_fajr)),
-            Triple("sunrise", R.id.live_item_sunrise, Pair(R.id.live_name_sunrise, R.id.live_time_sunrise)),
-            Triple("dhuhr", R.id.live_item_dhuhr, Pair(R.id.live_name_dhuhr, R.id.live_time_dhuhr)),
-            Triple("asr", R.id.live_item_asr, Pair(R.id.live_name_asr, R.id.live_time_asr)),
-            Triple("maghrib", R.id.live_item_maghrib, Pair(R.id.live_name_maghrib, R.id.live_time_maghrib)),
-            Triple("isha", R.id.live_item_isha, Pair(R.id.live_name_isha, R.id.live_time_isha))
+            TimelinePrayerSlot("fajr", R.id.live_bg_active_fajr, R.id.live_bg_idle_fajr, R.id.live_name_fajr, R.id.live_time_fajr),
+            TimelinePrayerSlot("sunrise", R.id.live_bg_active_sunrise, R.id.live_bg_idle_sunrise, R.id.live_name_sunrise, R.id.live_time_sunrise),
+            TimelinePrayerSlot("dhuhr", R.id.live_bg_active_dhuhr, R.id.live_bg_idle_dhuhr, R.id.live_name_dhuhr, R.id.live_time_dhuhr),
+            TimelinePrayerSlot("asr", R.id.live_bg_active_asr, R.id.live_bg_idle_asr, R.id.live_name_asr, R.id.live_time_asr),
+            TimelinePrayerSlot("maghrib", R.id.live_bg_active_maghrib, R.id.live_bg_idle_maghrib, R.id.live_name_maghrib, R.id.live_time_maghrib),
+            TimelinePrayerSlot("isha", R.id.live_bg_active_isha, R.id.live_bg_idle_isha, R.id.live_name_isha, R.id.live_time_isha)
         )
 
-        for ((key, containerId, textIds) in prayers) {
-            val isNext = (nextKey == key)
-            val pName = getPrayerName(key, isAr)
-            val pTime = when (key) {
+        for (slot in prayers) {
+            val isNext = (nextKey == slot.key)
+            val pName = getPrayerName(slot.key, isAr)
+            val pTime = when (slot.key) {
                 "fajr" -> day.fajr
                 "sunrise" -> day.sunrise
                 "dhuhr" -> day.dhuhr
@@ -262,17 +279,18 @@ object LiveStatusNotificationManager {
             }
             val formatted = formatDigits(pTime.format(timeFmt), numberStyle)
 
-            views.setTextViewText(textIds.first, pName)
-            views.setTextViewText(textIds.second, formatted)
+            views.setTextViewText(slot.nameId, pName)
+            views.setTextViewText(slot.timeId, formatted)
+
+            views.setViewVisibility(slot.bgActiveId, if (isNext) android.view.View.VISIBLE else android.view.View.GONE)
+            views.setViewVisibility(slot.bgIdleId, if (isNext) android.view.View.GONE else android.view.View.VISIBLE)
 
             if (isNext) {
-                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_chip_active)
-                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#C9D8B4"))
-                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#F4F8F3"))
+                views.setTextColor(slot.nameId, android.graphics.Color.parseColor("#C9D8B4"))
+                views.setTextColor(slot.timeId, android.graphics.Color.parseColor("#F4F8F3"))
             } else {
-                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_chip_idle)
-                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#A4B8A2"))
-                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#E0E6DF"))
+                views.setTextColor(slot.nameId, android.graphics.Color.parseColor("#A4B8A2"))
+                views.setTextColor(slot.timeId, android.graphics.Color.parseColor("#E0E6DF"))
             }
         }
     }

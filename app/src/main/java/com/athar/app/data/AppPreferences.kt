@@ -63,6 +63,7 @@ class AppPreferences(private val context: Context) {
         private val WIDGET_NUMBER_STYLE_KEY = stringPreferencesKey("widget_number_style")
         private val WIDGET_BG_STYLE_KEY = stringPreferencesKey("widget_bg_style")
         private val WIDGET_BLUR_INTENSITY_KEY = intPreferencesKey("widget_blur_intensity")
+        private val WIDGET_FONT_STYLE_KEY = stringPreferencesKey("widget_font_style")
 
         // Live Status / Status Bar / Now Bar
         private val LIVE_STATUS_ENABLED_KEY = booleanPreferencesKey("live_status_enabled")
@@ -119,6 +120,9 @@ class AppPreferences(private val context: Context) {
     val widgetBlurIntensity: Flow<Int> = context.dataStore.data.map {
         it[WIDGET_BLUR_INTENSITY_KEY] ?: 70
     }
+    val widgetFontStyle: Flow<WidgetFontStyle> = context.dataStore.data.map {
+        WidgetFontStyle.fromId(it[WIDGET_FONT_STYLE_KEY] ?: "APP_FONT")
+    }
 
     val liveStatusEnabled: Flow<Boolean> = context.dataStore.data.map {
         it[LIVE_STATUS_ENABLED_KEY] ?: false
@@ -149,7 +153,8 @@ class AppPreferences(private val context: Context) {
             widgetNumberStyle = NumberStylePreference.fromId(data[WIDGET_NUMBER_STYLE_KEY] ?: data[NUMBER_STYLE_KEY] ?: "western"),
             widgetBgStyle = WidgetBgStyle.fromId(data[WIDGET_BG_STYLE_KEY] ?: "THEME"),
             widgetBlurIntensity = data[WIDGET_BLUR_INTENSITY_KEY] ?: 70,
-            widgetLanguage = effectiveWidgetLang
+            widgetLanguage = effectiveWidgetLang,
+            widgetFontStyle = WidgetFontStyle.fromId(data[WIDGET_FONT_STYLE_KEY] ?: "APP_FONT")
         )
     }
 
@@ -283,6 +288,10 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[WIDGET_BLUR_INTENSITY_KEY] = intensity.coerceIn(20, 100) }
     }
 
+    suspend fun setWidgetFontStyle(style: WidgetFontStyle) {
+        context.dataStore.edit { it[WIDGET_FONT_STYLE_KEY] = style.id }
+    }
+
     suspend fun setLiveStatusEnabled(enabled: Boolean) {
         context.dataStore.edit { it[LIVE_STATUS_ENABLED_KEY] = enabled }
     }
@@ -297,6 +306,15 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setLiveStatusLanguage(lang: String) {
         context.dataStore.edit { it[LIVE_STATUS_LANGUAGE_KEY] = lang }
+    }
+}
+
+enum class WidgetFontStyle(val id: String) {
+    APP_FONT("APP_FONT"),
+    SYSTEM("SYSTEM");
+
+    companion object {
+        fun fromId(id: String): WidgetFontStyle = entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: APP_FONT
     }
 }
 
@@ -329,7 +347,8 @@ data class AppPrefsSnapshot(
     val widgetNumberStyle: NumberStylePreference,
     val widgetBgStyle: WidgetBgStyle,
     val widgetBlurIntensity: Int,
-    val widgetLanguage: String = language
+    val widgetLanguage: String = language,
+    val widgetFontStyle: WidgetFontStyle = WidgetFontStyle.APP_FONT
 )
 
 enum class NumberStylePreference(val id: String) {

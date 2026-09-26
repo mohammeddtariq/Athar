@@ -52,6 +52,15 @@
                     android:textAlignment="viewStart"
                     android:maxLines="1" />
 
+                <ImageView
+                    android:id="@+id/widget_next_name_image"
+                    android:layout_width="wrap_content"
+                    android:layout_height="18dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart"
+                    android:visibility="gone"
+                    android:contentDescription="@null" />
+
                 <TextView
                     android:id="@+id/widget_next_time"
                     android:layout_width="wrap_content"
@@ -63,6 +72,16 @@
                     android:textStyle="bold"
                     android:textAlignment="viewStart"
                     android:maxLines="1" />
+
+                <ImageView
+                    android:id="@+id/widget_next_time_image"
+                    android:layout_width="wrap_content"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="5dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart"
+                    android:visibility="gone"
+                    android:contentDescription="@null" />
 
                 <ImageView
                     android:id="@+id/widget_btn_settings"
@@ -93,6 +112,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
                 android:text="15 Rabi' al-Thani"
+                android:textColor="#8CA389"
+                android:textSize="8.5sp"
+                android:textAlignment="viewStart"
+                android:maxLines="1"
+                android:maxWidth="95dp"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_gregorian_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="26 September 2026"
                 android:textColor="#8CA389"
                 android:textSize="8.5sp"
                 android:textAlignment="viewStart"

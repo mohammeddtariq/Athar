@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,10 +34,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -66,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,6 +83,7 @@ import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.WidgetBgStyle
+import com.athar.app.data.WidgetFontStyle
 import com.athar.app.data.LiveStatusStyle
 import com.athar.app.notifications.LiveStatusNotificationManager
 import com.athar.app.data.formatDigits
@@ -92,6 +97,7 @@ import com.athar.app.data.presetCities
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
+import com.athar.app.ui.theme.AtharSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimaryMuted
@@ -170,6 +176,7 @@ fun SettingsScreen(
     val widgetNumberStyle by prefs.widgetNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val widgetBgStyle by prefs.widgetBgStyle.collectAsState(initial = WidgetBgStyle.THEME)
     val widgetBlurIntensity by prefs.widgetBlurIntensity.collectAsState(initial = 70)
+    val widgetFontStyle by prefs.widgetFontStyle.collectAsState(initial = WidgetFontStyle.APP_FONT)
     val liveStatusEnabled by prefs.liveStatusEnabled.collectAsState(initial = false)
     val liveStatusStyle by prefs.liveStatusStyle.collectAsState(initial = LiveStatusStyle.HERO)
     val liveStatusNumberStyle by prefs.liveStatusNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
@@ -822,9 +829,48 @@ fun SettingsScreen(
                         }
                     }
 
+                    Spacer(Modifier.height(16.dp))
+
+                    // 5. Font Style (App Font vs System Font)
+                    Text(
+                        stringResource(R.string.settings_widget_font_style),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_font_app),
+                            selected = widgetFontStyle == WidgetFontStyle.APP_FONT,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetFontStyle(WidgetFontStyle.APP_FONT)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                }
+                            }
+                        )
+                        LangChip(
+                            label = stringResource(R.string.settings_widget_font_system),
+                            selected = widgetFontStyle == WidgetFontStyle.SYSTEM,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    prefs.setWidgetFontStyle(WidgetFontStyle.SYSTEM)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                }
+                            }
+                        )
+                    }
+
                     Spacer(Modifier.height(18.dp))
 
-                    // 5. Live Mini-Preview
+                    // 6. Live Mini-Preview
                     Text(
                         stringResource(R.string.settings_widget_preview),
                         fontFamily = ThmanyahSans,
@@ -837,6 +883,7 @@ fun SettingsScreen(
                         bgStyle = widgetBgStyle,
                         blurIntensity = widgetBlurIntensity,
                         numberStyle = widgetNumberStyle,
+                        fontStyle = widgetFontStyle,
                         widgetLanguage = widgetLanguage,
                         appLanguage = language
                     )
@@ -1043,6 +1090,72 @@ fun SettingsScreen(
                                 liveStatusLanguage = liveStatusLanguage,
                                 appLanguage = language
                             )
+
+                            Spacer(Modifier.height(14.dp))
+
+                            // 5. Samsung One UI Now Bar / Android 15+ Tip
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(AtharSurface)
+                                    .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = AtharPrimaryLight,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.settings_live_status_nowbar_tip_title),
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = AtharPrimaryLight
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_live_status_nowbar_tip_desc),
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 11.5.sp,
+                                    color = AtharTextSecondary,
+                                    lineHeight = 16.sp
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        runCatching {
+                                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                        }.onFailure {
+                                            runCatching {
+                                                val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(intent)
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, AtharPrimary.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.settings_open_developer_options),
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                        color = AtharPrimaryLight
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1464,6 +1577,7 @@ private fun WidgetLivePreviewCard(
     bgStyle: WidgetBgStyle,
     blurIntensity: Int,
     numberStyle: NumberStylePreference,
+    fontStyle: WidgetFontStyle = WidgetFontStyle.APP_FONT,
     widgetLanguage: String = "match_app",
     appLanguage: String = "ar"
 ) {
@@ -1471,6 +1585,13 @@ private fun WidgetLivePreviewCard(
     val isAr = (effectiveLang == "ar")
     val hijriDateText = remember(effectiveLang, numberStyle) {
         HijriDateHelper.formatHijriDate(
+            date = LocalDate.now(),
+            isArabic = isAr,
+            numberStyle = numberStyle
+        )
+    }
+    val gregorianDateText = remember(effectiveLang, numberStyle) {
+        HijriDateHelper.formatGregorianDate(
             date = LocalDate.now(),
             isArabic = isAr,
             numberStyle = numberStyle
@@ -1492,6 +1613,9 @@ private fun WidgetLivePreviewCard(
         }
     }
 
+    val prayerNameFont = if (fontStyle == WidgetFontStyle.APP_FONT) ThmanyahSerifDisplay else FontFamily.Default
+    val prayerTimeFont = if (fontStyle == WidgetFontStyle.APP_FONT) ThmanyahSans else FontFamily.Default
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1506,14 +1630,8 @@ private fun WidgetLivePreviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Start side: Dates (Hijri & Gregorian)
                 Column {
-                    Text(
-                        text = if (isAr) "الصلاة التالية" else "Next Prayer",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.5.sp,
-                        color = AtharTextSecondary
-                    )
                     if (hijriDateText.isNotEmpty()) {
                         Text(
                             text = hijriDateText,
@@ -1522,22 +1640,41 @@ private fun WidgetLivePreviewCard(
                             color = AtharPrimaryMuted
                         )
                     }
+                    if (gregorianDateText.isNotEmpty()) {
+                        Text(
+                            text = gregorianDateText,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 9.5.sp,
+                            color = AtharPrimaryMuted
+                        )
+                    }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.LocationOn,
-                        contentDescription = null,
-                        tint = AtharPrimaryLight,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(Modifier.width(3.dp))
+
+                // End side: Next Prayer label & Location
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = if (isAr) "موقعي" else "My Location",
+                        text = if (isAr) "الصلاة التالية" else "Next Prayer",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
+                        fontSize = 11.5.sp,
                         color = AtharTextSecondary
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.LocationOn,
+                            contentDescription = null,
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            text = if (isAr) "موقعي" else "My Location",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            color = AtharTextSecondary
+                        )
+                    }
                 }
             }
 
@@ -1551,9 +1688,9 @@ private fun WidgetLivePreviewCard(
                 Column {
                     Text(
                         text = if (isAr) "الفجر" else "Fajr",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp,
+                        fontFamily = prayerNameFont,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
                         color = AtharTextPrimary
                     )
                     Text(
@@ -1566,9 +1703,9 @@ private fun WidgetLivePreviewCard(
 
                 Text(
                     text = formatDigits("05:17", numberStyle),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 22.sp,
+                    fontFamily = prayerTimeFont,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
                     color = AtharTextPrimary
                 )
             }
