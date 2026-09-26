@@ -248,4 +248,18 @@
     <string name="settings_battery_title">Battery Optimization</string>
     <string name="settings_battery_sub_active">Unrestricted • Timely alarms guaranteed</string>
     <string name="settings_battery_sub_restricted">Restricted by system • Tap to allow unrestricted</string>
+
+    <!-- Live Status & Now Bar -->
+    <string name="live_status_channel_name">Athar • Live Status</string>
+    <string name="live_status_channel_desc">Persistent live prayer countdown for status bar and One UI Now Bar</string>
+    <string name="settings_live_status_title">Live Status &amp; Now Bar</string>
+    <string name="settings_live_status_subtitle">Persistent prayer countdown on status bar and Samsung Now Bar</string>
+    <string name="settings_live_status_enable">Enable Live Status</string>
+    <string name="settings_live_status_style">Display Style</string>
+    <string name="settings_live_status_style_hero">Focus Card (Minimal)</string>
+    <string name="settings_live_status_style_timeline">Full Timeline (Mosaic)</string>
+    <string name="settings_live_status_lang">Live Status Language</string>
+    <string name="settings_live_status_num_style">Number Style</string>
+    <string name="settings_live_status_preview">Live Status Preview</string>
 </resources>
+

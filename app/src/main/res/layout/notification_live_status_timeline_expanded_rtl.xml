@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/live_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_live_status_card"
+    android:padding="10dp"
+    android:layoutDirection="rtl">
+
+    <!-- Top Row: Next Prayer Summary & Countdown & Location -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="start|center_vertical"
+            android:layoutDirection="rtl">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layoutDirection="rtl">
+
+                <TextView
+                    android:id="@+id/live_prayer_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="الفجر"
+                    android:textColor="#F4F8F3"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textAlignment="viewStart"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/live_prayer_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="٠٥:١٧"
+                    android:textColor="#A5C89E"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textAlignment="viewStart"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/live_sub_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="العبور • ١٥ ربيع الآخر ١٤٤٨ هـ"
+                android:textColor="#8CA389"
+                android:textSize="10sp"
+                android:textAlignment="viewStart"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_widget_countdown_pill"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp">
+
+            <Chronometer
+                android:id="@+id/live_countdown_chrono"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#A5C89E"
+                android:textSize="11.5sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="#1E2A1C" />
+
+    <!-- Bottom Row: 6 Daily Prayer Chips Strip (RTL: Fajr -> Isha from right to left) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl">
+
+        <!-- Fajr -->
+        <FrameLayout
+            android:id="@+id/live_item_fajr"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="1dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_widget_chip_idle">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/live_name_fajr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="الفجر"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+                <TextView
+                    android:id="@+id/live_time_fajr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="٠٥:١٧"
+                    android:textColor="#C8D6C6"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Sunrise -->
+        <FrameLayout
+            android:id="@+id/live_item_sunrise"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="1dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_widget_chip_idle">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/live_name_sunrise"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="الشروق"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+                <TextView
+                    android:id="@+id/live_time_sunrise"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="٠٦:٤٤"
+                    android:textColor="#C8D6C6"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Dhuhr -->
+        <FrameLayout
+            android:id="@+id/live_item_dhuhr"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="1dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_widget_chip_idle">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/live_name_dhuhr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="الظهر"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+                <TextView
+                    android:id="@+id/live_time_dhuhr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="١٢:٤٥"
+                    android:textColor="#C8D6C6"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Asr -->
+        <FrameLayout
+            android:id="@+id/live_item_asr"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="1dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_widget_chip_idle">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/live_name_asr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="العصر"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+                <TextView
+                    android:id="@+id/live_time_asr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="١٦:١٠"
+                    android:textColor="#C8D6C6"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Maghrib -->
+        <FrameLayout
+            android:id="@+id/live_item_maghrib"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="1dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_widget_chip_idle">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/live_name_maghrib"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="المغرب"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+                <TextView
+                    android:id="@+id/live_time_maghrib"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="١٨:٤٥"
+                    android:textColor="#C8D6C6"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Isha -->
+        <FrameLayout
+            android:id="@+id/live_item_isha"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="1dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_widget_chip_idle">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/live_name_isha"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="العشاء"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+                <TextView
+                    android:id="@+id/live_time_isha"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="٢٠:٠٥"
+                    android:textColor="#C8D6C6"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

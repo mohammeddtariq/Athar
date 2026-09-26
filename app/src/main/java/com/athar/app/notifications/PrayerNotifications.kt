@@ -158,7 +158,11 @@ object PrayerNotifications {
                 alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
             }
         }
+
+        // Keep Live Status (Now Bar & status bar) synchronized with prayer calculations
+        LiveStatusNotificationManager.update(context)
     }
+
 
     /** Helper for non-suspending callers (e.g. Activity callbacks) to trigger scheduling asynchronously. */
     fun scheduleNextAsync(context: Context) {
@@ -244,6 +248,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 PrayerNotifications.showPrayerNotification(context, key, langCode)
                 PrayerNotifications.scheduleNext(context)
                 com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
+                LiveStatusNotificationManager.update(context)
             } finally {
                 pendingResult.finish()
             }
@@ -268,6 +273,7 @@ class BootReceiver : BroadcastReceiver() {
                     }
                     PrayerNotifications.scheduleNext(context)
                     com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
+                    LiveStatusNotificationManager.update(context)
                     com.athar.app.updater.UpdateCheckWorker.schedule(context)
                 } finally {
                     pendingResult.finish()

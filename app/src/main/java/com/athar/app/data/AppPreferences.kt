@@ -63,6 +63,12 @@ class AppPreferences(private val context: Context) {
         private val WIDGET_NUMBER_STYLE_KEY = stringPreferencesKey("widget_number_style")
         private val WIDGET_BG_STYLE_KEY = stringPreferencesKey("widget_bg_style")
         private val WIDGET_BLUR_INTENSITY_KEY = intPreferencesKey("widget_blur_intensity")
+
+        // Live Status / Status Bar / Now Bar
+        private val LIVE_STATUS_ENABLED_KEY = booleanPreferencesKey("live_status_enabled")
+        private val LIVE_STATUS_STYLE_KEY = stringPreferencesKey("live_status_style")
+        private val LIVE_STATUS_NUMBER_STYLE_KEY = stringPreferencesKey("live_status_number_style")
+        private val LIVE_STATUS_LANGUAGE_KEY = stringPreferencesKey("live_status_language")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -112,6 +118,19 @@ class AppPreferences(private val context: Context) {
     }
     val widgetBlurIntensity: Flow<Int> = context.dataStore.data.map {
         it[WIDGET_BLUR_INTENSITY_KEY] ?: 70
+    }
+
+    val liveStatusEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[LIVE_STATUS_ENABLED_KEY] ?: false
+    }
+    val liveStatusStyle: Flow<LiveStatusStyle> = context.dataStore.data.map {
+        LiveStatusStyle.fromId(it[LIVE_STATUS_STYLE_KEY] ?: "HERO")
+    }
+    val liveStatusNumberStyle: Flow<NumberStylePreference> = context.dataStore.data.map {
+        NumberStylePreference.fromId(it[LIVE_STATUS_NUMBER_STYLE_KEY] ?: "western")
+    }
+    val liveStatusLanguage: Flow<String> = context.dataStore.data.map {
+        it[LIVE_STATUS_LANGUAGE_KEY] ?: "match_app"
     }
 
     suspend fun getPreferencesSnapshot(): AppPrefsSnapshot {
@@ -262,6 +281,31 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setWidgetBlurIntensity(intensity: Int) {
         context.dataStore.edit { it[WIDGET_BLUR_INTENSITY_KEY] = intensity.coerceIn(20, 100) }
+    }
+
+    suspend fun setLiveStatusEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[LIVE_STATUS_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun setLiveStatusStyle(style: LiveStatusStyle) {
+        context.dataStore.edit { it[LIVE_STATUS_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setLiveStatusNumberStyle(style: NumberStylePreference) {
+        context.dataStore.edit { it[LIVE_STATUS_NUMBER_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setLiveStatusLanguage(lang: String) {
+        context.dataStore.edit { it[LIVE_STATUS_LANGUAGE_KEY] = lang }
+    }
+}
+
+enum class LiveStatusStyle(val id: String) {
+    HERO("HERO"),
+    TIMELINE("TIMELINE");
+
+    companion object {
+        fun fromId(id: String): LiveStatusStyle = entries.firstOrNull { it.id == id } ?: HERO
     }
 }
 

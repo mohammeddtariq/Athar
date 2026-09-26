@@ -154,6 +154,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         PrayerNotifications.scheduleNextAsync(this)
         com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(applicationContext)
+        com.athar.app.notifications.LiveStatusNotificationManager.updateAsync(applicationContext)
     }
 
     private fun applyLocale(languageCode: String) {

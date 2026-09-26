@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/live_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_live_status_card"
+    android:padding="12dp"
+    android:layoutDirection="ltr">
+
+    <!-- Header: Next Prayer label & Hijri date on start (left), Location on end (right) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layoutDirection="ltr">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="start|center_vertical"
+            android:layoutDirection="ltr">
+
+            <TextView
+                android:id="@+id/live_label_next"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Next Prayer"
+                android:textColor="#C8D6C6"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:textAlignment="viewStart"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/live_hijri_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="15 Rabi' al-Thani 1448 AH"
+                android:textColor="#8CA389"
+                android:textSize="9.5sp"
+                android:textAlignment="viewStart"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layoutDirection="ltr">
+
+            <ImageView
+                android:layout_width="11dp"
+                android:layout_height="11dp"
+                android:src="@drawable/ic_location_pin"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:id="@+id/live_location_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="3dp"
+                android:text="Cairo"
+                android:textColor="#C8D6C6"
+                android:textSize="10.5sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:maxWidth="110dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Main Section: Prayer Name, Adhan Sub, and Time -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp"
+        android:layoutDirection="ltr">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="start|center_vertical"
+            android:layoutDirection="ltr">
+
+            <TextView
+                android:id="@+id/live_prayer_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fajr"
+                android:textColor="#F4F8F3"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textAlignment="viewStart"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/live_prayer_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Adhan for Fajr"
+                android:textColor="#8CA389"
+                android:textSize="10.5sp"
+                android:textAlignment="viewStart"
+                android:maxLines="1" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/live_prayer_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="05:17"
+            android:textColor="#A5C89E"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textAlignment="viewStart"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- Bottom Row: Time Remaining & Countdown Pill -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp"
+        android:layoutDirection="ltr">
+
+        <TextView
+            android:id="@+id/live_remaining_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time Remaining"
+            android:textColor="#A5C89E"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:textAlignment="viewStart"
+            android:maxLines="1" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_widget_countdown_pill"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp">
+
+            <Chronometer
+                android:id="@+id/live_countdown_chrono"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#A5C89E"
+                android:textSize="11.5sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

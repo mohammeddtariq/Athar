@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="false"
@@ -77,6 +78,11 @@
         <!-- Widget Next Prayer Alarm Receiver -->
         <receiver
             android:name=".widget.WidgetAlarmReceiver"
+            android:exported="false" />
+
+        <!-- Live Status Alarm Receiver -->
+        <receiver
+            android:name=".notifications.LiveStatusAlarmReceiver"
             android:exported="false" />
 
         <!-- Widget Configuration Activity (Long-press settings shortcut) -->

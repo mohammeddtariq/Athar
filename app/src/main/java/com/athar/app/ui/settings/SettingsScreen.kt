@@ -79,6 +79,8 @@ import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.WidgetBgStyle
+import com.athar.app.data.LiveStatusStyle
+import com.athar.app.notifications.LiveStatusNotificationManager
 import com.athar.app.data.formatDigits
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.widget.AtharWidgetUpdater
@@ -168,6 +170,10 @@ fun SettingsScreen(
     val widgetNumberStyle by prefs.widgetNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val widgetBgStyle by prefs.widgetBgStyle.collectAsState(initial = WidgetBgStyle.THEME)
     val widgetBlurIntensity by prefs.widgetBlurIntensity.collectAsState(initial = 70)
+    val liveStatusEnabled by prefs.liveStatusEnabled.collectAsState(initial = false)
+    val liveStatusStyle by prefs.liveStatusStyle.collectAsState(initial = LiveStatusStyle.HERO)
+    val liveStatusNumberStyle by prefs.liveStatusNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
+    val liveStatusLanguage by prefs.liveStatusLanguage.collectAsState(initial = "match_app")
 
     var showMethods by remember { mutableStateOf(false) }
     var showCities by remember { mutableStateOf(false) }
@@ -837,6 +843,211 @@ fun SettingsScreen(
                 }
             }
 
+            // ── Live Status & Now Bar ──
+            item(key = "live_status") {
+                SectionCard(
+                    title = stringResource(R.string.settings_live_status_title)
+                ) {
+                    Text(
+                        stringResource(R.string.settings_live_status_subtitle),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Master Toggle Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_live_status_enable),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.5.sp,
+                            color = AtharTextPrimary
+                        )
+                        Switch(
+                            checked = liveStatusEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPerm = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (!hasPerm) {
+                                        notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }
+                                scope.launch {
+                                    prefs.setLiveStatusEnabled(enabled)
+                                    LiveStatusNotificationManager.update(context)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AtharTextOnPrimary,
+                                checkedTrackColor = AtharPrimary,
+                                uncheckedThumbColor = AtharTextSecondary,
+                                uncheckedTrackColor = AtharCardBorder
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(visible = liveStatusEnabled) {
+                        Column {
+                            Spacer(Modifier.height(16.dp))
+
+                            // 1. Style Selection
+                            Text(
+                                stringResource(R.string.settings_live_status_style),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LangChip(
+                                    label = stringResource(R.string.settings_live_status_style_hero),
+                                    selected = liveStatusStyle == LiveStatusStyle.HERO,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusStyle(LiveStatusStyle.HERO)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = stringResource(R.string.settings_live_status_style_timeline),
+                                    selected = liveStatusStyle == LiveStatusStyle.TIMELINE,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusStyle(LiveStatusStyle.TIMELINE)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // 2. Language
+                            Text(
+                                stringResource(R.string.settings_live_status_lang),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LangChip(
+                                    label = stringResource(R.string.settings_widget_lang_match_app),
+                                    selected = liveStatusLanguage == "match_app",
+                                    modifier = Modifier.weight(1.2f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusLanguage("match_app")
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = "العربية",
+                                    selected = liveStatusLanguage == "ar",
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusLanguage("ar")
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = "English",
+                                    selected = liveStatusLanguage == "en",
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusLanguage("en")
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // 3. Number Style
+                            Text(
+                                stringResource(R.string.settings_live_status_num_style),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LangChip(
+                                    label = stringResource(R.string.settings_widget_num_western),
+                                    selected = liveStatusNumberStyle == NumberStylePreference.WESTERN,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusNumberStyle(NumberStylePreference.WESTERN)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = stringResource(R.string.settings_widget_num_arabic),
+                                    selected = liveStatusNumberStyle == NumberStylePreference.ARABIC_INDIC,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setLiveStatusNumberStyle(NumberStylePreference.ARABIC_INDIC)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(18.dp))
+
+                            // 4. Live Preview
+                            Text(
+                                stringResource(R.string.settings_live_status_preview),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            LiveStatusLivePreviewCard(
+                                style = liveStatusStyle,
+                                numberStyle = liveStatusNumberStyle,
+                                liveStatusLanguage = liveStatusLanguage,
+                                appLanguage = language
+                            )
+                        }
+                    }
+                }
+            }
+
             // ── App Logo (Standalone above About section) ──
             item {
                 Column(
@@ -1395,3 +1606,239 @@ private fun WidgetLivePreviewCard(
         }
     }
 }
+
+@Composable
+private fun LiveStatusLivePreviewCard(
+    style: LiveStatusStyle,
+    numberStyle: NumberStylePreference,
+    liveStatusLanguage: String = "match_app",
+    appLanguage: String = "ar"
+) {
+    val effectiveLang = if (liveStatusLanguage == "match_app") appLanguage else liveStatusLanguage
+    val isAr = (effectiveLang == "ar")
+    val hijriDateText = remember(effectiveLang, numberStyle) {
+        HijriDateHelper.formatHijriDate(
+            date = LocalDate.now(),
+            isArabic = isAr,
+            numberStyle = numberStyle
+        )
+    }
+
+    val cardBg = Color(0xFF14, 0xFF19, 0xFF13)
+    val borderColor = AtharCardBorder
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(cardBg)
+            .border(1.2.dp, borderColor, RoundedCornerShape(18.dp))
+            .padding(14.dp)
+    ) {
+        Column {
+            // Header Row: App Pill + Location & Hijri
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Athar Live Activity Chip
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AtharPrimarySubtle)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(AtharPrimaryLight, CircleShape)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = if (isAr) "أَثَر • مباشر" else "ATHAR • LIVE",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        color = AtharPrimaryLight
+                    )
+                }
+
+                // Location Pin
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = if (isAr) "موقعي" else "My Location",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AtharTextSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            if (style == LiveStatusStyle.HERO) {
+                // Focus / Hero Card style
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (isAr) "الصلاة التالية" else "Next Prayer",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = AtharTextSecondary
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (isAr) "الفجر" else "Fajr",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 22.sp,
+                            color = AtharTextPrimary
+                        )
+                        Text(
+                            text = if (isAr) "أذان الفجر" else "Adhan for Fajr",
+                            fontFamily = ThmanyahSans,
+                            fontSize = 10.5.sp,
+                            color = AtharPrimaryMuted
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = formatDigits("05:17", numberStyle),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 22.sp,
+                            color = AtharTextPrimary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AtharPrimary.copy(alpha = 0.18f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "⏱ " + formatDigits("04:32:10", numberStyle),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.5.sp,
+                                color = AtharPrimaryLight
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Timeline style: 5 prayers strip + live active badge
+                val samplePrayers = listOf(
+                    Triple(if (isAr) "الفجر" else "Fajr", "05:17", true),
+                    Triple(if (isAr) "الظهر" else "Dhuhr", "12:08", false),
+                    Triple(if (isAr) "العصر" else "Asr", "15:32", false),
+                    Triple(if (isAr) "المغرب" else "Maghrib", "18:02", false),
+                    Triple(if (isAr) "العشاء" else "Isha", "19:32", false)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    samplePrayers.forEach { (name, time, isNext) ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isNext) AtharPrimarySubtle else Color(0xFF1B221A)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isNext) AtharPrimaryLight else AtharCardBorder,
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .padding(vertical = 6.dp, horizontal = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = name,
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = if (isNext) FontWeight.Black else FontWeight.Bold,
+                                    fontSize = 10.5.sp,
+                                    color = if (isNext) AtharPrimaryLight else AtharTextSecondary,
+                                    maxLines = 1
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = formatDigits(time, numberStyle),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 11.sp,
+                                    color = if (isNext) AtharTextPrimary else AtharTextSecondary.copy(alpha = 0.7f),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isAr) "المتبقي لصلاة الفجر" else "Remaining for Fajr",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AtharPrimaryLight
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AtharPrimary.copy(alpha = 0.18f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "⏱ " + formatDigits("04:32:10", numberStyle),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 11.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
+                }
+            }
+
+            if (hijriDateText.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = hijriDateText,
+                    fontFamily = ThmanyahSans,
+                    fontSize = 10.sp,
+                    color = AtharPrimaryMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
