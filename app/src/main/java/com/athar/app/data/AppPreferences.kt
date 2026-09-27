@@ -386,7 +386,7 @@ enum class LiveStatusStyle(val id: String) {
     TIMELINE("TIMELINE");
 
     companion object {
-        fun fromId(id: String): LiveStatusStyle = entries.firstOrNull { it.id == id } ?: HERO
+        fun fromId(id: String?): LiveStatusStyle = entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: HERO
     }
 }
 

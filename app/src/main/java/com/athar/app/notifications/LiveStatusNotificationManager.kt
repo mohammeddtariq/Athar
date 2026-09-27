@@ -217,6 +217,7 @@ object LiveStatusNotificationManager {
                 expandedViews.setTextViewText(R.id.live_remaining_label, remainingLabel)
                 setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
             } else {
+                bindTimelineChips(collapsedViews, day, next.key, isAr, liveStatusNumberStyle)
                 expandedViews.setTextViewText(R.id.live_prayer_name, "$nextLabel: $prayerName")
                 expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
                 expandedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")

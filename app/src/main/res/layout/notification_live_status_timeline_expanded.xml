@@ -89,12 +89,13 @@
     </LinearLayout>
 
     <!-- Divider -->
-    <View
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="0.8dp"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:background="#1E2A1C" />
+        android:background="#1E2A1C"
+        android:contentDescription="@null" />
 
     <!-- Bottom Row: 6 Daily Prayer Chips Strip -->
     <LinearLayout
@@ -106,30 +107,35 @@
 
         <!-- Fajr -->
         <FrameLayout
+            android:id="@+id/live_slot_fajr"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="1dp">
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp">
             <ImageView
                 android:id="@+id/live_bg_active_fajr"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_active"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@null" />
             <ImageView
                 android:id="@+id/live_bg_idle_fajr"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_idle"
-                android:visibility="visible" />
+                android:visibility="visible"
+                android:contentDescription="@null" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
                 <TextView
                     android:id="@+id/live_name_fajr"
                     android:layout_width="wrap_content"
@@ -154,30 +160,35 @@
 
         <!-- Sunrise -->
         <FrameLayout
+            android:id="@+id/live_slot_sunrise"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="1dp">
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp">
             <ImageView
                 android:id="@+id/live_bg_active_sunrise"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_active"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@null" />
             <ImageView
                 android:id="@+id/live_bg_idle_sunrise"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_idle"
-                android:visibility="visible" />
+                android:visibility="visible"
+                android:contentDescription="@null" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
                 <TextView
                     android:id="@+id/live_name_sunrise"
                     android:layout_width="wrap_content"
@@ -202,30 +213,35 @@
 
         <!-- Dhuhr -->
         <FrameLayout
+            android:id="@+id/live_slot_dhuhr"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="1dp">
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp">
             <ImageView
                 android:id="@+id/live_bg_active_dhuhr"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_active"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@null" />
             <ImageView
                 android:id="@+id/live_bg_idle_dhuhr"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_idle"
-                android:visibility="visible" />
+                android:visibility="visible"
+                android:contentDescription="@null" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
                 <TextView
                     android:id="@+id/live_name_dhuhr"
                     android:layout_width="wrap_content"
@@ -250,30 +266,35 @@
 
         <!-- Asr -->
         <FrameLayout
+            android:id="@+id/live_slot_asr"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="1dp">
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp">
             <ImageView
                 android:id="@+id/live_bg_active_asr"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_active"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@null" />
             <ImageView
                 android:id="@+id/live_bg_idle_asr"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_idle"
-                android:visibility="visible" />
+                android:visibility="visible"
+                android:contentDescription="@null" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
                 <TextView
                     android:id="@+id/live_name_asr"
                     android:layout_width="wrap_content"
@@ -298,30 +319,35 @@
 
         <!-- Maghrib -->
         <FrameLayout
+            android:id="@+id/live_slot_maghrib"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="1dp">
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp">
             <ImageView
                 android:id="@+id/live_bg_active_maghrib"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_active"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@null" />
             <ImageView
                 android:id="@+id/live_bg_idle_maghrib"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_idle"
-                android:visibility="visible" />
+                android:visibility="visible"
+                android:contentDescription="@null" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
                 <TextView
                     android:id="@+id/live_name_maghrib"
                     android:layout_width="wrap_content"
@@ -346,30 +372,35 @@
 
         <!-- Isha -->
         <FrameLayout
+            android:id="@+id/live_slot_isha"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="1dp">
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp">
             <ImageView
                 android:id="@+id/live_bg_active_isha"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_active"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@null" />
             <ImageView
                 android:id="@+id/live_bg_idle_isha"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/bg_widget_chip_idle"
-                android:visibility="visible" />
+                android:visibility="visible"
+                android:contentDescription="@null" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
                 <TextView
                     android:id="@+id/live_name_isha"
                     android:layout_width="wrap_content"
