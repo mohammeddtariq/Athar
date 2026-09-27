@@ -168,6 +168,15 @@
                 android:textColor="#A5C89E"
                 android:textSize="11.5sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/live_countdown_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#A5C89E"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
         </FrameLayout>
     </LinearLayout>
 </LinearLayout>

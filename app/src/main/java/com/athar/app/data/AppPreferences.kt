@@ -75,6 +75,9 @@ class AppPreferences(private val context: Context) {
 
         // Now Bar & Live Activity (Native Promoted Ongoing Notification for Android 15/16 & One UI 8+)
         private val NOW_BAR_LIVE_ACTIVITY_KEY = booleanPreferencesKey("now_bar_live_activity_enabled")
+        private val NOW_BAR_STYLE_KEY = stringPreferencesKey("now_bar_style")
+        private val NOW_BAR_LANGUAGE_KEY = stringPreferencesKey("now_bar_language")
+        private val NOW_BAR_NUMBER_STYLE_KEY = stringPreferencesKey("now_bar_number_style")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -165,6 +168,15 @@ class AppPreferences(private val context: Context) {
 
     val nowBarLiveActivityEnabled: Flow<Boolean> = context.dataStore.data.map {
         it[NOW_BAR_LIVE_ACTIVITY_KEY] ?: false
+    }
+    val nowBarStyle: Flow<LiveStatusStyle> = context.dataStore.data.map {
+        LiveStatusStyle.fromId(it[NOW_BAR_STYLE_KEY] ?: "HERO")
+    }
+    val nowBarLanguage: Flow<String> = context.dataStore.data.map {
+        it[NOW_BAR_LANGUAGE_KEY] ?: "match_app"
+    }
+    val nowBarNumberStyle: Flow<NumberStylePreference> = context.dataStore.data.map {
+        NumberStylePreference.fromId(it[NOW_BAR_NUMBER_STYLE_KEY] ?: "western")
     }
 
     val notifMasterMode: Flow<PrayerNotifMode> = context.dataStore.data.map {
@@ -278,6 +290,18 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setNowBarLiveActivityEnabled(enabled: Boolean) {
         context.dataStore.edit { it[NOW_BAR_LIVE_ACTIVITY_KEY] = enabled }
+    }
+
+    suspend fun setNowBarStyle(style: LiveStatusStyle) {
+        context.dataStore.edit { it[NOW_BAR_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setNowBarLanguage(lang: String) {
+        context.dataStore.edit { it[NOW_BAR_LANGUAGE_KEY] = lang }
+    }
+
+    suspend fun setNowBarNumberStyle(style: NumberStylePreference) {
+        context.dataStore.edit { it[NOW_BAR_NUMBER_STYLE_KEY] = style.id }
     }
 
     suspend fun setQuranThemeMode(mode: QuranThemeMode) {

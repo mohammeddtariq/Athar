@@ -271,6 +271,12 @@
     <string name="settings_live_status_lang">Language</string>
     <string name="settings_live_status_num_style">Number Style</string>
     <string name="settings_live_status_preview">Card Preview</string>
+    <string name="settings_now_bar_style">Display Style</string>
+    <string name="settings_now_bar_style_hero">Focus Chip (Next Prayer)</string>
+    <string name="settings_now_bar_style_timeline">Full Timeline Summary</string>
+    <string name="settings_now_bar_lang">Language</string>
+    <string name="settings_now_bar_num_style">Number Style</string>
+    <string name="settings_now_bar_preview">Now Bar Preview</string>
     <string name="settings_live_status_nowbar_tip_title">Samsung One UI / Now Bar</string>
     <string name="settings_live_status_nowbar_tip_desc">To display Live Activities in the Samsung One UI Now Bar, make sure \"Live notifications for all apps\" is enabled in Developer Options.</string>
     <string name="settings_open_developer_options">Open Developer Options</string>

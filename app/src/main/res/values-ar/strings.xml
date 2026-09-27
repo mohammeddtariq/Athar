@@ -271,6 +271,12 @@
     <string name="settings_live_status_lang">اللغة</string>
     <string name="settings_live_status_num_style">نمط الأرقام</string>
     <string name="settings_live_status_preview">معاينة البطاقة</string>
+    <string name="settings_now_bar_style">نمط العرض</string>
+    <string name="settings_now_bar_style_hero">شريحة التركيز (الصلاة القادمة)</string>
+    <string name="settings_now_bar_style_timeline">ملخص شريط المواقيت الكامل</string>
+    <string name="settings_now_bar_lang">اللغة</string>
+    <string name="settings_now_bar_num_style">نمط الأرقام</string>
+    <string name="settings_now_bar_preview">معاينة شريط Now Bar</string>
     <string name="settings_live_status_nowbar_tip_title">سامسونج One UI / شريط Now Bar</string>
     <string name="settings_live_status_nowbar_tip_desc">لإظهار الأنشطة الحية في شريط Now Bar على أجهزة سامسونج، يرجى التأكد من تفعيل \"إشعارات حية لكافة التطبيقات\" من خيارات المطور.</string>
     <string name="settings_open_developer_options">فتح خيارات المطور</string>

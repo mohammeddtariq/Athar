@@ -20,6 +20,7 @@ import com.athar.app.data.DayPrayers
 import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.LiveStatusStyle
 import com.athar.app.data.MadhabOption
+import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
@@ -109,13 +110,21 @@ object LiveStatusNotificationManager {
         val methodId = prefs.calcMethodId.first()
         val madhabId = prefs.madhabId.first()
         val appLanguage = prefs.selectedLanguage.first()
-        val liveStatusLanguage = prefs.liveStatusLanguage.first()
-        val liveStatusNumberStyle = prefs.liveStatusNumberStyle.first()
-        val liveStatusStyle = prefs.liveStatusStyle.first()
         val savedCity = prefs.cityLabel.first()
 
-        val effectiveLang = if (liveStatusLanguage == "match_app") appLanguage else liveStatusLanguage
-        val isAr = (effectiveLang == "ar")
+        // 1. Persistent Notification Preferences (Independent)
+        val persistentStyle = prefs.liveStatusStyle.first()
+        val persistentLangPref = prefs.liveStatusLanguage.first()
+        val persistentNumberStyle = prefs.liveStatusNumberStyle.first()
+        val persistentEffectiveLang = if (persistentLangPref == "match_app") appLanguage else persistentLangPref
+        val persistentIsAr = (persistentEffectiveLang == "ar")
+
+        // 2. Now Bar / Live Activity Preferences (Independent)
+        val nowBarStyle = prefs.nowBarStyle.first()
+        val nowBarLangPref = prefs.nowBarLanguage.first()
+        val nowBarNumberStyle = prefs.nowBarNumberStyle.first()
+        val nowBarEffectiveLang = if (nowBarLangPref == "match_app") appLanguage else nowBarLangPref
+        val nowBarIsAr = (nowBarEffectiveLang == "ar")
 
         val todayDate = LocalDate.now()
         val day = if (lat != null && lng != null) {
@@ -133,19 +142,6 @@ object LiveStatusNotificationManager {
 
         val next = findNextPrayer(day)
         val targetDate = LocalDate.now().plusDays(if (next.isTomorrow) 1L else 0L)
-        val hijriDateText = HijriDateHelper.formatHijriDate(
-            date = targetDate,
-            isArabic = isAr,
-            numberStyle = liveStatusNumberStyle
-        )
-
-        val prayerName = getPrayerName(next.key, isAr)
-        val formattedTime = formatDigits(next.time.format(timeFmt), liveStatusNumberStyle)
-        val adhanText = if (isAr) "أذان $prayerName" else "Adhan for $prayerName"
-        val locationText = savedCity ?: if (isAr) "موقعي" else "My Location"
-        val nextLabel = if (isAr) "الصلاة التالية" else "Next Prayer"
-        val remainingLabel = if (isAr) "الوقت المتبقي" else "Time Remaining"
-
         val targetPrayerDate = prayerDateToday(next.time, next.isTomorrow)
 
         // Tap intent to launch app
@@ -182,16 +178,16 @@ object LiveStatusNotificationManager {
 
         // 1. Post or Cancel Persistent Notification (Custom RemoteViews)
         if (persistentEnabled) {
-            val (collapsedRes, expandedRes) = when (liveStatusStyle) {
+            val (collapsedRes, expandedRes) = when (persistentStyle) {
                 LiveStatusStyle.HERO -> {
-                    if (isAr) {
+                    if (persistentIsAr) {
                         R.layout.notification_live_status_hero_collapsed_rtl to R.layout.notification_live_status_hero_expanded_rtl
                     } else {
                         R.layout.notification_live_status_hero_collapsed to R.layout.notification_live_status_hero_expanded
                     }
                 }
                 LiveStatusStyle.TIMELINE -> {
-                    if (isAr) {
+                    if (persistentIsAr) {
                         R.layout.notification_live_status_timeline_collapsed_rtl to R.layout.notification_live_status_timeline_expanded_rtl
                     } else {
                         R.layout.notification_live_status_timeline_collapsed to R.layout.notification_live_status_timeline_expanded
@@ -199,30 +195,42 @@ object LiveStatusNotificationManager {
                 }
             }
 
+            val persistentHijriDate = HijriDateHelper.formatHijriDate(
+                date = targetDate,
+                isArabic = persistentIsAr,
+                numberStyle = persistentNumberStyle
+            )
+            val persistentPrayerName = getPrayerName(next.key, persistentIsAr)
+            val persistentFormattedTime = formatDigits(next.time.format(timeFmt), persistentNumberStyle)
+            val persistentAdhanText = if (persistentIsAr) "أذان $persistentPrayerName" else "Adhan for $persistentPrayerName"
+            val persistentLocationText = savedCity ?: if (persistentIsAr) "موقعي" else "My Location"
+            val persistentNextLabel = if (persistentIsAr) "الصلاة التالية" else "Next Prayer"
+            val persistentRemainingLabel = if (persistentIsAr) "الوقت المتبقي" else "Time Remaining"
+
             val collapsedViews = RemoteViews(appContext.packageName, collapsedRes)
             val expandedViews = RemoteViews(appContext.packageName, expandedRes)
 
-            collapsedViews.setTextViewText(R.id.live_prayer_name, prayerName)
-            collapsedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
-            collapsedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")
-            setupChronometer(collapsedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
+            collapsedViews.setTextViewText(R.id.live_prayer_name, persistentPrayerName)
+            collapsedViews.setTextViewText(R.id.live_prayer_time, persistentFormattedTime)
+            collapsedViews.setTextViewText(R.id.live_sub_info, "$persistentLocationText • $persistentHijriDate")
+            bindCountdown(collapsedViews, next.time, next.isTomorrow, persistentNumberStyle)
 
-            if (liveStatusStyle == LiveStatusStyle.HERO) {
-                expandedViews.setTextViewText(R.id.live_label_next, nextLabel)
-                expandedViews.setTextViewText(R.id.live_hijri_date, hijriDateText)
-                expandedViews.setTextViewText(R.id.live_location_text, locationText)
-                expandedViews.setTextViewText(R.id.live_prayer_name, prayerName)
-                expandedViews.setTextViewText(R.id.live_prayer_sub, adhanText)
-                expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
-                expandedViews.setTextViewText(R.id.live_remaining_label, remainingLabel)
-                setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
+            if (persistentStyle == LiveStatusStyle.HERO) {
+                expandedViews.setTextViewText(R.id.live_label_next, persistentNextLabel)
+                expandedViews.setTextViewText(R.id.live_hijri_date, persistentHijriDate)
+                expandedViews.setTextViewText(R.id.live_location_text, persistentLocationText)
+                expandedViews.setTextViewText(R.id.live_prayer_name, persistentPrayerName)
+                expandedViews.setTextViewText(R.id.live_prayer_sub, persistentAdhanText)
+                expandedViews.setTextViewText(R.id.live_prayer_time, persistentFormattedTime)
+                expandedViews.setTextViewText(R.id.live_remaining_label, persistentRemainingLabel)
+                bindCountdown(expandedViews, next.time, next.isTomorrow, persistentNumberStyle)
             } else {
-                bindTimelineChips(collapsedViews, day, next.key, isAr, liveStatusNumberStyle)
-                expandedViews.setTextViewText(R.id.live_prayer_name, "$nextLabel: $prayerName")
-                expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
-                expandedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")
-                setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
-                bindTimelineChips(expandedViews, day, next.key, isAr, liveStatusNumberStyle)
+                bindTimelineChips(collapsedViews, day, next.key, persistentIsAr, persistentNumberStyle)
+                expandedViews.setTextViewText(R.id.live_prayer_name, "$persistentNextLabel: $persistentPrayerName")
+                expandedViews.setTextViewText(R.id.live_prayer_time, persistentFormattedTime)
+                expandedViews.setTextViewText(R.id.live_sub_info, "$persistentLocationText • $persistentHijriDate")
+                bindCountdown(expandedViews, next.time, next.isTomorrow, persistentNumberStyle)
+                bindTimelineChips(expandedViews, day, next.key, persistentIsAr, persistentNumberStyle)
             }
 
             collapsedViews.setOnClickPendingIntent(R.id.live_root, pendingIntent)
@@ -230,12 +238,10 @@ object LiveStatusNotificationManager {
 
             val persistentBuilder = NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_prayer_hands)
-                .setContentTitle("$prayerName • $formattedTime")
-                .setContentText("$locationText • $hijriDateText")
-                .setSubText(hijriDateText)
+                .setContentTitle("$persistentPrayerName • $persistentFormattedTime")
+                .setContentText("$persistentLocationText • $persistentHijriDate")
+                .setSubText(persistentHijriDate)
                 .setWhen(targetPrayerDate.time)
-                .setUsesChronometer(true)
-                .setChronometerCountDown(true)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
@@ -248,25 +254,41 @@ object LiveStatusNotificationManager {
                 .setContentIntent(pendingIntent)
                 .setDeleteIntent(dismissPendingPersistent)
 
+            if (persistentNumberStyle == NumberStylePreference.WESTERN) {
+                persistentBuilder.setUsesChronometer(true)
+                persistentBuilder.setChronometerCountDown(true)
+            } else {
+                persistentBuilder.setUsesChronometer(false)
+            }
+
             manager?.notify(PERSISTENT_NOTIFICATION_ID, persistentBuilder.build())
         } else {
             manager?.cancel(PERSISTENT_NOTIFICATION_ID)
         }
 
-        // 2. Post or Cancel Now Bar / Live Activity Notification (Standard Native Ongoing)
+        // 2. Post or Cancel Now Bar / Live Activity Notification (Completely Independent Settings)
         if (nowBarEnabled) {
+            val nowBarHijriDate = HijriDateHelper.formatHijriDate(
+                date = targetDate,
+                isArabic = nowBarIsAr,
+                numberStyle = nowBarNumberStyle
+            )
+            val nowBarPrayerName = getPrayerName(next.key, nowBarIsAr)
+            val nowBarFormattedTime = formatDigits(next.time.format(timeFmt), nowBarNumberStyle)
+            val nowBarAdhanText = if (nowBarIsAr) "أذان $nowBarPrayerName" else "Adhan for $nowBarPrayerName"
+            val nowBarLocationText = savedCity ?: if (nowBarIsAr) "موقعي" else "My Location"
+            val nowBarNextLabel = if (nowBarIsAr) "الصلاة التالية" else "Next Prayer"
+
+            val totalSecs = ((targetPrayerDate.time - System.currentTimeMillis()) / 1000L).coerceAtLeast(0L)
+            val hours = totalSecs / 3600L
+            val mins = (totalSecs % 3600L) / 60L
+            val remainingStr = formatDigits("%02d:%02d".format(hours, mins), nowBarNumberStyle)
+
             val nowBarBuilder = NotificationCompat.Builder(appContext, NOW_BAR_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_prayer_hands)
-                .setContentTitle("$prayerName • $formattedTime")
-                .setContentText("$locationText • $hijriDateText")
-                .setSubText(prayerName)
-                .setStyle(
-                    NotificationCompat.BigTextStyle()
-                        .bigText("$locationText • $hijriDateText\n$adhanText")
-                )
+                .setContentTitle("$nowBarPrayerName • $nowBarFormattedTime")
+                .setSubText(nowBarPrayerName)
                 .setWhen(targetPrayerDate.time)
-                .setUsesChronometer(true)
-                .setChronometerCountDown(true)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
@@ -275,6 +297,28 @@ object LiveStatusNotificationManager {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setContentIntent(pendingIntent)
                 .setDeleteIntent(dismissPendingNowBar)
+
+            if (nowBarNumberStyle == NumberStylePreference.WESTERN) {
+                nowBarBuilder.setUsesChronometer(true)
+                nowBarBuilder.setChronometerCountDown(true)
+            } else {
+                nowBarBuilder.setUsesChronometer(false)
+            }
+
+            if (nowBarStyle == LiveStatusStyle.HERO) {
+                nowBarBuilder.setContentText("$nowBarLocationText • $nowBarHijriDate")
+                nowBarBuilder.setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText("$nowBarLocationText • $nowBarHijriDate\n$nowBarAdhanText • ⏱ $remainingStr")
+                )
+            } else {
+                val timelineText = formatTimelineSummary(day, next.key, nowBarIsAr, nowBarNumberStyle)
+                nowBarBuilder.setContentText(timelineText)
+                nowBarBuilder.setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText("$nowBarLocationText • $nowBarHijriDate\n$timelineText")
+                )
+            }
 
             val extras = Bundle().apply {
                 putBoolean("android.requestPromotedOngoing", true)
@@ -287,8 +331,10 @@ object LiveStatusNotificationManager {
             manager?.cancel(NOW_BAR_NOTIFICATION_ID)
         }
 
-        // Schedule next alarm to refresh when this prayer arrives
-        scheduleNextAlarm(appContext, next.time, next.isTomorrow)
+        // Schedule next alarm to refresh countdown / when this prayer arrives
+        val requiresMinuteTick = (persistentEnabled && persistentNumberStyle == NumberStylePreference.ARABIC_INDIC) ||
+                (nowBarEnabled && nowBarNumberStyle == NumberStylePreference.ARABIC_INDIC)
+        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick)
     }
 
     fun updateAsync(context: Context) {
@@ -368,27 +414,74 @@ object LiveStatusNotificationManager {
         }
     }
 
-    private fun setupChronometer(
+    private fun bindCountdown(
         views: RemoteViews,
-        chronoId: Int,
         targetTime: LocalTime,
-        isTomorrow: Boolean
+        isTomorrow: Boolean,
+        numberStyle: NumberStylePreference
     ) {
         val targetDate = prayerDateToday(targetTime, isTomorrow)
         val diffMillis = targetDate.time - System.currentTimeMillis()
-        if (diffMillis > 0) {
-            val base = SystemClock.elapsedRealtime() + diffMillis
-            views.setChronometerCountDown(chronoId, true)
-            views.setChronometer(chronoId, base, null, true)
+
+        if (numberStyle == NumberStylePreference.ARABIC_INDIC) {
+            views.setViewVisibility(R.id.live_countdown_chrono, android.view.View.GONE)
+            views.setViewVisibility(R.id.live_countdown_text, android.view.View.VISIBLE)
+
+            val totalSecs = (diffMillis / 1000L).coerceAtLeast(0L)
+            val hours = totalSecs / 3600L
+            val mins = (totalSecs % 3600L) / 60L
+            val secs = totalSecs % 60L
+            val raw = if (hours > 0) {
+                "%02d:%02d:%02d".format(hours, mins, secs)
+            } else {
+                "%02d:%02d".format(mins, secs)
+            }
+            views.setTextViewText(R.id.live_countdown_text, formatDigits(raw, NumberStylePreference.ARABIC_INDIC))
         } else {
-            views.setChronometerCountDown(chronoId, false)
-            views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
+            views.setViewVisibility(R.id.live_countdown_text, android.view.View.GONE)
+            views.setViewVisibility(R.id.live_countdown_chrono, android.view.View.VISIBLE)
+
+            if (diffMillis > 0) {
+                val base = SystemClock.elapsedRealtime() + diffMillis
+                views.setChronometerCountDown(R.id.live_countdown_chrono, true)
+                views.setChronometer(R.id.live_countdown_chrono, base, null, true)
+            } else {
+                views.setChronometerCountDown(R.id.live_countdown_chrono, false)
+                views.setChronometer(R.id.live_countdown_chrono, SystemClock.elapsedRealtime(), "00:00", false)
+            }
         }
     }
 
-    private fun scheduleNextAlarm(context: Context, nextTime: LocalTime, isTomorrow: Boolean) {
+    private fun formatTimelineSummary(
+        day: DayPrayers,
+        nextKey: String,
+        isAr: Boolean,
+        numberStyle: NumberStylePreference
+    ): String {
+        val slots = listOf("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")
+        return slots.joinToString(" • ") { key ->
+            val pName = getPrayerName(key, isAr)
+            val pTime = when (key) {
+                "fajr" -> day.fajr
+                "sunrise" -> day.sunrise
+                "dhuhr" -> day.dhuhr
+                "asr" -> day.asr
+                "maghrib" -> day.maghrib
+                else -> day.isha
+            }
+            val formatted = formatDigits(pTime.format(timeFmt), numberStyle)
+            if (key == nextKey) "[$pName $formatted]" else "$pName $formatted"
+        }
+    }
+
+    private fun scheduleNextAlarm(
+        context: Context,
+        nextTime: LocalTime,
+        isTomorrow: Boolean,
+        requiresMinuteTick: Boolean
+    ) {
         val targetDate = prayerDateToday(nextTime, isTomorrow)
-        val triggerAtMillis = targetDate.time + 1000L
+        val prayerTriggerMillis = targetDate.time + 1000L
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val intent = Intent(context, LiveStatusAlarmReceiver::class.java)
@@ -398,6 +491,14 @@ object LiveStatusNotificationManager {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        val triggerAtMillis = if (requiresMinuteTick) {
+            val now = System.currentTimeMillis()
+            val nextMinute = now + (60_000L - (now % 60_000L))
+            minOf(nextMinute, prayerTriggerMillis)
+        } else {
+            prayerTriggerMillis
+        }
 
         try {
             alarmManager.setExactAndAllowWhileIdle(

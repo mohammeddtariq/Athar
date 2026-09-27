@@ -185,6 +185,9 @@ fun SettingsScreen(
     val widgetBlurIntensity by prefs.widgetBlurIntensity.collectAsState(initial = 70)
     val widgetFontStyle by prefs.widgetFontStyle.collectAsState(initial = WidgetFontStyle.APP_FONT)
     val nowBarLiveActivityEnabled by prefs.nowBarLiveActivityEnabled.collectAsState(initial = false)
+    val nowBarStyle by prefs.nowBarStyle.collectAsState(initial = LiveStatusStyle.HERO)
+    val nowBarLanguage by prefs.nowBarLanguage.collectAsState(initial = "match_app")
+    val nowBarNumberStyle by prefs.nowBarNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val liveStatusEnabled by prefs.liveStatusEnabled.collectAsState(initial = false)
     val liveStatusStyle by prefs.liveStatusStyle.collectAsState(initial = LiveStatusStyle.HERO)
     val liveStatusNumberStyle by prefs.liveStatusNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
@@ -955,9 +958,155 @@ fun SettingsScreen(
 
                     AnimatedVisibility(visible = nowBarLiveActivityEnabled) {
                         Column {
+                            Spacer(Modifier.height(16.dp))
+
+                            // 1. Style Selection (Hero vs Timeline)
+                            Text(
+                                stringResource(R.string.settings_now_bar_style),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LangChip(
+                                    label = stringResource(R.string.settings_now_bar_style_hero),
+                                    selected = nowBarStyle == LiveStatusStyle.HERO,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarStyle(LiveStatusStyle.HERO)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = stringResource(R.string.settings_now_bar_style_timeline),
+                                    selected = nowBarStyle == LiveStatusStyle.TIMELINE,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarStyle(LiveStatusStyle.TIMELINE)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // 2. Language Selection
+                            Text(
+                                stringResource(R.string.settings_now_bar_lang),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LangChip(
+                                    label = stringResource(R.string.settings_widget_lang_match_app),
+                                    selected = nowBarLanguage == "match_app",
+                                    modifier = Modifier.weight(1.2f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarLanguage("match_app")
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = "العربية",
+                                    selected = nowBarLanguage == "ar",
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarLanguage("ar")
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = "English",
+                                    selected = nowBarLanguage == "en",
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarLanguage("en")
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // 3. Number Style Selection
+                            Text(
+                                stringResource(R.string.settings_now_bar_num_style),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LangChip(
+                                    label = "123",
+                                    selected = nowBarNumberStyle == NumberStylePreference.WESTERN,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarNumberStyle(NumberStylePreference.WESTERN)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                                LangChip(
+                                    label = "١٢٣",
+                                    selected = nowBarNumberStyle == NumberStylePreference.ARABIC_INDIC,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        scope.launch {
+                                            prefs.setNowBarNumberStyle(NumberStylePreference.ARABIC_INDIC)
+                                            LiveStatusNotificationManager.update(context)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // 4. Dedicated Live Preview Card for Now Bar
+                            Text(
+                                stringResource(R.string.settings_now_bar_preview),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            NowBarLivePreviewCard(
+                                style = nowBarStyle,
+                                numberStyle = nowBarNumberStyle,
+                                nowBarLanguage = nowBarLanguage,
+                                appLanguage = language
+                            )
+
                             Spacer(Modifier.height(14.dp))
 
-                            // Samsung One UI Now Bar / Android 15+ Tip
+                            // 5. Samsung One UI Now Bar / Android 15+ Tip
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2037,9 +2186,10 @@ private fun LiveStatusLivePreviewCard(
                     }
                 }
             } else {
-                // Timeline style: 5 prayers strip + live active badge
+                // Timeline style: 6 prayers strip (Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha) + live active badge
                 val samplePrayers = listOf(
                     Triple(if (isAr) "الفجر" else "Fajr", "05:17", true),
+                    Triple(if (isAr) "الشروق" else "Sunrise", "06:44", false),
                     Triple(if (isAr) "الظهر" else "Dhuhr", "12:08", false),
                     Triple(if (isAr) "العصر" else "Asr", "15:32", false),
                     Triple(if (isAr) "المغرب" else "Maghrib", "18:02", false),
@@ -2048,22 +2198,22 @@ private fun LiveStatusLivePreviewCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     samplePrayers.forEach { (name, time, isNext) ->
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     if (isNext) AtharPrimarySubtle else Color(0xFF1B221A)
                                 )
                                 .border(
                                     1.dp,
                                     if (isNext) AtharPrimaryLight else AtharCardBorder,
-                                    RoundedCornerShape(10.dp)
+                                    RoundedCornerShape(8.dp)
                                 )
-                                .padding(vertical = 6.dp, horizontal = 2.dp),
+                                .padding(vertical = 5.dp, horizontal = 1.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -2071,7 +2221,7 @@ private fun LiveStatusLivePreviewCard(
                                     text = name,
                                     fontFamily = ThmanyahSans,
                                     fontWeight = if (isNext) FontWeight.Black else FontWeight.Bold,
-                                    fontSize = 10.5.sp,
+                                    fontSize = 9.5.sp,
                                     color = if (isNext) AtharPrimaryLight else AtharTextSecondary,
                                     maxLines = 1
                                 )
@@ -2080,7 +2230,7 @@ private fun LiveStatusLivePreviewCard(
                                     text = formatDigits(time, numberStyle),
                                     fontFamily = ThmanyahSans,
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 11.sp,
+                                    fontSize = 9.5.sp,
                                     color = if (isNext) AtharTextPrimary else AtharTextSecondary.copy(alpha = 0.7f),
                                     maxLines = 1
                                 )
@@ -2112,6 +2262,238 @@ private fun LiveStatusLivePreviewCard(
                     ) {
                         Text(
                             text = "⏱ " + formatDigits("04:32:10", numberStyle),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 11.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
+                }
+            }
+
+            if (hijriDateText.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = hijriDateText,
+                    fontFamily = ThmanyahSans,
+                    fontSize = 10.sp,
+                    color = AtharPrimaryMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NowBarLivePreviewCard(
+    style: LiveStatusStyle,
+    numberStyle: NumberStylePreference,
+    nowBarLanguage: String = "match_app",
+    appLanguage: String = "ar"
+) {
+    val effectiveLang = if (nowBarLanguage == "match_app") appLanguage else nowBarLanguage
+    val isAr = (effectiveLang == "ar")
+    val hijriDateText = remember(effectiveLang, numberStyle) {
+        HijriDateHelper.formatHijriDate(
+            date = LocalDate.now(),
+            isArabic = isAr,
+            numberStyle = numberStyle
+        )
+    }
+
+    val cardBg = Color(0xFF14, 0xFF19, 0xFF13)
+    val borderColor = AtharCardBorder
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(cardBg)
+            .border(1.2.dp, borderColor, RoundedCornerShape(18.dp))
+            .padding(14.dp)
+    ) {
+        Column {
+            // Header Row: Now Bar / Live Activity Chip + Status
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AtharPrimarySubtle)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(AtharPrimaryLight, CircleShape)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = if (isAr) "شريط Now Bar • نشاط حي" else "Now Bar • Live Activity",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        color = AtharPrimaryLight
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = if (isAr) "موقعي" else "My Location",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AtharTextSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            if (style == LiveStatusStyle.HERO) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (isAr) "الصلاة التالية" else "Next Prayer",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = AtharTextSecondary
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (isAr) "الفجر" else "Fajr",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                            color = AtharTextPrimary
+                        )
+                        Text(
+                            text = if (isAr) "أذان الفجر" else "Adhan for Fajr",
+                            fontFamily = ThmanyahSans,
+                            fontSize = 10.5.sp,
+                            color = AtharPrimaryMuted
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = formatDigits("05:17", numberStyle),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                            color = AtharTextPrimary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AtharPrimary.copy(alpha = 0.18f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "⏱ " + formatDigits("04:32", numberStyle),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.sp,
+                                color = AtharPrimaryLight
+                            )
+                        }
+                    }
+                }
+            } else {
+                val samplePrayers = listOf(
+                    Triple(if (isAr) "الفجر" else "Fajr", "05:17", true),
+                    Triple(if (isAr) "الشروق" else "Sunrise", "06:44", false),
+                    Triple(if (isAr) "الظهر" else "Dhuhr", "12:08", false),
+                    Triple(if (isAr) "العصر" else "Asr", "15:32", false),
+                    Triple(if (isAr) "المغرب" else "Maghrib", "18:02", false),
+                    Triple(if (isAr) "العشاء" else "Isha", "19:32", false)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    samplePrayers.forEach { (name, time, isNext) ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isNext) AtharPrimarySubtle else Color(0xFF1B221A)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isNext) AtharPrimaryLight else AtharCardBorder,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(vertical = 5.dp, horizontal = 1.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = name,
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = if (isNext) FontWeight.Black else FontWeight.Bold,
+                                    fontSize = 9.5.sp,
+                                    color = if (isNext) AtharPrimaryLight else AtharTextSecondary,
+                                    maxLines = 1
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = formatDigits(time, numberStyle),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 9.5.sp,
+                                    color = if (isNext) AtharTextPrimary else AtharTextSecondary.copy(alpha = 0.7f),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isAr) "الصلاة التالية: الفجر" else "Next: Fajr",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AtharPrimaryLight
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AtharPrimary.copy(alpha = 0.18f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "⏱ " + formatDigits("04:32", numberStyle),
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
                             fontSize = 11.sp,
