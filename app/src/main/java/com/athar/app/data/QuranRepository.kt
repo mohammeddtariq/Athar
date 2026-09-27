@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
@@ -198,7 +199,7 @@ object QuranRepository {
     }
 
     private fun fetchChapterJson(number: Int): String {
-        val url = URL("$ENDPOINT?chapter_number=$number&per_page=300")
+        val url = URI.create("$ENDPOINT?chapter_number=$number&per_page=300").toURL()
         val conn = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 5000
             readTimeout = 5000

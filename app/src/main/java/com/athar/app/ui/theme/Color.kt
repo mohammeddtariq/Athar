@@ -30,9 +30,9 @@ val AtharTextMuted = Color(0xFF4A5A43)        // Very low-emphasis captions
 val AtharTextOnPrimary = Color(0xFF141A10)    // Dark text over pale accent
 
 // ─── Navigation Bar (Floating Capsule Dock) ───
-val AtharNavbarBg = Color(0xFF353E2C)         // Solid greyish-green dock container
-val AtharNavbarBorder = Color(0xFF48543B)     // Subtle greyish-green dock border
-val AtharNavPillSelected = Color(0xFF556441)  // Active tab greyish-green pill
+val AtharNavbarBg = Color(0xFF353E2C)         // Solid olive-green dock container
+val AtharNavbarBorder = Color(0xFF48543B)     // Subtle olive-green dock border
+val AtharNavPillSelected = Color(0xFF556441)  // Active tab olive-green pill
 val AtharNavPillBorder = Color(0xFF6B7E52)    // Active pill border
 val AtharNavIconActive = Color(0xFFC7EFA0)    // Glowing pale lime-sage active icon & text
 val AtharNavIconInactive = Color(0xFFA4AA9C)  // Refined grey-sage inactive icon

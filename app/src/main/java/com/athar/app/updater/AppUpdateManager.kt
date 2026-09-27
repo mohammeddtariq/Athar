@@ -19,6 +19,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
 data class AppReleaseInfo(
@@ -89,7 +90,7 @@ object AppUpdateManager {
      */
     suspend fun checkForUpdate(currentVersionName: String): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
-            val connection = URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection
+            val connection = URI.create(LATEST_RELEASE_URL).toURL().openConnection() as HttpURLConnection
             connection.apply {
                 requestMethod = "GET"
                 setRequestProperty("Accept", "application/vnd.github.v3+json")
@@ -243,7 +244,7 @@ object AppUpdateManager {
         var redirects = 0
 
         while (redirects < 6) {
-            val conn = URL(currentUrl).openConnection() as HttpURLConnection
+            val conn = URI.create(currentUrl).toURL().openConnection() as HttpURLConnection
             conn.instanceFollowRedirects = true
             conn.setRequestProperty("User-Agent", "Athar-Android")
             conn.connectTimeout = 15000
@@ -264,7 +265,7 @@ object AppUpdateManager {
                 return conn
             }
         }
-        val conn = URL(currentUrl).openConnection() as HttpURLConnection
+        val conn = URI.create(currentUrl).toURL().openConnection() as HttpURLConnection
         conn.connect()
         return conn
     }

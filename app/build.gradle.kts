@@ -1,5 +1,6 @@
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
 plugins {
@@ -95,9 +96,9 @@ tasks.register("downloadQuran") {
                 continue
             }
             try {
-                val url = URL(
+                val url = URI.create(
                     "https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=$n&per_page=300"
-                )
+                ).toURL()
                 val conn = url.openConnection() as HttpURLConnection
                 conn.connectTimeout = 25000
                 conn.readTimeout = 25000

@@ -11,6 +11,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.content.res.ResourcesCompat
@@ -519,8 +520,8 @@ object AtharWidgetUpdater {
         textColor: Int
     ): Bitmap? {
         return runCatching {
-            val density = context.resources.displayMetrics.scaledDensity
-            val pxSize = textSizeSp * density
+            val displayMetrics = context.resources.displayMetrics
+            val pxSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSizeSp, displayMetrics)
             val typeface = ResourcesCompat.getFont(context, fontResId) ?: return null
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 this.typeface = typeface
@@ -529,7 +530,7 @@ object AtharWidgetUpdater {
             }
             val fontMetrics = paint.fontMetrics
             val textWidth = paint.measureText(text)
-            val pad = (2f * density).toInt()
+            val pad = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, displayMetrics).toInt()
             val width = (textWidth + pad * 2).toInt().coerceAtLeast(1)
             val height = ((fontMetrics.descent - fontMetrics.ascent) + pad * 2).toInt().coerceAtLeast(1)
 
