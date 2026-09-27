@@ -40,7 +40,9 @@ class AppPreferences(private val context: Context) {
 
         // Notifications
         private val NOTIF_MASTER_KEY = booleanPreferencesKey("notif_master")
+        private val NOTIF_MASTER_MODE_KEY = stringPreferencesKey("notif_master_mode")
         private val NOTIF_PREFIX = "notif_prayer_"
+        private val NOTIF_MODE_PREFIX = "notif_mode_"
 
         // Number formatting preference
         private val NUMBER_STYLE_KEY = stringPreferencesKey("number_style")
@@ -65,11 +67,14 @@ class AppPreferences(private val context: Context) {
         private val WIDGET_BLUR_INTENSITY_KEY = intPreferencesKey("widget_blur_intensity")
         private val WIDGET_FONT_STYLE_KEY = stringPreferencesKey("widget_font_style")
 
-        // Live Status / Status Bar / Now Bar
+        // Live Status (Persistent Notification in Drawer)
         private val LIVE_STATUS_ENABLED_KEY = booleanPreferencesKey("live_status_enabled")
         private val LIVE_STATUS_STYLE_KEY = stringPreferencesKey("live_status_style")
         private val LIVE_STATUS_NUMBER_STYLE_KEY = stringPreferencesKey("live_status_number_style")
         private val LIVE_STATUS_LANGUAGE_KEY = stringPreferencesKey("live_status_language")
+
+        // Now Bar & Live Activity (Native Promoted Ongoing Notification for Android 15/16 & One UI 8+)
+        private val NOW_BAR_LIVE_ACTIVITY_KEY = booleanPreferencesKey("now_bar_live_activity_enabled")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -158,8 +163,33 @@ class AppPreferences(private val context: Context) {
         )
     }
 
+    val nowBarLiveActivityEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[NOW_BAR_LIVE_ACTIVITY_KEY] ?: false
+    }
+
+    val notifMasterMode: Flow<PrayerNotifMode> = context.dataStore.data.map {
+        val modeStr = it[NOTIF_MASTER_MODE_KEY]
+        if (modeStr != null) {
+            PrayerNotifMode.fromId(modeStr)
+        } else {
+            val legacy = it[NOTIF_MASTER_KEY] ?: true
+            if (legacy) PrayerNotifMode.SOUND else PrayerNotifMode.OFF
+        }
+    }
+
+    fun prayerNotificationMode(prayerKey: String): Flow<PrayerNotifMode> =
+        context.dataStore.data.map {
+            val modeStr = it[stringPreferencesKey("$NOTIF_MODE_PREFIX$prayerKey")]
+            if (modeStr != null) {
+                PrayerNotifMode.fromId(modeStr)
+            } else {
+                val legacy = it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] ?: true
+                if (legacy) PrayerNotifMode.SOUND else PrayerNotifMode.OFF
+            }
+        }
+
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
-        context.dataStore.data.map { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] ?: true }
+        prayerNotificationMode(prayerKey).map { it != PrayerNotifMode.OFF }
 
     suspend fun setLanguageAndCompleteOnboarding(languageCode: String) {
         context.dataStore.edit {
@@ -220,11 +250,34 @@ class AppPreferences(private val context: Context) {
     }
 
     suspend fun setNotificationsMaster(enabled: Boolean) {
-        context.dataStore.edit { it[NOTIF_MASTER_KEY] = enabled }
+        setNotificationsMasterMode(if (enabled) PrayerNotifMode.SOUND else PrayerNotifMode.OFF)
+    }
+
+    suspend fun setNotificationsMasterMode(mode: PrayerNotifMode) {
+        context.dataStore.edit {
+            it[NOTIF_MASTER_MODE_KEY] = mode.id
+            it[NOTIF_MASTER_KEY] = (mode != PrayerNotifMode.OFF)
+            val prayerKeys = listOf("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")
+            for (key in prayerKeys) {
+                it[stringPreferencesKey("$NOTIF_MODE_PREFIX$key")] = mode.id
+                it[booleanPreferencesKey("$NOTIF_PREFIX$key")] = (mode != PrayerNotifMode.OFF)
+            }
+        }
     }
 
     suspend fun setPrayerNotification(prayerKey: String, enabled: Boolean) {
-        context.dataStore.edit { it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] = enabled }
+        setPrayerNotificationMode(prayerKey, if (enabled) PrayerNotifMode.SOUND else PrayerNotifMode.OFF)
+    }
+
+    suspend fun setPrayerNotificationMode(prayerKey: String, mode: PrayerNotifMode) {
+        context.dataStore.edit {
+            it[stringPreferencesKey("$NOTIF_MODE_PREFIX$prayerKey")] = mode.id
+            it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] = (mode != PrayerNotifMode.OFF)
+        }
+    }
+
+    suspend fun setNowBarLiveActivityEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[NOW_BAR_LIVE_ACTIVITY_KEY] = enabled }
     }
 
     suspend fun setQuranThemeMode(mode: QuranThemeMode) {
@@ -306,6 +359,16 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setLiveStatusLanguage(lang: String) {
         context.dataStore.edit { it[LIVE_STATUS_LANGUAGE_KEY] = lang }
+    }
+}
+
+enum class PrayerNotifMode(val id: String) {
+    OFF("off"),
+    SILENT("silent"),
+    SOUND("sound");
+
+    companion object {
+        fun fromId(id: String?): PrayerNotifMode = entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: SOUND
     }
 }
 

@@ -17,6 +17,7 @@ import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.MadhabOption
+import com.athar.app.data.PrayerNotifMode
 import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.prayerDateToday
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,7 @@ import java.util.Locale
 
 object PrayerNotifications {
     const val CHANNEL_ID = "athar_prayer_times_v2"
+    const val CHANNEL_ID_SILENT = "athar_prayer_silent"
     private const val LEGACY_CHANNEL_ID = "athar_prayer_times"
     const val REQUEST_BASE = 4000
 
@@ -46,24 +48,37 @@ object PrayerNotifications {
             manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
         } catch (_: Exception) {}
 
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+            val soundUri = getNotificationSoundUri(context)
+            val audioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build()
 
-        val soundUri = getNotificationSoundUri(context)
-        val audioAttributes = AudioAttributes.Builder()
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-            .build()
-
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            context.getString(R.string.notif_channel_name),
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = context.getString(R.string.notif_channel_desc)
-            setSound(soundUri, audioAttributes)
-            enableVibration(true)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.notif_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.notif_channel_desc)
+                setSound(soundUri, audioAttributes)
+                enableVibration(true)
+            }
+            manager.createNotificationChannel(channel)
         }
-        manager.createNotificationChannel(channel)
+
+        if (manager.getNotificationChannel(CHANNEL_ID_SILENT) == null) {
+            val silentChannel = NotificationChannel(
+                CHANNEL_ID_SILENT,
+                context.getString(R.string.notif_channel_silent_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.notif_channel_silent_desc)
+                setSound(null, null)
+                enableVibration(false)
+            }
+            manager.createNotificationChannel(silentChannel)
+        }
     }
 
     fun prayerRequestCode(key: String): Int = when (key) {
@@ -83,8 +98,8 @@ object PrayerNotifications {
      */
     suspend fun scheduleNext(context: Context) = withContext(Dispatchers.IO) {
         val prefs = AppPreferences(context.applicationContext)
-        val master = prefs.notificationsMaster.first()
-        if (!master) {
+        val masterMode = prefs.notifMasterMode.first()
+        if (masterMode == PrayerNotifMode.OFF) {
             cancelAll(context)
             return@withContext
         }
@@ -109,7 +124,7 @@ object PrayerNotifications {
         val prayerKeys = listOf("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")
 
         for (key in prayerKeys) {
-            val enabled = prefs.prayerNotificationEnabled(key).first()
+            val mode = prefs.prayerNotificationMode(key).first()
             val intent = Intent(context.applicationContext, PrayerAlarmReceiver::class.java).apply {
                 putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, key)
             }
@@ -120,7 +135,7 @@ object PrayerNotifications {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            if (!enabled) {
+            if (mode == PrayerNotifMode.OFF) {
                 alarmManager.cancel(pending)
                 continue
             }
@@ -193,7 +208,13 @@ object PrayerNotifications {
         return context.createConfigurationContext(config)
     }
 
-    fun showPrayerNotification(context: Context, prayerKey: String, languageCode: String = "ar") {
+    fun showPrayerNotification(
+        context: Context,
+        prayerKey: String,
+        languageCode: String = "ar",
+        mode: PrayerNotifMode = PrayerNotifMode.SOUND
+    ) {
+        if (mode == PrayerNotifMode.OFF) return
         ensureChannel(context)
         val localizedContext = getLocalizedContext(context, languageCode)
 
@@ -217,19 +238,26 @@ object PrayerNotifications {
         val body = localizedContext.getString(bodyRes)
         val soundUri = getNotificationSoundUri(context)
 
-        val notification = NotificationCompat.Builder(context.applicationContext, CHANNEL_ID)
+        val targetChannel = if (mode == PrayerNotifMode.SILENT) CHANNEL_ID_SILENT else CHANNEL_ID
+
+        val notificationBuilder = NotificationCompat.Builder(context.applicationContext, targetChannel)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setSound(soundUri)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(openPending)
-            .build()
+
+        if (mode == PrayerNotifMode.SILENT) {
+            notificationBuilder.setSound(null)
+            notificationBuilder.setSilent(true)
+        } else {
+            notificationBuilder.setSound(soundUri)
+        }
 
         val manager = context.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(prayerRequestCode(prayerKey), notification)
+        manager.notify(prayerRequestCode(prayerKey), notificationBuilder.build())
     }
 }
 
@@ -245,7 +273,10 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             try {
                 val prefs = AppPreferences(context.applicationContext)
                 val langCode = prefs.selectedLanguage.first()
-                PrayerNotifications.showPrayerNotification(context, key, langCode)
+                val mode = prefs.prayerNotificationMode(key).first()
+                if (mode != PrayerNotifMode.OFF) {
+                    PrayerNotifications.showPrayerNotification(context, key, langCode, mode)
+                }
                 PrayerNotifications.scheduleNext(context)
                 com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
                 LiveStatusNotificationManager.update(context)

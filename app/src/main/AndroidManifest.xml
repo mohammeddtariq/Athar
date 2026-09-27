@@ -85,6 +85,11 @@
             android:name=".notifications.LiveStatusAlarmReceiver"
             android:exported="false" />
 
+        <!-- Live Status Dismiss Receiver (Auto-restore if dismissed from status bar) -->
+        <receiver
+            android:name=".notifications.LiveStatusDismissReceiver"
+            android:exported="false" />
+
         <!-- Widget Configuration Activity (Long-press settings shortcut) -->
         <activity
             android:name=".widget.WidgetConfigureActivity"

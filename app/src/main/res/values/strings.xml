@@ -135,6 +135,8 @@
     <!-- Notifications -->
     <string name="notif_channel_name">Athar • Prayer Reminders</string>
     <string name="notif_channel_desc">Serene reminders for each prayer time</string>
+    <string name="notif_channel_silent_name">Athar • Silent Prayer Reminders</string>
+    <string name="notif_channel_silent_desc">Silent visual reminders for prayer times without audio sound</string>
     <string name="notif_prayer_title">Time for %s</string>
     <string name="notif_prayer_body">May your prayer be accepted.</string>
     <string name="notif_sunrise_body">The earth shines with the light of its Lord • Welcome your day with praise and trust in God, leaving a blessed trace in all you do.</string>
@@ -253,19 +255,24 @@
     <string name="settings_battery_sub_restricted">Restricted by system • Tap to allow unrestricted</string>
 
     <!-- Live Status & Now Bar -->
-    <string name="live_status_channel_name">Athar • Live Status</string>
-    <string name="live_status_channel_desc">Persistent live prayer countdown for status bar and One UI Now Bar</string>
-    <string name="settings_live_status_title">Live Status &amp; Now Bar</string>
-    <string name="settings_live_status_subtitle">Persistent prayer countdown on status bar and Samsung Now Bar</string>
-    <string name="settings_live_status_enable">Enable Live Status</string>
+    <string name="live_status_channel_name">Athar • Persistent Notification</string>
+    <string name="live_status_channel_desc">Persistent live prayer countdown card in notification drawer</string>
+    <string name="now_bar_channel_name">Athar • Now Bar &amp; Live Activity</string>
+    <string name="now_bar_channel_desc">Promoted live prayer updates on Lock Screen Now Bar and Status Bar chip</string>
+    <string name="settings_live_activity_title">Live Activity &amp; Now Bar</string>
+    <string name="settings_live_activity_subtitle">Real-time prayer countdown chip on Status Bar and Samsung One UI Now Bar (Android 15+)</string>
+    <string name="settings_live_activity_enable">Enable Now Bar / Live Activity</string>
+    <string name="settings_live_status_title">Persistent Notification</string>
+    <string name="settings_live_status_subtitle">Persistent prayer countdown card in the notification drawer</string>
+    <string name="settings_live_status_enable">Enable Persistent Notification</string>
     <string name="settings_live_status_style">Display Style</string>
     <string name="settings_live_status_style_hero">Focus Card (Minimal)</string>
     <string name="settings_live_status_style_timeline">Full Timeline (Mosaic)</string>
-    <string name="settings_live_status_lang">Live Status Language</string>
+    <string name="settings_live_status_lang">Language</string>
     <string name="settings_live_status_num_style">Number Style</string>
-    <string name="settings_live_status_preview">Live Status Preview</string>
+    <string name="settings_live_status_preview">Card Preview</string>
     <string name="settings_live_status_nowbar_tip_title">Samsung One UI / Now Bar</string>
-    <string name="settings_live_status_nowbar_tip_desc">To show Live Status in Samsung One UI Now Bar, enable \"Live notifications for all apps\" under Developer Options.</string>
+    <string name="settings_live_status_nowbar_tip_desc">To display Live Activities in the Samsung One UI Now Bar, make sure \"Live notifications for all apps\" is enabled in Developer Options.</string>
     <string name="settings_open_developer_options">Open Developer Options</string>
 </resources>
 

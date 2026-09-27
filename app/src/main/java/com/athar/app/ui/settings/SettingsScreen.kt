@@ -39,6 +39,12 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.NotificationsNone
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import com.athar.app.data.PrayerNotifMode
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
@@ -54,6 +60,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -171,12 +178,13 @@ fun SettingsScreen(
     val city by prefs.cityLabel.collectAsState(initial = null)
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val schoolId by prefs.schoolId.collectAsState(initial = "SHAFII")
-    val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
+    val notifMasterMode by prefs.notifMasterMode.collectAsState(initial = PrayerNotifMode.SOUND)
     val widgetLanguage by prefs.widgetLanguage.collectAsState(initial = "match_app")
     val widgetNumberStyle by prefs.widgetNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val widgetBgStyle by prefs.widgetBgStyle.collectAsState(initial = WidgetBgStyle.THEME)
     val widgetBlurIntensity by prefs.widgetBlurIntensity.collectAsState(initial = 70)
     val widgetFontStyle by prefs.widgetFontStyle.collectAsState(initial = WidgetFontStyle.APP_FONT)
+    val nowBarLiveActivityEnabled by prefs.nowBarLiveActivityEnabled.collectAsState(initial = false)
     val liveStatusEnabled by prefs.liveStatusEnabled.collectAsState(initial = false)
     val liveStatusStyle by prefs.liveStatusStyle.collectAsState(initial = LiveStatusStyle.HERO)
     val liveStatusNumberStyle by prefs.liveStatusNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
@@ -190,7 +198,7 @@ fun SettingsScreen(
     ) { granted ->
         if (granted) {
             scope.launch {
-                prefs.setNotificationsMaster(true)
+                prefs.setNotificationsMasterMode(PrayerNotifMode.SOUND)
                 PrayerNotifications.ensureChannel(context)
                 PrayerNotifications.scheduleNext(context)
             }
@@ -223,8 +231,8 @@ fun SettingsScreen(
         }
     }
 
-    fun setMaster(enabled: Boolean) {
-        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    fun setMaster(mode: PrayerNotifMode) {
+        if (mode != PrayerNotifMode.OFF && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
@@ -234,9 +242,9 @@ fun SettingsScreen(
             }
         }
         scope.launch {
-            prefs.setNotificationsMaster(enabled)
+            prefs.setNotificationsMasterMode(mode)
             PrayerNotifications.ensureChannel(context)
-            if (enabled) PrayerNotifications.scheduleNext(context)
+            if (mode != PrayerNotifMode.OFF) PrayerNotifications.scheduleNext(context)
             else PrayerNotifications.cancelAll(context)
         }
     }
@@ -554,12 +562,14 @@ fun SettingsScreen(
                     Spacer(Modifier.height(8.dp))
                     NotifRow(
                         label = stringResource(R.string.settings_notifications),
-                        checked = notifMaster,
+                        mode = notifMasterMode,
                         onChange = ::setMaster
                     )
-                    if (notifMaster) {
-                        Spacer(Modifier.height(4.dp))
-                        PrayerToggleList(prefs = prefs)
+                    AnimatedVisibility(visible = notifMasterMode != PrayerNotifMode.OFF) {
+                        Column {
+                            Spacer(Modifier.height(4.dp))
+                            PrayerToggleList(prefs = prefs)
+                        }
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -890,7 +900,132 @@ fun SettingsScreen(
                 }
             }
 
-            // ── Live Status & Now Bar ──
+            // ── Now Bar & Live Activity (Promoted Chip) ──
+            item(key = "now_bar_live_activity") {
+                SectionCard(
+                    title = stringResource(R.string.settings_live_activity_title)
+                ) {
+                    Text(
+                        stringResource(R.string.settings_live_activity_subtitle),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Master Toggle Row for Now Bar / Live Activity
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_live_activity_enable),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.5.sp,
+                            color = AtharTextPrimary
+                        )
+                        Switch(
+                            checked = nowBarLiveActivityEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPerm = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (!hasPerm) {
+                                        notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }
+                                scope.launch {
+                                    prefs.setNowBarLiveActivityEnabled(enabled)
+                                    LiveStatusNotificationManager.update(context)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AtharTextOnPrimary,
+                                checkedTrackColor = AtharPrimary,
+                                uncheckedThumbColor = AtharTextSecondary,
+                                uncheckedTrackColor = AtharCardBorder
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(visible = nowBarLiveActivityEnabled) {
+                        Column {
+                            Spacer(Modifier.height(14.dp))
+
+                            // Samsung One UI Now Bar / Android 15+ Tip
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(AtharSurface)
+                                    .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = AtharPrimaryLight,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.settings_live_status_nowbar_tip_title),
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = AtharPrimaryLight
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_live_status_nowbar_tip_desc),
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 11.5.sp,
+                                    color = AtharTextSecondary,
+                                    lineHeight = 16.sp
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        runCatching {
+                                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                        }.onFailure {
+                                            runCatching {
+                                                val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(intent)
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, AtharPrimary.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.settings_open_developer_options),
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                        color = AtharPrimaryLight
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Persistent Notification (Notification Drawer Card) ──
             item(key = "live_status") {
                 SectionCard(
                     title = stringResource(R.string.settings_live_status_title)
@@ -1090,72 +1225,6 @@ fun SettingsScreen(
                                 liveStatusLanguage = liveStatusLanguage,
                                 appLanguage = language
                             )
-
-                            Spacer(Modifier.height(14.dp))
-
-                            // 5. Samsung One UI Now Bar / Android 15+ Tip
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(AtharSurface)
-                                    .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
-                                    .padding(12.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Outlined.Info,
-                                        contentDescription = null,
-                                        tint = AtharPrimaryLight,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.settings_live_status_nowbar_tip_title),
-                                        fontFamily = ThmanyahSans,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = AtharPrimaryLight
-                                    )
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.settings_live_status_nowbar_tip_desc),
-                                    fontFamily = ThmanyahSans,
-                                    fontSize = 11.5.sp,
-                                    color = AtharTextSecondary,
-                                    lineHeight = 16.sp
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                OutlinedButton(
-                                    onClick = {
-                                        runCatching {
-                                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            context.startActivity(intent)
-                                        }.onFailure {
-                                            runCatching {
-                                                val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
-                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                }
-                                                context.startActivity(intent)
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(1.dp, AtharPrimary.copy(alpha = 0.5f))
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.settings_open_developer_options),
-                                        fontFamily = ThmanyahSans,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.5.sp,
-                                        color = AtharPrimaryLight
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -1388,6 +1457,96 @@ fun SettingsScreen(
 }
 
 @Composable
+fun PrayerNotifThreeWayToggle(
+    mode: PrayerNotifMode,
+    onModeSelected: (PrayerNotifMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Forced LTR layout so that visually:
+    // Left: OFF (Muted Red Bell)
+    // Middle: SILENT (Quiet Amber Bell)
+    // Right: SOUND (Active Olive Bell)
+    // In Arabic reading direction (RTL): Rightmost is SOUND, Middle is SILENT, Leftmost is OFF.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(
+            modifier = modifier
+                .height(34.dp)
+                .clip(RoundedCornerShape(17.dp))
+                .background(Color(0xFF141913))
+                .border(1.dp, AtharCardBorder, RoundedCornerShape(17.dp))
+                .padding(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Option 0: OFF
+            val isOff = mode == PrayerNotifMode.OFF
+            Box(
+                modifier = Modifier
+                    .size(width = 34.dp, height = 30.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(if (isOff) Color(0xFFEF5350).copy(alpha = 0.18f) else Color.Transparent)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onModeSelected(PrayerNotifMode.OFF) }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.NotificationsOff,
+                    contentDescription = null,
+                    tint = if (isOff) Color(0xFFEF5350) else AtharTextSecondary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+
+            // Option 1: SILENT
+            val isSilent = mode == PrayerNotifMode.SILENT
+            Box(
+                modifier = Modifier
+                    .size(width = 34.dp, height = 30.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(if (isSilent) Color(0xFFFFD54F).copy(alpha = 0.18f) else Color.Transparent)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onModeSelected(PrayerNotifMode.SILENT) }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.NotificationsNone,
+                    contentDescription = null,
+                    tint = if (isSilent) Color(0xFFFFD54F) else AtharTextSecondary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+
+            // Option 2: SOUND
+            val isSound = mode == PrayerNotifMode.SOUND
+            Box(
+                modifier = Modifier
+                    .size(width = 34.dp, height = 30.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(if (isSound) AtharPrimary.copy(alpha = 0.22f) else Color.Transparent)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onModeSelected(PrayerNotifMode.SOUND) }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.NotificationsActive,
+                    contentDescription = null,
+                    tint = if (isSound) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PrayerToggleList(prefs: AppPreferences) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -1401,13 +1560,13 @@ private fun PrayerToggleList(prefs: AppPreferences) {
     )
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         prayers.forEach { (key, res) ->
-            val enabled by prefs.prayerNotificationEnabled(key).collectAsState(initial = true)
+            val mode by prefs.prayerNotificationMode(key).collectAsState(initial = PrayerNotifMode.SOUND)
             NotifRow(
                 label = stringResource(res),
-                checked = enabled,
-                onChange = {
+                mode = mode,
+                onChange = { newMode ->
                     scope.launch {
-                        prefs.setPrayerNotification(key, it)
+                        prefs.setPrayerNotificationMode(key, newMode)
                         PrayerNotifications.scheduleNext(context)
                     }
                 }
@@ -1417,7 +1576,11 @@ private fun PrayerToggleList(prefs: AppPreferences) {
 }
 
 @Composable
-private fun NotifRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun NotifRow(
+    label: String,
+    mode: PrayerNotifMode,
+    onChange: (PrayerNotifMode) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1432,15 +1595,9 @@ private fun NotifRow(label: String, checked: Boolean, onChange: (Boolean) -> Uni
             fontSize = 13.5.sp,
             color = AtharTextPrimary
         )
-        Switch(
-            checked = checked,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = AtharTextOnPrimary,
-                checkedTrackColor = AtharPrimary,
-                uncheckedThumbColor = AtharTextSecondary,
-                uncheckedTrackColor = AtharCardBorder
-            )
+        PrayerNotifThreeWayToggle(
+            mode = mode,
+            onModeSelected = onChange
         )
     }
 }

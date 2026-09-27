@@ -42,45 +42,67 @@ import java.time.format.DateTimeFormatter
 object LiveStatusNotificationManager {
 
     const val NOTIFICATION_ID = 9550
+    const val PERSISTENT_NOTIFICATION_ID = 9550
+    const val NOW_BAR_NOTIFICATION_ID = 9560
     const val CHANNEL_ID = "athar_live_status_v2"
+    const val NOW_BAR_CHANNEL_ID = "athar_now_bar_live_v1"
     private const val ALARM_REQUEST_CODE = 9551
+    private const val DISMISS_REQUEST_CODE_PERSISTENT = 9552
+    private const val DISMISS_REQUEST_CODE_NOW_BAR = 9553
     private val timeFmt = DateTimeFormatter.ofPattern("H:mm")
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
 
-        // Clean up v1 channel so new importance and lockscreen settings take effect
+        // Clean up legacy v1 channel
         try {
             manager.deleteNotificationChannel("athar_live_status_v1")
         } catch (_: Exception) {}
 
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            context.getString(R.string.live_status_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT
-        ).apply {
-            description = context.getString(R.string.live_status_channel_desc)
-            setShowBadge(false)
-            setSound(null, null)
-            enableVibration(false)
-            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.live_status_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = context.getString(R.string.live_status_channel_desc)
+                setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            manager.createNotificationChannel(channel)
         }
-        manager.createNotificationChannel(channel)
+
+        if (manager.getNotificationChannel(NOW_BAR_CHANNEL_ID) == null) {
+            val nowBarChannel = NotificationChannel(
+                NOW_BAR_CHANNEL_ID,
+                context.getString(R.string.now_bar_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = context.getString(R.string.now_bar_channel_desc)
+                setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            manager.createNotificationChannel(nowBarChannel)
+        }
     }
 
     suspend fun update(context: Context) = withContext(Dispatchers.IO) {
         val appContext = context.applicationContext
         val prefs = AppPreferences(appContext)
-        val enabled = prefs.liveStatusEnabled.first()
-        if (!enabled) {
+        val persistentEnabled = prefs.liveStatusEnabled.first()
+        val nowBarEnabled = prefs.nowBarLiveActivityEnabled.first()
+        if (!persistentEnabled && !nowBarEnabled) {
             cancel(appContext)
             return@withContext
         }
 
         ensureChannel(appContext)
+        val manager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
 
         val lat = prefs.latitude.first()
         val lng = prefs.longitude.first()
@@ -124,52 +146,7 @@ object LiveStatusNotificationManager {
         val nextLabel = if (isAr) "الصلاة التالية" else "Next Prayer"
         val remainingLabel = if (isAr) "الوقت المتبقي" else "Time Remaining"
 
-        // Layout selection based on chosen style and direction
-        val (collapsedRes, expandedRes) = when (liveStatusStyle) {
-            LiveStatusStyle.HERO -> {
-                if (isAr) {
-                    R.layout.notification_live_status_hero_collapsed_rtl to R.layout.notification_live_status_hero_expanded_rtl
-                } else {
-                    R.layout.notification_live_status_hero_collapsed to R.layout.notification_live_status_hero_expanded
-                }
-            }
-            LiveStatusStyle.TIMELINE -> {
-                if (isAr) {
-                    R.layout.notification_live_status_timeline_collapsed_rtl to R.layout.notification_live_status_timeline_expanded_rtl
-                } else {
-                    R.layout.notification_live_status_timeline_collapsed to R.layout.notification_live_status_timeline_expanded
-                }
-            }
-        }
-
-        val collapsedViews = RemoteViews(appContext.packageName, collapsedRes)
-        val expandedViews = RemoteViews(appContext.packageName, expandedRes)
-
-        // Bind collapsed view
-        collapsedViews.setTextViewText(R.id.live_prayer_name, prayerName)
-        collapsedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
-        collapsedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")
-        setupChronometer(collapsedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
-
-        // Bind expanded view
-        if (liveStatusStyle == LiveStatusStyle.HERO) {
-            expandedViews.setTextViewText(R.id.live_label_next, nextLabel)
-            expandedViews.setTextViewText(R.id.live_hijri_date, hijriDateText)
-            expandedViews.setTextViewText(R.id.live_location_text, locationText)
-            expandedViews.setTextViewText(R.id.live_prayer_name, prayerName)
-            expandedViews.setTextViewText(R.id.live_prayer_sub, adhanText)
-            expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
-            expandedViews.setTextViewText(R.id.live_remaining_label, remainingLabel)
-            setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
-        } else {
-            expandedViews.setTextViewText(R.id.live_prayer_name, "$nextLabel: $prayerName")
-            expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
-            expandedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")
-            setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
-
-            // Bind 6 prayer slots
-            bindTimelineChips(expandedViews, day, next.key, isAr, liveStatusNumberStyle)
-        }
+        val targetPrayerDate = prayerDateToday(next.time, next.isTomorrow)
 
         // Tap intent to launch app
         val contentIntent = Intent(appContext, MainActivity::class.java).apply {
@@ -182,38 +159,132 @@ object LiveStatusNotificationManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        collapsedViews.setOnClickPendingIntent(R.id.live_root, pendingIntent)
-        expandedViews.setOnClickPendingIntent(R.id.live_root, pendingIntent)
-
-        val targetPrayerDate = prayerDateToday(next.time, next.isTomorrow)
-        val notifBuilder = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_prayer_hands)
-            .setContentTitle("$prayerName • $formattedTime")
-            .setContentText("$locationText • $hijriDateText")
-            .setSubText(hijriDateText)
-            .setWhen(targetPrayerDate.time)
-            .setUsesChronometer(true)
-            .setChronometerCountDown(true)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_STATUS)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCustomContentView(collapsedViews)
-            .setCustomBigContentView(expandedViews)
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-            .setContentIntent(pendingIntent)
-
-        // Request promotion for Android 16 Live Updates & Samsung One UI Now Bar
-        val extras = Bundle().apply {
-            putBoolean("android.requestPromotedOngoing", true)
-            putString("android.substName", appContext.getString(R.string.app_name))
+        // Delete intents to auto-restore notification if dismissed from status bar
+        val dismissIntentPersistent = Intent(appContext, LiveStatusDismissReceiver::class.java).apply {
+            action = "com.athar.app.ACTION_RESTORE_PERSISTENT"
         }
-        notifBuilder.addExtras(extras)
+        val dismissPendingPersistent = PendingIntent.getBroadcast(
+            appContext,
+            DISMISS_REQUEST_CODE_PERSISTENT,
+            dismissIntentPersistent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-        val manager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        manager?.notify(NOTIFICATION_ID, notifBuilder.build())
+        val dismissIntentNowBar = Intent(appContext, LiveStatusDismissReceiver::class.java).apply {
+            action = "com.athar.app.ACTION_RESTORE_NOW_BAR"
+        }
+        val dismissPendingNowBar = PendingIntent.getBroadcast(
+            appContext,
+            DISMISS_REQUEST_CODE_NOW_BAR,
+            dismissIntentNowBar,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 1. Post or Cancel Persistent Notification (Custom RemoteViews)
+        if (persistentEnabled) {
+            val (collapsedRes, expandedRes) = when (liveStatusStyle) {
+                LiveStatusStyle.HERO -> {
+                    if (isAr) {
+                        R.layout.notification_live_status_hero_collapsed_rtl to R.layout.notification_live_status_hero_expanded_rtl
+                    } else {
+                        R.layout.notification_live_status_hero_collapsed to R.layout.notification_live_status_hero_expanded
+                    }
+                }
+                LiveStatusStyle.TIMELINE -> {
+                    if (isAr) {
+                        R.layout.notification_live_status_timeline_collapsed_rtl to R.layout.notification_live_status_timeline_expanded_rtl
+                    } else {
+                        R.layout.notification_live_status_timeline_collapsed to R.layout.notification_live_status_timeline_expanded
+                    }
+                }
+            }
+
+            val collapsedViews = RemoteViews(appContext.packageName, collapsedRes)
+            val expandedViews = RemoteViews(appContext.packageName, expandedRes)
+
+            collapsedViews.setTextViewText(R.id.live_prayer_name, prayerName)
+            collapsedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
+            collapsedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")
+            setupChronometer(collapsedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
+
+            if (liveStatusStyle == LiveStatusStyle.HERO) {
+                expandedViews.setTextViewText(R.id.live_label_next, nextLabel)
+                expandedViews.setTextViewText(R.id.live_hijri_date, hijriDateText)
+                expandedViews.setTextViewText(R.id.live_location_text, locationText)
+                expandedViews.setTextViewText(R.id.live_prayer_name, prayerName)
+                expandedViews.setTextViewText(R.id.live_prayer_sub, adhanText)
+                expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
+                expandedViews.setTextViewText(R.id.live_remaining_label, remainingLabel)
+                setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
+            } else {
+                expandedViews.setTextViewText(R.id.live_prayer_name, "$nextLabel: $prayerName")
+                expandedViews.setTextViewText(R.id.live_prayer_time, formattedTime)
+                expandedViews.setTextViewText(R.id.live_sub_info, "$locationText • $hijriDateText")
+                setupChronometer(expandedViews, R.id.live_countdown_chrono, next.time, next.isTomorrow)
+                bindTimelineChips(expandedViews, day, next.key, isAr, liveStatusNumberStyle)
+            }
+
+            collapsedViews.setOnClickPendingIntent(R.id.live_root, pendingIntent)
+            expandedViews.setOnClickPendingIntent(R.id.live_root, pendingIntent)
+
+            val persistentBuilder = NotificationCompat.Builder(appContext, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_prayer_hands)
+                .setContentTitle("$prayerName • $formattedTime")
+                .setContentText("$locationText • $hijriDateText")
+                .setSubText(hijriDateText)
+                .setWhen(targetPrayerDate.time)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setCustomContentView(collapsedViews)
+                .setCustomBigContentView(expandedViews)
+                .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+                .setContentIntent(pendingIntent)
+                .setDeleteIntent(dismissPendingPersistent)
+
+            manager?.notify(PERSISTENT_NOTIFICATION_ID, persistentBuilder.build())
+        } else {
+            manager?.cancel(PERSISTENT_NOTIFICATION_ID)
+        }
+
+        // 2. Post or Cancel Now Bar / Live Activity Notification (Standard Native Ongoing)
+        if (nowBarEnabled) {
+            val nowBarBuilder = NotificationCompat.Builder(appContext, NOW_BAR_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_prayer_hands)
+                .setContentTitle("$prayerName • $formattedTime")
+                .setContentText("$locationText • $hijriDateText")
+                .setSubText(prayerName)
+                .setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText("$locationText • $hijriDateText\n$adhanText")
+                )
+                .setWhen(targetPrayerDate.time)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentIntent(pendingIntent)
+                .setDeleteIntent(dismissPendingNowBar)
+
+            val extras = Bundle().apply {
+                putBoolean("android.requestPromotedOngoing", true)
+                putString("android.substName", appContext.getString(R.string.app_name))
+            }
+            nowBarBuilder.addExtras(extras)
+
+            manager?.notify(NOW_BAR_NOTIFICATION_ID, nowBarBuilder.build())
+        } else {
+            manager?.cancel(NOW_BAR_NOTIFICATION_ID)
+        }
 
         // Schedule next alarm to refresh when this prayer arrives
         scheduleNextAlarm(appContext, next.time, next.isTomorrow)
@@ -229,7 +300,8 @@ object LiveStatusNotificationManager {
     fun cancel(context: Context) {
         val appContext = context.applicationContext
         val manager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        manager?.cancel(NOTIFICATION_ID)
+        manager?.cancel(PERSISTENT_NOTIFICATION_ID)
+        manager?.cancel(NOW_BAR_NOTIFICATION_ID)
 
         val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
         val intent = Intent(appContext, LiveStatusAlarmReceiver::class.java)
@@ -359,6 +431,16 @@ object LiveStatusNotificationManager {
  * Receiver to roll over Live Status notification when prayer time passes.
  */
 class LiveStatusAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        LiveStatusNotificationManager.updateAsync(context)
+    }
+}
+
+/**
+ * Receiver invoked if user dismisses ongoing status notifications from status bar.
+ * Auto-restores them immediately if still enabled in settings.
+ */
+class LiveStatusDismissReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         LiveStatusNotificationManager.updateAsync(context)
     }

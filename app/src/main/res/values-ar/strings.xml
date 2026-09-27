@@ -135,6 +135,8 @@
     <!-- Notifications -->
     <string name="notif_channel_name">أَثَر • نداء الصلاة</string>
     <string name="notif_channel_desc">تنبيهات أوقات الصلاة بنبرة هادئة ملهمة</string>
+    <string name="notif_channel_silent_name">أَثَر • تنبيهات الصلاة الصامتة</string>
+    <string name="notif_channel_silent_desc">تنبيهات صامتة لمواقيت الصلاة تظهر بدون إصدار صوت</string>
     <string name="notif_prayer_title">حان وقت %s</string>
     <string name="notif_prayer_body">تقبّل الله صلاتك.</string>
     <string name="notif_sunrise_body">أشرقت الأرض بنور ربها • استقبل يومك بحمد الله وتوكّل عليه، واجعل أثرك مباركاً.</string>
@@ -253,19 +255,24 @@
     <string name="settings_battery_sub_restricted">مقيّد بواسطة النظام • اضغط للإلغاء</string>
 
     <!-- Live Status & Now Bar -->
-    <string name="live_status_channel_name">أَثَر • شريط الحالة المباشرة</string>
-    <string name="live_status_channel_desc">متابعة حية ومستمرة لمواقيت الصلاة في شريط الإشعارات وNow Bar</string>
-    <string name="settings_live_status_title">الحالة المباشرة وشريط Now Bar</string>
-    <string name="settings_live_status_subtitle">عد تنازلي مستمر في شريط الحالة وشريط Now Bar على أجهزة سامسونج</string>
-    <string name="settings_live_status_enable">تفعيل الحالة المباشرة</string>
+    <string name="live_status_channel_name">أَثَر • إشعار الحالة المستمر</string>
+    <string name="live_status_channel_desc">بطاقة متابعة مستمرة لمواقيت الصلاة في لوحة الإشعارات</string>
+    <string name="now_bar_channel_name">أَثَر • شريط Now Bar والأنشطة الحية</string>
+    <string name="now_bar_channel_desc">تحديثات حية ومستمرة في شريط Now Bar وعلى الشاشة المقفلة وشريط الحالة</string>
+    <string name="settings_live_activity_title">الأنشطة الحية وشريط Now Bar</string>
+    <string name="settings_live_activity_subtitle">عد تنازلي مباشر في شريط الحالة وشريط Now Bar على هواتف سامسونج (أندرويد 15 فما فوق)</string>
+    <string name="settings_live_activity_enable">تفعيل شريط Now Bar / الأنشطة الحية</string>
+    <string name="settings_live_status_title">إشعار الحالة المستمر</string>
+    <string name="settings_live_status_subtitle">بطاقة هادئة مستمرة لمواقيت الصلاة في لوحة الإشعارات</string>
+    <string name="settings_live_status_enable">تفعيل الإشعار المستمر</string>
     <string name="settings_live_status_style">نمط العرض</string>
     <string name="settings_live_status_style_hero">بطاقة التركيز الهادئة</string>
     <string name="settings_live_status_style_timeline">شريط المواقيت الكامل</string>
-    <string name="settings_live_status_lang">لغة الحالة المباشرة</string>
+    <string name="settings_live_status_lang">اللغة</string>
     <string name="settings_live_status_num_style">نمط الأرقام</string>
-    <string name="settings_live_status_preview">معاينة الحالة المباشرة</string>
+    <string name="settings_live_status_preview">معاينة البطاقة</string>
     <string name="settings_live_status_nowbar_tip_title">سامسونج One UI / شريط Now Bar</string>
-    <string name="settings_live_status_nowbar_tip_desc">لإظهار الحالة الحية في شريط Now Bar على أجهزة سامسونج، يرجى تفعيل خيار \"إشعارات حية لكافة التطبيقات\" من خيارات المطور.</string>
+    <string name="settings_live_status_nowbar_tip_desc">لإظهار الأنشطة الحية في شريط Now Bar على أجهزة سامسونج، يرجى التأكد من تفعيل \"إشعارات حية لكافة التطبيقات\" من خيارات المطور.</string>
     <string name="settings_open_developer_options">فتح خيارات المطور</string>
 </resources>
 
