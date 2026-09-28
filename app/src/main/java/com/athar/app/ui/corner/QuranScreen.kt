@@ -30,7 +30,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import kotlin.math.absoluteValue
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -134,6 +136,7 @@ import com.athar.app.data.QuranPages
 import com.athar.app.data.QuranReciter
 import com.athar.app.data.QuranRepository
 import com.athar.app.data.QuranRepository.toArabicIndic
+import com.athar.app.data.QuranVerse
 import com.athar.app.data.QuranThemeMode
 import com.athar.app.data.QuranLayoutMode
 import kotlinx.coroutines.Dispatchers
@@ -1199,6 +1202,34 @@ private fun LigatureMushafPage(
     }
 }
 
+private val QURAN_STOP_MARK_REGEX = Regex("^[\\u06D6-\\u06DC\\u06DE\\u06E9\\s]+$")
+
+data class QuranVerseToken(
+    val token: String,
+    val isStopMark: Boolean,
+    val wordIndex: Int
+)
+
+fun parseVerseTokens(text: String): List<QuranVerseToken> {
+    val tokens = text.split(" ").filter { it.isNotBlank() }
+    var currentWordIdx = 0
+    return tokens.map { tok ->
+        val isStop = QURAN_STOP_MARK_REGEX.matches(tok.trim())
+        if (isStop) {
+            QuranVerseToken(tok, isStopMark = true, wordIndex = 0)
+        } else {
+            currentWordIdx++
+            QuranVerseToken(tok, isStopMark = false, wordIndex = currentWordIdx)
+        }
+    }
+}
+
+sealed class QuranTextItem {
+    data class BismillahItem(val surahNumber: Int) : QuranTextItem()
+    data class VerseItem(val verse: QuranVerse, val pageNumber: Int) : QuranTextItem()
+    data class PageDividerItem(val pageNumber: Int) : QuranTextItem()
+}
+
 @Composable
 private fun SurahReader(
     surah: SurahMeta,
@@ -1255,21 +1286,42 @@ private fun SurahReader(
     var activeVerseNumber by remember { mutableStateOf<Int?>(null) }
     var activeWordIndex by remember { mutableStateOf<Int?>(null) }
     var autoScrollEnabled by rememberSaveable { mutableStateOf(true) }
+    var areBarsVisible by remember { mutableStateOf(true) }
     var lastUserInteractionTime by remember { mutableLongStateOf(0L) }
 
     val listState = rememberLazyListState()
+
+    // Detect user manual dragging to pause auto-scroll temporarily and reveal bars when reciting
+    val isUserDragging by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(isUserDragging) {
+        if (isUserDragging) {
+            lastUserInteractionTime = System.currentTimeMillis()
+            if (isPlaying && !areBarsVisible) {
+                areBarsVisible = true
+            }
+        }
+    }
+
+    // Build flat sequence of text items (Bismillah, Verses, Mushaf Page Dividers) for per-ayah scrolling
+    val textItems = remember(pageChunks, surah.number) {
+        val chunks = pageChunks ?: return@remember emptyList()
+        val items = ArrayList<QuranTextItem>()
+        if (surah.number != 9) {
+            items.add(QuranTextItem.BismillahItem(surah.number))
+        }
+        for (chunk in chunks) {
+            for (verse in chunk.verses) {
+                items.add(QuranTextItem.VerseItem(verse, chunk.pageNumber))
+            }
+            items.add(QuranTextItem.PageDividerItem(chunk.pageNumber))
+        }
+        items
+    }
 
     // Preload recitation timing for current surah & reciter
     LaunchedEffect(surah.number, reciter) {
         val timing = QuranRecitationSyncRepository.getChapterTiming(context, reciter, surah.number)
         chapterTiming = timing
-    }
-
-    // Detect user manual scrolling to pause auto-scroll temporarily
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
-            lastUserInteractionTime = System.currentTimeMillis()
-        }
     }
 
     // High-frequency playback position sampling & active word/verse resolution
@@ -1304,28 +1356,58 @@ private fun SurahReader(
         }
     }
 
-    // Smooth auto-scroll following the active recited verse
+    // Smooth auto-scroll following the active recited verse (per-ayah scrolling in text mode)
     LaunchedEffect(activeVerseNumber, autoScrollEnabled, isPlaying) {
         val vNum = activeVerseNumber ?: return@LaunchedEffect
         if (!autoScrollEnabled || !isPlaying) return@LaunchedEffect
         val now = System.currentTimeMillis()
-        if (now - lastUserInteractionTime < 3200L) return@LaunchedEffect
+        if (now - lastUserInteractionTime < 2800L) return@LaunchedEffect
 
-        val chunks = pageChunks ?: return@LaunchedEffect
-        val chunkIdx = chunks.indexOfFirst { chunk -> chunk.verses.any { it.number == vNum } }
-        if (chunkIdx >= 0) {
-            val itemIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) chunkIdx + 1 else chunkIdx
-            try {
-                listState.animateScrollToItem(itemIdx)
-            } catch (_: Exception) {}
+        if (layoutMode == QuranLayoutMode.TEXT) {
+            val targetIdx = textItems.indexOfFirst { it is QuranTextItem.VerseItem && it.verse.number == vNum }
+            if (targetIdx >= 0) {
+                try {
+                    listState.animateScrollToItem(targetIdx, scrollOffset = 0)
+                } catch (_: Exception) {}
+            }
+        } else {
+            val chunks = pageChunks ?: return@LaunchedEffect
+            val chunkIdx = chunks.indexOfFirst { chunk -> chunk.verses.any { it.number == vNum } }
+            if (chunkIdx >= 0) {
+                try {
+                    listState.animateScrollToItem(chunkIdx, scrollOffset = 0)
+                } catch (_: Exception) {}
+            }
         }
     }
 
     // Scroll state & scroll-aware floating bars
-    var areBarsVisible by remember { mutableStateOf(true) }
     var showControlsHint by rememberSaveable { mutableStateOf(true) }
     var showIndexHint by rememberSaveable { mutableStateOf(true) }
     var showNavHint by rememberSaveable { mutableStateOf(true) }
+
+    // Recitation Full-Screen Mode: Tools vanish when reciting starts; reappear on touch/drag; auto-vanish after 4s
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            areBarsVisible = false
+            showFontPanel = false
+            showThemePanel = false
+            showReciterPanel = false
+            showDropdownMenu = false
+            showControlsHint = false
+            showIndexHint = false
+            showNavHint = false
+        } else {
+            areBarsVisible = true
+        }
+    }
+
+    LaunchedEffect(isPlaying, areBarsVisible, lastUserInteractionTime, showFontPanel, showThemePanel, showReciterPanel, showDropdownMenu) {
+        if (isPlaying && areBarsVisible && !showFontPanel && !showThemePanel && !showReciterPanel && !showDropdownMenu) {
+            delay(4000)
+            areBarsVisible = false
+        }
+    }
 
     LaunchedEffect(surah.number) {
         kotlinx.coroutines.delay(6500)
@@ -1354,17 +1436,24 @@ private fun SurahReader(
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val dy = available.y
-                if (dy < -6f) {
-                    areBarsVisible = false
-                    showFontPanel = false
-                    showThemePanel = false
-                    showReciterPanel = false
-                    showDropdownMenu = false
-                    showIndexHint = false
-                    showNavHint = false
-                    showControlsHint = false
-                } else if (dy > 6f) {
-                    areBarsVisible = true
+                lastUserInteractionTime = System.currentTimeMillis()
+                if (isPlaying) {
+                    if (dy.absoluteValue > 6f && !areBarsVisible) {
+                        areBarsVisible = true
+                    }
+                } else {
+                    if (dy < -6f) {
+                        areBarsVisible = false
+                        showFontPanel = false
+                        showThemePanel = false
+                        showReciterPanel = false
+                        showDropdownMenu = false
+                        showIndexHint = false
+                        showNavHint = false
+                        showControlsHint = false
+                    } else if (dy > 6f) {
+                        areBarsVisible = true
+                    }
                 }
                 return Offset.Zero
             }
@@ -1376,7 +1465,7 @@ private fun SurahReader(
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset <= 30
         }
     }
-    val shouldShowBars = areBarsVisible || isNearTop
+    val shouldShowBars = if (isPlaying) areBarsVisible else (areBarsVisible || isNearTop)
 
     // Release audio player when leaving screen or changing surah
     DisposableEffect(surah.number) {
@@ -1411,6 +1500,7 @@ private fun SurahReader(
             try {
                 mediaPlayer?.pause()
                 isPlaying = false
+                areBarsVisible = true
             } catch (_: Exception) {}
             return
         }
@@ -1418,6 +1508,7 @@ private fun SurahReader(
             try {
                 mediaPlayer?.start()
                 isPlaying = true
+                areBarsVisible = false
             } catch (_: Exception) {}
             return
         }
@@ -1434,6 +1525,7 @@ private fun SurahReader(
             setOnPreparedListener { mp ->
                 isAudioLoading = false
                 isPlaying = true
+                areBarsVisible = false
                 mp.start()
                 if (chapterTiming == null) {
                     scope.launch {
@@ -1449,6 +1541,7 @@ private fun SurahReader(
             }
             setOnCompletionListener {
                 isPlaying = false
+                areBarsVisible = true
                 activeVerseNumber = null
                 activeWordIndex = null
             }
@@ -1504,15 +1597,26 @@ private fun SurahReader(
     }
 
     // Scroll to initial page when chunks become available
-    LaunchedEffect(pageChunks, initialPageNumber) {
+    LaunchedEffect(pageChunks, initialPageNumber, layoutMode) {
         val chunks = pageChunks
         if (!chunks.isNullOrEmpty() && initialPageNumber != null && !isPositionRestored) {
-            val chunkIdx = chunks.indexOfFirst { it.pageNumber == initialPageNumber }
-            if (chunkIdx >= 0) {
-                val scrollIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) chunkIdx + 1 else chunkIdx
-                try {
-                    listState.scrollToItem(scrollIdx)
-                } catch (_: Exception) {}
+            if (layoutMode == QuranLayoutMode.TEXT) {
+                val targetIdx = textItems.indexOfFirst {
+                    (it is QuranTextItem.VerseItem && it.pageNumber == initialPageNumber) ||
+                    (it is QuranTextItem.PageDividerItem && it.pageNumber == initialPageNumber)
+                }
+                if (targetIdx >= 0) {
+                    try {
+                        listState.scrollToItem(targetIdx)
+                    } catch (_: Exception) {}
+                }
+            } else {
+                val chunkIdx = chunks.indexOfFirst { it.pageNumber == initialPageNumber }
+                if (chunkIdx >= 0) {
+                    try {
+                        listState.scrollToItem(chunkIdx)
+                    } catch (_: Exception) {}
+                }
             }
             isPositionRestored = true
         } else if (chunks != null && initialPageNumber == null) {
@@ -1522,17 +1626,29 @@ private fun SurahReader(
 
     val currentVisiblePage by remember {
         derivedStateOf {
-            val chunks = pageChunks
-            if (!chunks.isNullOrEmpty()) {
-                val firstIdx = listState.firstVisibleItemIndex
-                val chunkIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) {
-                    (firstIdx - 1).coerceIn(0, chunks.lastIndex)
+            if (layoutMode == QuranLayoutMode.TEXT) {
+                if (textItems.isNotEmpty()) {
+                    val idx = listState.firstVisibleItemIndex.coerceIn(0, textItems.lastIndex)
+                    when (val item = textItems[idx]) {
+                        is QuranTextItem.VerseItem -> item.pageNumber
+                        is QuranTextItem.PageDividerItem -> item.pageNumber
+                        is QuranTextItem.BismillahItem -> {
+                            val firstVerse = textItems.filterIsInstance<QuranTextItem.VerseItem>().firstOrNull()
+                            firstVerse?.pageNumber ?: QuranPages.getPageForVerse(surah.number, 1)
+                        }
+                    }
                 } else {
-                    firstIdx.coerceIn(0, chunks.lastIndex)
+                    QuranPages.getPageForVerse(surah.number, 1)
                 }
-                chunks[chunkIdx].pageNumber
             } else {
-                QuranPages.getPageForVerse(surah.number, 1)
+                val chunks = pageChunks
+                if (!chunks.isNullOrEmpty()) {
+                    val firstIdx = listState.firstVisibleItemIndex
+                    val chunkIdx = firstIdx.coerceIn(0, chunks.lastIndex)
+                    chunks[chunkIdx].pageNumber
+                } else {
+                    QuranPages.getPageForVerse(surah.number, 1)
+                }
             }
         }
     }
@@ -1583,6 +1699,7 @@ private fun SurahReader(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
+                                lastUserInteractionTime = System.currentTimeMillis()
                                 areBarsVisible = !areBarsVisible
                             },
                         contentPadding = PaddingValues(
@@ -1594,197 +1711,210 @@ private fun SurahReader(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (layoutMode == QuranLayoutMode.TEXT) {
-                            // ─── DESIGN 1 (DEFAULT): Traditional Uthmanic Text Flow ───
-                            // Bismillah header (all surahs except Surah 9 At-Tawbah)
-                            if (surah.number != 9) {
-                                item(key = "bismillah_${surah.number}") {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 8.dp, bottom = 18.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
-                                            fontFamily = QuranBismillah,
-                                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                                            fontSize = (42 * fontScale).sp,
-                                            color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
-                                            style = TextStyle(
-                                                shadow = if (fontBold) Shadow(
-                                                    color = (if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8)).copy(alpha = 0.5f),
-                                                    offset = Offset(0.35f, 0.35f),
-                                                    blurRadius = 0.5f
-                                                ) else null
-                                            ),
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                        Spacer(Modifier.height(10.dp))
-                                        // Delicate divider line with center dot
-                                        Row(
+                            // ─── DESIGN 1 (DEFAULT): Traditional Uthmanic Text Flow with Per-Ayah Items ───
+                            items(
+                                count = textItems.size,
+                                key = { idx ->
+                                    when (val item = textItems[idx]) {
+                                        is QuranTextItem.BismillahItem -> "bismillah_${item.surahNumber}"
+                                        is QuranTextItem.VerseItem -> "verse_${surah.number}_${item.verse.number}"
+                                        is QuranTextItem.PageDividerItem -> "divider_${surah.number}_${item.pageNumber}"
+                                    }
+                                }
+                            ) { idx ->
+                                when (val item = textItems[idx]) {
+                                    is QuranTextItem.BismillahItem -> {
+                                        Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 48.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                                .padding(top = 8.dp, bottom = 18.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(0.6.dp)
-                                                    .background(colors.dividerLine.copy(alpha = 0.6f))
+                                            Text(
+                                                text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
+                                                fontFamily = QuranBismillah,
+                                                fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                                fontSize = (42 * fontScale).sp,
+                                                color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                                                style = TextStyle(
+                                                    shadow = if (fontBold) Shadow(
+                                                        color = (if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8)).copy(alpha = 0.5f),
+                                                        offset = Offset(0.35f, 0.35f),
+                                                        blurRadius = 0.5f
+                                                    ) else null
+                                                ),
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
                                             )
-                                            Box(
+                                            Spacer(Modifier.height(10.dp))
+                                            // Delicate divider line with center dot
+                                            Row(
                                                 modifier = Modifier
-                                                    .padding(horizontal = 10.dp)
-                                                    .size(3.5.dp)
-                                                    .clip(CircleShape)
-                                                    .background(colors.dividerText.copy(alpha = 0.5f))
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(0.6.dp)
-                                                    .background(colors.dividerLine.copy(alpha = 0.6f))
-                                            )
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 48.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(0.6.dp)
+                                                        .background(colors.dividerLine.copy(alpha = 0.6f))
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 10.dp)
+                                                        .size(3.5.dp)
+                                                        .clip(CircleShape)
+                                                        .background(colors.dividerText.copy(alpha = 0.5f))
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(0.6.dp)
+                                                        .background(colors.dividerLine.copy(alpha = 0.6f))
+                                                )
+                                            }
                                         }
                                     }
-                                }
-                            }
+                                    is QuranTextItem.PageDividerItem -> {
+                                        QuranPageDivider(
+                                            pageNumber = item.pageNumber,
+                                            colors = colors
+                                        )
+                                    }
+                                    is QuranTextItem.VerseItem -> {
+                                        val verse = item.verse
+                                        val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
+                                        val sizeSp = (22 * fontScale).sp
 
-                            // Each chunk represents one authentic Madani Mushaf Page
-                            items(chunks, key = { "text_page_${surah.number}_${it.pageNumber}" }) { chunk ->
-                                val sizeSp = (22 * fontScale).sp
-                                val isCurrentChunkActive = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
-
-                                val inlineContent = remember(chunk, fontScale, colors.ayahMarker, isCurrentChunkActive, activeVerseNumber) {
-                                    chunk.verses.associate { verse ->
-                                        val isThisVerseActive = isPlaying && verse.number == activeVerseNumber
-                                        "ayah_${verse.number}" to InlineTextContent(
-                                            Placeholder(
-                                                width = sizeSp,
-                                                height = sizeSp,
-                                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                                            )
-                                        ) {
-                                            AyahEndMedallion(
-                                                number = verse.number,
-                                                fontScale = fontScale,
-                                                color = if (isThisVerseActive) (if (colors.isLight) AtharPrimary else Color(0xFFC9D8B4)) else colors.ayahMarker
+                                        val inlineContent = remember(verse.number, fontScale, colors.ayahMarker, isThisVerseActive) {
+                                            mapOf(
+                                                "ayah_${verse.number}" to InlineTextContent(
+                                                    Placeholder(
+                                                        width = sizeSp,
+                                                        height = sizeSp,
+                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                                    )
+                                                ) {
+                                                    AyahEndMedallion(
+                                                        number = verse.number,
+                                                        fontScale = fontScale,
+                                                        color = if (isThisVerseActive) (if (colors.isLight) AtharPrimary else Color(0xFFC9D8B4)) else colors.ayahMarker
+                                                    )
+                                                }
                                             )
                                         }
-                                    }
-                                }
 
-                                val annotated = remember(
-                                    chunk,
-                                    isPlaying,
-                                    activeVerseNumber,
-                                    activeWordIndex,
-                                    colors.text,
-                                    colors.isLight
-                                ) {
-                                    buildAnnotatedString {
-                                        for (i in chunk.verses.indices) {
-                                            val verse = chunk.verses[i]
-                                            val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
-
-                                            if (!isPlaying) {
-                                                append(verse.text)
-                                            } else if (!isThisVerseActive) {
-                                                withStyle(SpanStyle(color = colors.text.copy(alpha = 0.35f))) {
+                                        val annotated = remember(
+                                            verse.text,
+                                            verse.number,
+                                            isPlaying,
+                                            isThisVerseActive,
+                                            activeWordIndex,
+                                            colors.text,
+                                            colors.isLight
+                                        ) {
+                                            buildAnnotatedString {
+                                                if (!isPlaying) {
                                                     append(verse.text)
-                                                }
-                                            } else {
-                                                val rawWords = verse.text.split(" ")
-                                                val currentWIdx = activeWordIndex ?: 0
-                                                for (w in rawWords.indices) {
-                                                    val word = rawWords[w]
-                                                    val word1Based = w + 1
+                                                } else if (!isThisVerseActive) {
+                                                    withStyle(SpanStyle(color = colors.text.copy(alpha = 0.35f))) {
+                                                        append(verse.text)
+                                                    }
+                                                } else {
+                                                    val tokens = parseVerseTokens(verse.text)
+                                                    val currentWIdx = activeWordIndex ?: 0
+                                                    val highlightColor = if (colors.isLight) Color(0xFF1B3B15) else Color.White
+                                                    val glowColor = if (colors.isLight) AtharPrimary.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.85f)
+                                                    val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.20f)
 
-                                                    when {
-                                                        word1Based == currentWIdx -> {
-                                                            val highlightColor = if (colors.isLight) Color(0xFF1B3B15) else Color(0xFFE2F1AF)
-                                                            val glowColor = if (colors.isLight) AtharPrimary.copy(alpha = 0.5f) else Color(0xFF86A789).copy(alpha = 0.85f)
-                                                            withStyle(
-                                                                SpanStyle(
-                                                                    color = highlightColor,
-                                                                    fontWeight = FontWeight.Black,
-                                                                    background = (if (colors.isLight) AtharPrimary else AtharPrimaryLight).copy(alpha = 0.22f),
-                                                                    shadow = Shadow(
-                                                                        color = glowColor,
-                                                                        offset = Offset(0f, 0f),
-                                                                        blurRadius = 12f
-                                                                    )
-                                                                )
-                                                            ) {
-                                                                append(word)
+                                                    for (w in tokens.indices) {
+                                                        val tokenItem = tokens[w]
+                                                        if (tokenItem.isStopMark) {
+                                                            withStyle(SpanStyle(color = colors.text.copy(alpha = 0.65f))) {
+                                                                append(tokenItem.token)
+                                                            }
+                                                        } else {
+                                                            val word1Based = tokenItem.wordIndex
+                                                            when {
+                                                                word1Based == currentWIdx -> {
+                                                                    withStyle(
+                                                                        SpanStyle(
+                                                                            color = highlightColor,
+                                                                            fontWeight = FontWeight.Black,
+                                                                            background = bgHighlight,
+                                                                            shadow = Shadow(
+                                                                                color = glowColor,
+                                                                                offset = Offset(0f, 0f),
+                                                                                blurRadius = 12f
+                                                                            )
+                                                                        )
+                                                                    ) {
+                                                                        append(tokenItem.token)
+                                                                    }
+                                                                }
+                                                                word1Based < currentWIdx -> {
+                                                                    withStyle(
+                                                                        SpanStyle(
+                                                                            color = colors.text,
+                                                                            fontWeight = FontWeight.SemiBold
+                                                                        )
+                                                                    ) {
+                                                                        append(tokenItem.token)
+                                                                    }
+                                                                }
+                                                                else -> {
+                                                                    withStyle(
+                                                                        SpanStyle(
+                                                                            color = colors.text.copy(alpha = 0.70f),
+                                                                            fontWeight = FontWeight.Normal
+                                                                        )
+                                                                    ) {
+                                                                        append(tokenItem.token)
+                                                                    }
+                                                                }
                                                             }
                                                         }
-                                                        word1Based < currentWIdx -> {
-                                                            withStyle(
-                                                                SpanStyle(
-                                                                    color = colors.text,
-                                                                    fontWeight = FontWeight.SemiBold
-                                                                )
-                                                            ) {
-                                                                append(word)
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            withStyle(
-                                                                SpanStyle(
-                                                                    color = colors.text.copy(alpha = 0.70f),
-                                                                    fontWeight = FontWeight.Normal
-                                                                )
-                                                            ) {
-                                                                append(word)
-                                                            }
+                                                        if (w < tokens.lastIndex) {
+                                                            append(" ")
                                                         }
                                                     }
-                                                    if (w < rawWords.lastIndex) {
-                                                        append(" ")
-                                                    }
                                                 }
-                                            }
 
-                                            append("\u202F")
-                                            appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
-                                            if (i < chunk.verses.lastIndex) {
-                                                append(" ")
+                                                append("\u202F")
+                                                appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
                                             }
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .widthIn(max = 520.dp)
+                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = annotated,
+                                                inlineContent = inlineContent,
+                                                fontFamily = QuranUthmanicHafs,
+                                                fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                                fontSize = (22 * fontScale).sp,
+                                                lineHeight = (42 * fontScale).sp,
+                                                color = colors.text,
+                                                textAlign = TextAlign.Center,
+                                                style = TextStyle(
+                                                    textDirection = TextDirection.Rtl,
+                                                    shadow = if (fontBold) Shadow(
+                                                        color = colors.text.copy(alpha = 0.5f),
+                                                        offset = Offset(0.35f, 0.35f),
+                                                        blurRadius = 0.5f
+                                                    ) else null
+                                                ),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
                                         }
                                     }
                                 }
-
-                                Text(
-                                    text = annotated,
-                                    inlineContent = inlineContent,
-                                    fontFamily = QuranUthmanicHafs,
-                                    fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = (22 * fontScale).sp,
-                                    lineHeight = (42 * fontScale).sp,
-                                    color = colors.text,
-                                    textAlign = TextAlign.Center,
-                                    style = TextStyle(
-                                        textDirection = TextDirection.Rtl,
-                                        shadow = if (fontBold) Shadow(
-                                            color = colors.text.copy(alpha = 0.5f),
-                                            offset = Offset(0.35f, 0.35f),
-                                            blurRadius = 0.5f
-                                        ) else null
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .widthIn(max = 520.dp)
-                                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                                )
-
-                                // Page Divider (indicates this page ended in the Mushaf — Arabic-Indic numerals only)
-                                QuranPageDivider(
-                                    pageNumber = chunk.pageNumber,
-                                    colors = colors
-                                )
                             }
                         } else {
                             // ─── DESIGN 2 (BETA): Vector Mushaf Pages ───
@@ -2141,8 +2271,8 @@ private fun SurahReader(
                             }
                         }
 
-                        // Floating Hints Row underneath top bar if visible
-                        if (showIndexHint || showNavHint) {
+                        // Floating Hints Row underneath top bar if visible (suppressed when reciting)
+                        if (!isPlaying && (showIndexHint || showNavHint)) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2563,7 +2693,7 @@ private fun SurahReader(
             ) {
                 // Hint tooltip on first entry
                 AnimatedVisibility(
-                    visible = showControlsHint && shouldShowBars,
+                    visible = !isPlaying && showControlsHint && shouldShowBars,
                     enter = fadeIn() + slideInVertically { it / 2 },
                     exit = fadeOut() + slideOutVertically { it / 2 }
                 ) {
