@@ -17,15 +17,22 @@ android {
         applicationId = "com.athar.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.4-beta"
+        versionCode = 7
+        versionName = "1.0.5-beta"
 
+        manifestPlaceholders["appName"] = "@string/app_name"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appName"] = "@string/app_name_dev"
+        }
         release {
             isMinifyEnabled = false
+            manifestPlaceholders["appName"] = "@string/app_name"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

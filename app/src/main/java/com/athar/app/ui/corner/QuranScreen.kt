@@ -138,6 +138,10 @@ import com.athar.app.data.QuranThemeMode
 import com.athar.app.data.QuranLayoutMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import com.athar.app.data.ChapterRecitationTiming
+import com.athar.app.data.QuranRecitationSyncRepository
 import com.athar.app.data.VerseChunk
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -1245,7 +1249,77 @@ private fun SurahReader(
     var isAudioLoading by remember(surah.number) { mutableStateOf(false) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
+    // Recitation Synchronization & Syllable/Word Highlight State
+    var chapterTiming by remember(surah.number, reciter) { mutableStateOf<ChapterRecitationTiming?>(null) }
+    var currentPlaybackMs by remember { mutableLongStateOf(0L) }
+    var activeVerseNumber by remember { mutableStateOf<Int?>(null) }
+    var activeWordIndex by remember { mutableStateOf<Int?>(null) }
+    var autoScrollEnabled by rememberSaveable { mutableStateOf(true) }
+    var lastUserInteractionTime by remember { mutableLongStateOf(0L) }
+
     val listState = rememberLazyListState()
+
+    // Preload recitation timing for current surah & reciter
+    LaunchedEffect(surah.number, reciter) {
+        val timing = QuranRecitationSyncRepository.getChapterTiming(context, reciter, surah.number)
+        chapterTiming = timing
+    }
+
+    // Detect user manual scrolling to pause auto-scroll temporarily
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            lastUserInteractionTime = System.currentTimeMillis()
+        }
+    }
+
+    // High-frequency playback position sampling & active word/verse resolution
+    LaunchedEffect(isPlaying, chapterTiming) {
+        if (!isPlaying) {
+            currentPlaybackMs = 0L
+            activeVerseNumber = null
+            activeWordIndex = null
+            return@LaunchedEffect
+        }
+        while (isActive && isPlaying) {
+            try {
+                val player = mediaPlayer
+                if (player != null && player.isPlaying) {
+                    val pos = player.currentPosition.toLong()
+                    currentPlaybackMs = pos
+                    val timing = chapterTiming
+                    if (timing != null) {
+                        val activeVerse = timing.findActiveVerse(pos)
+                        val vNum = activeVerse?.verseNumber
+                        val wIdx = if (activeVerse != null) timing.findActiveWordIndex(activeVerse, pos) else null
+                        if (activeVerseNumber != vNum) {
+                            activeVerseNumber = vNum
+                        }
+                        if (activeWordIndex != wIdx) {
+                            activeWordIndex = wIdx
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+            delay(40)
+        }
+    }
+
+    // Smooth auto-scroll following the active recited verse
+    LaunchedEffect(activeVerseNumber, autoScrollEnabled, isPlaying) {
+        val vNum = activeVerseNumber ?: return@LaunchedEffect
+        if (!autoScrollEnabled || !isPlaying) return@LaunchedEffect
+        val now = System.currentTimeMillis()
+        if (now - lastUserInteractionTime < 3200L) return@LaunchedEffect
+
+        val chunks = pageChunks ?: return@LaunchedEffect
+        val chunkIdx = chunks.indexOfFirst { chunk -> chunk.verses.any { it.number == vNum } }
+        if (chunkIdx >= 0) {
+            val itemIdx = if (layoutMode == QuranLayoutMode.TEXT && surah.number != 9) chunkIdx + 1 else chunkIdx
+            try {
+                listState.animateScrollToItem(itemIdx)
+            } catch (_: Exception) {}
+        }
+    }
 
     // Scroll state & scroll-aware floating bars
     var areBarsVisible by remember { mutableStateOf(true) }
@@ -1314,6 +1388,8 @@ private fun SurahReader(
             } catch (_: Exception) {}
             isPlaying = false
             isAudioLoading = false
+            activeVerseNumber = null
+            activeWordIndex = null
         }
     }
 
@@ -1326,6 +1402,8 @@ private fun SurahReader(
         } catch (_: Exception) {}
         isPlaying = false
         isAudioLoading = false
+        activeVerseNumber = null
+        activeWordIndex = null
     }
 
     fun toggleAudio() {
@@ -1344,11 +1422,8 @@ private fun SurahReader(
             return
         }
 
-        // Initialize and stream recitation from selected reciter (Minshawi / Alafasy)
+        // Initialize and stream recitation from selected reciter
         isAudioLoading = true
-        val surah3Digit = surah.number.toString().padStart(3, '0')
-        val audioUrl = "${reciter.baseUrl}/$surah3Digit.mp3"
-
         val player = MediaPlayer().apply {
             setAudioAttributes(
                 AudioAttributes.Builder()
@@ -1356,28 +1431,55 @@ private fun SurahReader(
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .build()
             )
-            setOnPreparedListener {
+            setOnPreparedListener { mp ->
                 isAudioLoading = false
                 isPlaying = true
-                it.start()
+                mp.start()
+                if (chapterTiming == null) {
+                    scope.launch {
+                        val verses = QuranRepository.getSurahVerses(context, surah.number) ?: emptyList()
+                        chapterTiming = QuranRecitationSyncRepository.synthesizeOfflineTiming(
+                            chapter = surah.number,
+                            reciterId = reciter.quranComId,
+                            verses = verses,
+                            totalDurationMs = mp.duration.toLong()
+                        )
+                    }
+                }
             }
             setOnCompletionListener {
                 isPlaying = false
+                activeVerseNumber = null
+                activeWordIndex = null
             }
-            setOnErrorListener { _, _, _ ->
-                isAudioLoading = false
-                isPlaying = false
+            setOnErrorListener { mp, _, _ ->
+                val fallbackUrl = reciter.getFallbackAudioUrl(surah.number)
+                runCatching {
+                    mp.reset()
+                    mp.setDataSource(fallbackUrl)
+                    mp.prepareAsync()
+                }.onFailure {
+                    isAudioLoading = false
+                    isPlaying = false
+                }
                 true
             }
         }
         mediaPlayer = player
 
         try {
-            player.setDataSource(audioUrl)
+            val primaryUrl = reciter.getPrimaryAudioUrl(surah.number)
+            player.setDataSource(primaryUrl)
             player.prepareAsync()
         } catch (_: Exception) {
-            isAudioLoading = false
-            isPlaying = false
+            try {
+                player.reset()
+                player.setDataSource(reciter.getFallbackAudioUrl(surah.number))
+                player.prepareAsync()
+            } catch (_: Exception) {
+                isAudioLoading = false
+                isPlaying = false
+            }
         }
     }
 
@@ -1553,8 +1655,11 @@ private fun SurahReader(
                             // Each chunk represents one authentic Madani Mushaf Page
                             items(chunks, key = { "text_page_${surah.number}_${it.pageNumber}" }) { chunk ->
                                 val sizeSp = (22 * fontScale).sp
-                                val inlineContent = remember(chunk, fontScale, colors.ayahMarker) {
+                                val isCurrentChunkActive = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
+
+                                val inlineContent = remember(chunk, fontScale, colors.ayahMarker, isCurrentChunkActive, activeVerseNumber) {
                                     chunk.verses.associate { verse ->
+                                        val isThisVerseActive = isPlaying && verse.number == activeVerseNumber
                                         "ayah_${verse.number}" to InlineTextContent(
                                             Placeholder(
                                                 width = sizeSp,
@@ -1565,17 +1670,84 @@ private fun SurahReader(
                                             AyahEndMedallion(
                                                 number = verse.number,
                                                 fontScale = fontScale,
-                                                color = colors.ayahMarker
+                                                color = if (isThisVerseActive) (if (colors.isLight) AtharPrimary else Color(0xFFC9D8B4)) else colors.ayahMarker
                                             )
                                         }
                                     }
                                 }
 
-                                val annotated = remember(chunk) {
+                                val annotated = remember(
+                                    chunk,
+                                    isPlaying,
+                                    activeVerseNumber,
+                                    activeWordIndex,
+                                    colors.text,
+                                    colors.isLight
+                                ) {
                                     buildAnnotatedString {
                                         for (i in chunk.verses.indices) {
                                             val verse = chunk.verses[i]
-                                            append(verse.text)
+                                            val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
+
+                                            if (!isPlaying) {
+                                                append(verse.text)
+                                            } else if (!isThisVerseActive) {
+                                                withStyle(SpanStyle(color = colors.text.copy(alpha = 0.35f))) {
+                                                    append(verse.text)
+                                                }
+                                            } else {
+                                                val rawWords = verse.text.split(" ")
+                                                val currentWIdx = activeWordIndex ?: 0
+                                                for (w in rawWords.indices) {
+                                                    val word = rawWords[w]
+                                                    val word1Based = w + 1
+
+                                                    when {
+                                                        word1Based == currentWIdx -> {
+                                                            val highlightColor = if (colors.isLight) Color(0xFF1B3B15) else Color(0xFFE2F1AF)
+                                                            val glowColor = if (colors.isLight) AtharPrimary.copy(alpha = 0.5f) else Color(0xFF86A789).copy(alpha = 0.85f)
+                                                            withStyle(
+                                                                SpanStyle(
+                                                                    color = highlightColor,
+                                                                    fontWeight = FontWeight.Black,
+                                                                    background = (if (colors.isLight) AtharPrimary else AtharPrimaryLight).copy(alpha = 0.22f),
+                                                                    shadow = Shadow(
+                                                                        color = glowColor,
+                                                                        offset = Offset(0f, 0f),
+                                                                        blurRadius = 12f
+                                                                    )
+                                                                )
+                                                            ) {
+                                                                append(word)
+                                                            }
+                                                        }
+                                                        word1Based < currentWIdx -> {
+                                                            withStyle(
+                                                                SpanStyle(
+                                                                    color = colors.text,
+                                                                    fontWeight = FontWeight.SemiBold
+                                                                )
+                                                            ) {
+                                                                append(word)
+                                                            }
+                                                        }
+                                                        else -> {
+                                                            withStyle(
+                                                                SpanStyle(
+                                                                    color = colors.text.copy(alpha = 0.70f),
+                                                                    fontWeight = FontWeight.Normal
+                                                                )
+                                                            ) {
+                                                                append(word)
+                                                            }
+                                                        }
+                                                    }
+                                                    if (w < rawWords.lastIndex) {
+                                                        append(" ")
+                                                    }
+                                                }
+                                            }
+
                                             append("\u202F")
                                             appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
                                             if (i < chunk.verses.lastIndex) {
@@ -2752,6 +2924,50 @@ private fun SurahReader(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Auto-scroll indicator & toggle when reciting
+                AnimatedVisibility(
+                    visible = shouldShowBars && isPlaying,
+                    enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it / 2 },
+                    exit = fadeOut(tween(150)) + slideOutVertically(tween(150)) { it / 2 }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(bottom = 10.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(colors.floatingPillBg.copy(alpha = 0.95f))
+                            .border(
+                                1.dp,
+                                if (autoScrollEnabled) colors.floatingPillActiveIcon.copy(alpha = 0.5f) else colors.floatingPillBorder,
+                                RoundedCornerShape(18.dp)
+                            )
+                            .clickable { autoScrollEnabled = !autoScrollEnabled }
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (autoScrollEnabled) colors.floatingPillActiveIcon else colors.dividerText.copy(alpha = 0.5f))
+                            )
+                            Text(
+                                text = if (isArabic) {
+                                    if (autoScrollEnabled) "التمرير التلقائي مفعّل" else "التمرير التلقائي متوقف"
+                                } else {
+                                    if (autoScrollEnabled) "Auto-scroll On" else "Auto-scroll Paused"
+                                },
+                                fontFamily = ThmanyahSans,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (autoScrollEnabled) colors.floatingPillActiveIcon else colors.dividerText
+                            )
                         }
                     }
                 }

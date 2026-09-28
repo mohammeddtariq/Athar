@@ -458,25 +458,47 @@ fun formatDigits(text: String, style: NumberStylePreference): String {
     }
 }
 
-/** Quran Reciters (Sheikh Mohamed Siddiq Al-Minshawi & Sheikh Mishary Alafasy) */
+/** Quran Reciters (Sheikh Mohamed Siddiq Al-Minshawi, Sheikh Abdul Basit Abdul Samad & Sheikh Mishary Alafasy) */
 enum class QuranReciter(
     val id: String,
     val arabicName: String,
     val englishName: String,
-    val baseUrl: String
+    val baseUrl: String,
+    val quranComId: Int,
+    val qdcSubpath: String
 ) {
     MINSHAWI(
         id = "minshawi",
         arabicName = "الشيخ محمد صديق المنشاوي (مرتل)",
         englishName = "Mohamed Siddiq Al-Minshawi",
-        baseUrl = "https://server10.mp3quran.net/minsh"
+        baseUrl = "https://server10.mp3quran.net/minsh",
+        quranComId = 9,
+        qdcSubpath = "siddiq_minshawi"
+    ),
+    ABDUL_BASIT(
+        id = "abdul_basit",
+        arabicName = "الشيخ عبد الباسط عبد الصمد (مرتل)",
+        englishName = "Abdul Basit Abdul Samad",
+        baseUrl = "https://server7.mp3quran.net/basit",
+        quranComId = 2,
+        qdcSubpath = "abdul_baset"
     ),
     ALAFASY(
         id = "alafasy",
         arabicName = "الشيخ مشاري راشد العفاسي",
         englishName = "Mishary Rashid Alafasy",
-        baseUrl = "https://server8.mp3quran.net/afs"
+        baseUrl = "https://server8.mp3quran.net/afs",
+        quranComId = 7,
+        qdcSubpath = "mishari_al_afasy"
     );
+
+    fun getPrimaryAudioUrl(chapterNumber: Int): String =
+        "https://download.quranicaudio.com/qdc/$qdcSubpath/murattal/$chapterNumber.mp3"
+
+    fun getFallbackAudioUrl(chapterNumber: Int): String {
+        val surah3Digit = chapterNumber.toString().padStart(3, '0')
+        return "$baseUrl/$surah3Digit.mp3"
+    }
 
     companion object {
         fun fromId(id: String): QuranReciter = entries.firstOrNull { it.id == id } ?: MINSHAWI
