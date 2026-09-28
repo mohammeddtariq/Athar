@@ -20,53 +20,21 @@
         android:padding="12dp"
         android:layoutDirection="rtl">
 
-        <!-- Top row: Hijri & Gregorian dates on Start, Next Prayer label & Location on End -->
+        <!-- Top row: Next Prayer label on Start (directly above prayer name), Location & Date on End -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:gravity="top"
             android:layoutDirection="rtl">
 
-            <!-- Date column on Start (Right in RTL) -->
+            <!-- Next Prayer label on Start (Right in RTL) directly above prayer name -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:gravity="start|center_vertical"
-                android:layoutDirection="rtl">
-
-                <TextView
-                    android:id="@+id/widget_hijri_date"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="١٥ ربيع الآخر ١٤٤٨ هـ"
-                    android:textColor="#8CA389"
-                    android:textSize="9.5sp"
-                    android:textAlignment="viewStart"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-
-                <TextView
-                    android:id="@+id/widget_gregorian_date"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="٢٦ سبتمبر ٢٠٢٦ م"
-                    android:textColor="#8CA389"
-                    android:textSize="9.5sp"
-                    android:textAlignment="viewStart"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <!-- Next Prayer & Location & Settings on End (Left in RTL) -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="end|center_vertical"
+                android:gravity="start|top"
                 android:layoutDirection="rtl">
 
                 <TextView
@@ -75,15 +43,23 @@
                     android:layout_height="wrap_content"
                     android:text="الصلاة التالية"
                     android:textColor="#C8D6C6"
-                    android:textSize="11.5sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:textAlignment="viewEnd"
+                    android:textAlignment="viewStart"
                     android:maxLines="1" />
+            </LinearLayout>
+
+            <!-- Location, Settings & Dates on End (Left in RTL) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="end|top"
+                android:layoutDirection="rtl">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layoutDirection="rtl">
@@ -116,6 +92,30 @@
                         android:src="@drawable/ic_widget_settings"
                         android:contentDescription="@null" />
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/widget_hijri_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="١٥ ربيع الآخر ١٤٤٨ هـ"
+                    android:textColor="#8CA389"
+                    android:textSize="9sp"
+                    android:textAlignment="viewEnd"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_gregorian_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="٢٦ سبتمبر ٢٠٢٦ م"
+                    android:textColor="#8CA389"
+                    android:textSize="9sp"
+                    android:textAlignment="viewEnd"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
             </LinearLayout>
         </LinearLayout>
 
@@ -223,6 +223,15 @@
                     android:textColor="#A5C89E"
                     android:textSize="12sp"
                     android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_countdown_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#A5C89E"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </FrameLayout>
         </LinearLayout>
     </LinearLayout>

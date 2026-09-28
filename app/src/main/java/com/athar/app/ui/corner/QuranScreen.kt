@@ -3,7 +3,10 @@ package com.athar.app.ui.corner
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.graphics.Picture
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.LruCache
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import java.util.Locale
 import androidx.compose.animation.AnimatedContent
@@ -27,6 +30,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -73,6 +77,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -279,6 +284,15 @@ fun getQuranColors(mode: QuranThemeMode): QuranReaderColors = when (mode) {
 
 private enum class QuranTabIndex {
     SURAHS, JUZ
+}
+
+private fun isNetworkAvailable(context: android.content.Context): Boolean {
+    return runCatching {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val activeNetwork = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(activeNetwork) ?: return false
+        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }.getOrDefault(false)
 }
 
 /**
@@ -1288,6 +1302,14 @@ private fun SurahReader(
     var autoScrollEnabled by rememberSaveable { mutableStateOf(true) }
     var areBarsVisible by remember { mutableStateOf(true) }
     var lastUserInteractionTime by remember { mutableLongStateOf(0L) }
+    var audioAlertMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(audioAlertMessage) {
+        if (audioAlertMessage != null) {
+            kotlinx.coroutines.delay(4000)
+            audioAlertMessage = null
+        }
+    }
 
     val listState = rememberLazyListState()
 
@@ -1356,7 +1378,7 @@ private fun SurahReader(
         }
     }
 
-    // Smooth auto-scroll following the active recited verse (per-ayah scrolling in text mode)
+    // Silky smooth auto-scroll following the active recited verse
     LaunchedEffect(activeVerseNumber, autoScrollEnabled, isPlaying) {
         val vNum = activeVerseNumber ?: return@LaunchedEffect
         if (!autoScrollEnabled || !isPlaying) return@LaunchedEffect
@@ -1367,7 +1389,32 @@ private fun SurahReader(
             val targetIdx = textItems.indexOfFirst { it is QuranTextItem.VerseItem && it.verse.number == vNum }
             if (targetIdx >= 0) {
                 try {
-                    listState.animateScrollToItem(targetIdx, scrollOffset = 0)
+                    val layoutInfo = listState.layoutInfo
+                    val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                    val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == targetIdx }
+                    if (visibleItem != null && viewportHeight > 0) {
+                        val itemTop = visibleItem.offset
+                        val focalTop = (viewportHeight * 0.18f).toInt()
+                        val focalBottom = (viewportHeight * 0.65f).toInt()
+                        if (itemTop in focalTop..focalBottom) {
+                            // Comfortably inside reading focal zone, glide not needed
+                        } else {
+                            val scrollDelta = itemTop - focalTop
+                            listState.animateScrollBy(
+                                value = scrollDelta.toFloat(),
+                                animationSpec = tween<Float>(
+                                    durationMillis = 750,
+                                    easing = FastOutSlowInEasing
+                                )
+                            )
+                        }
+                    } else {
+                        val focalOffset = if (viewportHeight > 0) (viewportHeight * 0.18f).toInt() else 120
+                        listState.animateScrollToItem(
+                            index = targetIdx,
+                            scrollOffset = -focalOffset
+                        )
+                    }
                 } catch (_: Exception) {}
             }
         } else {
@@ -1375,7 +1422,32 @@ private fun SurahReader(
             val chunkIdx = chunks.indexOfFirst { chunk -> chunk.verses.any { it.number == vNum } }
             if (chunkIdx >= 0) {
                 try {
-                    listState.animateScrollToItem(chunkIdx, scrollOffset = 0)
+                    val layoutInfo = listState.layoutInfo
+                    val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                    val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == chunkIdx }
+                    if (visibleItem != null && viewportHeight > 0) {
+                        val itemTop = visibleItem.offset
+                        val focalTop = (viewportHeight * 0.15f).toInt()
+                        val focalBottom = (viewportHeight * 0.70f).toInt()
+                        if (itemTop in focalTop..focalBottom) {
+                            // Already visible
+                        } else {
+                            val scrollDelta = itemTop - focalTop
+                            listState.animateScrollBy(
+                                value = scrollDelta.toFloat(),
+                                animationSpec = tween<Float>(
+                                    durationMillis = 750,
+                                    easing = FastOutSlowInEasing
+                                )
+                            )
+                        }
+                    } else {
+                        val focalOffset = if (viewportHeight > 0) (viewportHeight * 0.15f).toInt() else 100
+                        listState.animateScrollToItem(
+                            index = chunkIdx,
+                            scrollOffset = -focalOffset
+                        )
+                    }
                 } catch (_: Exception) {}
             }
         }
@@ -1513,6 +1585,16 @@ private fun SurahReader(
             return
         }
 
+        // Verify internet connection before attempting to stream recitation
+        if (!isNetworkAvailable(context)) {
+            val msg = context.getString(R.string.quran_audio_requires_internet)
+            audioAlertMessage = msg
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            isAudioLoading = false
+            isPlaying = false
+            return
+        }
+
         // Initialize and stream recitation from selected reciter
         isAudioLoading = true
         val player = MediaPlayer().apply {
@@ -1547,13 +1629,17 @@ private fun SurahReader(
             }
             setOnErrorListener { mp, _, _ ->
                 val fallbackUrl = reciter.getFallbackAudioUrl(surah.number)
-                runCatching {
+                val fallbackSuccess = runCatching {
                     mp.reset()
                     mp.setDataSource(fallbackUrl)
                     mp.prepareAsync()
-                }.onFailure {
+                }.isSuccess
+                if (!fallbackSuccess) {
                     isAudioLoading = false
                     isPlaying = false
+                    val msg = context.getString(R.string.quran_audio_network_error)
+                    audioAlertMessage = msg
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
                 true
             }
@@ -1572,6 +1658,9 @@ private fun SurahReader(
             } catch (_: Exception) {
                 isAudioLoading = false
                 isPlaying = false
+                val msg = context.getString(R.string.quran_audio_network_error)
+                audioAlertMessage = msg
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -1824,9 +1913,8 @@ private fun SurahReader(
                                                 } else {
                                                     val tokens = parseVerseTokens(verse.text)
                                                     val currentWIdx = activeWordIndex ?: 0
-                                                    val highlightColor = if (colors.isLight) Color(0xFF1B3B15) else Color.White
-                                                    val glowColor = if (colors.isLight) AtharPrimary.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.85f)
-                                                    val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.20f)
+                                                    val highlightColor = if (colors.isLight) Color(0xFF163212) else Color(0xFFFFFFFF)
+                                                    val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.14f)
 
                                                     for (w in tokens.indices) {
                                                         val tokenItem = tokens[w]
@@ -1841,13 +1929,13 @@ private fun SurahReader(
                                                                     withStyle(
                                                                         SpanStyle(
                                                                             color = highlightColor,
-                                                                            fontWeight = FontWeight.Black,
+                                                                            fontWeight = FontWeight.Bold,
                                                                             background = bgHighlight,
-                                                                            shadow = Shadow(
-                                                                                color = glowColor,
-                                                                                offset = Offset(0f, 0f),
-                                                                                blurRadius = 12f
-                                                                            )
+                                                                            shadow = if (!colors.isLight) Shadow(
+                                                                                color = Color.Black.copy(alpha = 0.75f),
+                                                                                offset = Offset(0f, 1f),
+                                                                                blurRadius = 2f
+                                                                            ) else null
                                                                         )
                                                                     ) {
                                                                         append(tokenItem.token)
@@ -1886,11 +1974,32 @@ private fun SurahReader(
                                             }
                                         }
 
+                                        val activeVerseBorder = if (colors.isLight) {
+                                            AtharPrimary.copy(alpha = 0.35f)
+                                        } else {
+                                            Color.White.copy(alpha = 0.25f)
+                                        }
+                                        val activeVerseBg = if (colors.isLight) {
+                                            Color(0xFFF2F6F0).copy(alpha = 0.70f)
+                                        } else {
+                                            Color.White.copy(alpha = 0.05f)
+                                        }
+
+                                        val activeVerseModifier = if (isThisVerseActive) {
+                                            Modifier
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(activeVerseBg)
+                                                .border(1.dp, activeVerseBorder, RoundedCornerShape(16.dp))
+                                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                                        } else {
+                                            Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                        }
+
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .widthIn(max = 520.dp)
-                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                                .then(activeVerseModifier),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
@@ -3229,6 +3338,45 @@ private fun SurahReader(
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // Network warning banner when reciting requires internet
+            AnimatedVisibility(
+                visible = audioAlertMessage != null,
+                enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it / 2 },
+                exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 110.dp, start = 20.dp, end = 20.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(if (colors.isLight) Color(0xFF1E241A) else Color(0xFF181E16))
+                        .border(1.2.dp, Color(0xFFE57373).copy(alpha = 0.65f), RoundedCornerShape(22.dp))
+                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.WifiOff,
+                            contentDescription = null,
+                            tint = Color(0xFFFF8A80),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = audioAlertMessage ?: "",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }

@@ -216,6 +216,8 @@
     <string name="quran_layout_pages">الرسم العثماني</string>
     <string name="quran_layout_beta">تجريبي</string>
     <string name="quran_layout_default">افتراضي</string>
+    <string name="quran_audio_requires_internet">تتطلب التلاوة اتصالاً بالإنترنت للاستماع لصوت القارئ</string>
+    <string name="quran_audio_network_error">تعذر تشغيل التلاوة. يرجى التحقق من اتصالك بالإنترنت</string>
 
     <!-- App Updates -->
     <string name="update_notif_channel_name">أَثَر • تحديثات التطبيق</string>

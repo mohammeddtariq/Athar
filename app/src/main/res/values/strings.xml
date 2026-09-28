@@ -216,6 +216,8 @@
     <string name="quran_layout_pages">Uthmanic Script</string>
     <string name="quran_layout_beta">Beta</string>
     <string name="quran_layout_default">Default</string>
+    <string name="quran_audio_requires_internet">Audio recitation requires an active internet connection</string>
+    <string name="quran_audio_network_error">Unable to stream recitation. Please check your internet connection</string>
 
     <!-- App Updates -->
     <string name="update_notif_channel_name">Athar • App Updates</string>

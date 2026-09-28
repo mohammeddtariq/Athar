@@ -1934,30 +1934,10 @@ private fun WidgetLivePreviewCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                // Start side: Dates (Hijri & Gregorian)
-                Column {
-                    if (hijriDateText.isNotEmpty()) {
-                        Text(
-                            text = hijriDateText,
-                            fontFamily = ThmanyahSans,
-                            fontSize = 9.5.sp,
-                            color = AtharPrimaryMuted
-                        )
-                    }
-                    if (gregorianDateText.isNotEmpty()) {
-                        Text(
-                            text = gregorianDateText,
-                            fontFamily = ThmanyahSans,
-                            fontSize = 9.5.sp,
-                            color = AtharPrimaryMuted
-                        )
-                    }
-                }
-
-                // End side: Next Prayer label & Location
-                Column(horizontalAlignment = Alignment.End) {
+                // Start side: Next Prayer label directly above prayer name
+                Column(horizontalAlignment = Alignment.Start) {
                     Text(
                         text = if (isAr) "الصلاة التالية" else "Next Prayer",
                         fontFamily = ThmanyahSans,
@@ -1965,6 +1945,10 @@ private fun WidgetLivePreviewCard(
                         fontSize = 11.5.sp,
                         color = AtharTextSecondary
                     )
+                }
+
+                // End side: Location & Dates (Hijri & Gregorian)
+                Column(horizontalAlignment = Alignment.End) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Outlined.LocationOn,
@@ -1979,6 +1963,22 @@ private fun WidgetLivePreviewCard(
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
                             color = AtharTextSecondary
+                        )
+                    }
+                    if (hijriDateText.isNotEmpty()) {
+                        Text(
+                            text = hijriDateText,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 9.sp,
+                            color = AtharPrimaryMuted
+                        )
+                    }
+                    if (gregorianDateText.isNotEmpty()) {
+                        Text(
+                            text = gregorianDateText,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 9.sp,
+                            color = AtharPrimaryMuted
                         )
                     }
                 }

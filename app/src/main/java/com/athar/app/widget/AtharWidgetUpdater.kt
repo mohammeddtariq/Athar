@@ -23,6 +23,7 @@ import com.athar.app.data.CalcMethod
 import com.athar.app.data.DayPrayers
 import com.athar.app.data.HijriDateHelper
 import com.athar.app.data.MadhabOption
+import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.WidgetBgStyle
 import com.athar.app.data.WidgetFontStyle
 import com.athar.app.data.computeDayPrayers
@@ -79,7 +80,8 @@ object AtharWidgetUpdater {
             renderPrayersWideWidget(appContext, appWidgetManager, widgetId, snapshot, day, next)
         }
 
-        scheduleNextAlarm(appContext, next.time, next.isTomorrow)
+        val requiresMinuteTick = (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC)
+        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick)
     }
 
     fun updateAllWidgets(context: Context, overrideSnapshot: AppPrefsSnapshot? = null) {
@@ -225,8 +227,15 @@ object AtharWidgetUpdater {
             views.setViewVisibility(R.id.widget_prayer_time_image, View.GONE)
         }
 
-        // Live Countdown via Chronometer
-        setupChronometer(views, R.id.widget_countdown_chrono, next.time, next.isTomorrow)
+        // Live Countdown via Chronometer (or localized TextView for Arabic numerals)
+        setupCountdown(
+            views = views,
+            chronoId = R.id.widget_countdown_chrono,
+            textId = R.id.widget_countdown_text,
+            targetTime = next.time,
+            isTomorrow = next.isTomorrow,
+            numberStyle = snapshot.widgetNumberStyle
+        )
 
         // Tap to open app
         setupClickIntent(context, views)
@@ -332,8 +341,15 @@ object AtharWidgetUpdater {
         )
         views.setTextViewText(R.id.widget_gregorian_date, gregorianDateText)
 
-        // Live Countdown
-        setupChronometer(views, R.id.widget_countdown_chrono, next.time, next.isTomorrow)
+        // Live Countdown via Chronometer (or localized TextView for Arabic numerals)
+        setupCountdown(
+            views = views,
+            chronoId = R.id.widget_countdown_chrono,
+            textId = R.id.widget_countdown_text,
+            targetTime = next.time,
+            isTomorrow = next.isTomorrow,
+            numberStyle = snapshot.widgetNumberStyle
+        )
 
         // All prayers row configuration
         val prayerRows = listOf(
@@ -378,21 +394,46 @@ object AtharWidgetUpdater {
         appWidgetManager.updateAppWidget(widgetId, views)
     }
 
-    private fun setupChronometer(
+    private fun setupCountdown(
         views: RemoteViews,
         chronoId: Int,
+        textId: Int,
         targetTime: LocalTime,
-        isTomorrow: Boolean
+        isTomorrow: Boolean,
+        numberStyle: NumberStylePreference
     ) {
         val targetDate = prayerDateToday(targetTime, isTomorrow)
         val diffMillis = targetDate.time - System.currentTimeMillis()
-        if (diffMillis > 0) {
-            val base = SystemClock.elapsedRealtime() + diffMillis
-            views.setChronometerCountDown(chronoId, true)
-            views.setChronometer(chronoId, base, null, true)
+
+        if (numberStyle == NumberStylePreference.ARABIC_INDIC) {
+            views.setViewVisibility(chronoId, View.GONE)
+            views.setViewVisibility(textId, View.VISIBLE)
+            val timeText = if (diffMillis > 0) {
+                val totalSeconds = (diffMillis / 1000).coerceAtLeast(0)
+                val hours = totalSeconds / 3600
+                val minutes = (totalSeconds % 3600) / 60
+                val seconds = totalSeconds % 60
+                val formatted = if (hours > 0) {
+                    String.format("%02d:%02d", hours, minutes)
+                } else {
+                    String.format("%02d:%02d", minutes, seconds)
+                }
+                formatDigits(formatted, numberStyle)
+            } else {
+                formatDigits("00:00", numberStyle)
+            }
+            views.setTextViewText(textId, timeText)
         } else {
-            views.setChronometerCountDown(chronoId, false)
-            views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
+            views.setViewVisibility(textId, View.GONE)
+            views.setViewVisibility(chronoId, View.VISIBLE)
+            if (diffMillis > 0) {
+                val base = SystemClock.elapsedRealtime() + diffMillis
+                views.setChronometerCountDown(chronoId, true)
+                views.setChronometer(chronoId, base, null, true)
+            } else {
+                views.setChronometerCountDown(chronoId, false)
+                views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
+            }
         }
     }
 
@@ -421,9 +462,22 @@ object AtharWidgetUpdater {
         views.setOnClickPendingIntent(R.id.widget_btn_settings, settingsPending)
     }
 
-    private fun scheduleNextAlarm(context: Context, nextTime: LocalTime, isTomorrow: Boolean) {
+    private fun scheduleNextAlarm(
+        context: Context,
+        nextTime: LocalTime,
+        isTomorrow: Boolean,
+        requiresMinuteTick: Boolean = false
+    ) {
         val targetDate = prayerDateToday(nextTime, isTomorrow)
-        val triggerAtMillis = targetDate.time + 1000 // 1 second after prayer time
+        val prayerTimeMillis = targetDate.time + 1000 // 1 second after prayer time
+        val now = System.currentTimeMillis()
+
+        val triggerAtMillis = if (requiresMinuteTick && prayerTimeMillis > now) {
+            val nextMinute = ((now / 60000L) + 1L) * 60000L
+            minOf(nextMinute, prayerTimeMillis)
+        } else {
+            prayerTimeMillis
+        }
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val intent = Intent(context, WidgetAlarmReceiver::class.java)
