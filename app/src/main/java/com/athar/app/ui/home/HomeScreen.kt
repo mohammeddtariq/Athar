@@ -708,13 +708,6 @@ fun PrayerItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                formatDigits(row.time.format(timeFmt), numberStyle),
-                color = if (row.isNext) AtharPrimaryLight else AtharTextSecondary,
-                fontFamily = ThmanyahSans,
-                fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,
-                fontSize = 14.sp
-            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(row.nameResId),
@@ -732,6 +725,13 @@ fun PrayerItem(
                     )
                 }
             }
+            Text(
+                formatDigits(row.time.format(timeFmt), numberStyle),
+                color = if (row.isNext) AtharPrimaryLight else AtharTextSecondary,
+                fontFamily = ThmanyahSans,
+                fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,
+                fontSize = 14.sp
+            )
         }
     }
 }

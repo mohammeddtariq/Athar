@@ -165,6 +165,7 @@ import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.QuranBismillah
 import com.athar.app.ui.theme.QuranSurahNames
 import com.athar.app.ui.theme.QuranUthmanicHafs
+import com.athar.app.ui.theme.QuranIndoPak
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
@@ -475,7 +476,7 @@ fun QuranScreen(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(bottom = 100.dp)
+                            .padding(bottom = 76.dp)
                     ) {
                         LastReadFloatingCard(
                             surahName = displayName,
@@ -948,8 +949,15 @@ private fun AyahEndMedallion(
 @Composable
 private fun QuranPageDivider(
     pageNumber: Int,
-    colors: QuranReaderColors
+    colors: QuranReaderColors,
+    layoutMode: QuranLayoutMode = QuranLayoutMode.TEXT
 ) {
+    val isArabic = remember { Locale.getDefault().language == "ar" }
+    val dividerLabel = if (layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
+        if (isArabic) "مصحف ١٣ سطر • ص ${pageNumber.toArabicIndic()}" else "13-Line Mushaf • p. $pageNumber"
+    } else {
+        pageNumber.toArabicIndic()
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -964,10 +972,10 @@ private fun QuranPageDivider(
                 .background(colors.dividerLine)
         )
         Text(
-            text = "  —  ${pageNumber.toArabicIndic()}  —  ",
+            text = "  —  $dividerLabel  —  ",
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
+            fontSize = 12.5.sp,
             color = colors.dividerText
         )
         Box(
@@ -1216,7 +1224,7 @@ private fun LigatureMushafPage(
     }
 }
 
-private val QURAN_STOP_MARK_REGEX = Regex("^[\\u06D6-\\u06DC\\u06DE\\u06E9\\s]+$")
+private val QURAN_STOP_MARK_REGEX = Regex("^[\\u0615-\\u061A\\u06D6-\\u06ED\\uF600-\\uF8FF\\s]+$")
 
 data class QuranVerseToken(
     val token: String,
@@ -1391,7 +1399,7 @@ private fun SurahReader(
         val now = System.currentTimeMillis()
         if (now - lastUserInteractionTime < 2800L) return@LaunchedEffect
 
-        if (layoutMode == QuranLayoutMode.TEXT) {
+        if (layoutMode == QuranLayoutMode.TEXT || layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
             val targetIdx = textItems.indexOfFirst { it is QuranTextItem.VerseItem && it.verse.number == vNum }
             if (targetIdx >= 0) {
                 try {
@@ -1602,7 +1610,6 @@ private fun SurahReader(
         if (!isNetworkAvailable(context)) {
             val msg = context.getString(R.string.quran_audio_requires_internet)
             audioAlertMessage = msg
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             isAudioLoading = false
             isPlaying = false
             return
@@ -1652,7 +1659,6 @@ private fun SurahReader(
                     isPlaying = false
                     val msg = context.getString(R.string.quran_audio_network_error)
                     audioAlertMessage = msg
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
                 true
             }
@@ -1673,7 +1679,6 @@ private fun SurahReader(
                 isPlaying = false
                 val msg = context.getString(R.string.quran_audio_network_error)
                 audioAlertMessage = msg
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -1681,15 +1686,22 @@ private fun SurahReader(
     var isPositionRestored by remember(surah.number) { mutableStateOf(initialPageNumber == null) }
 
     // Load surah verses chunked by authentic Mushaf pages
-    LaunchedEffect(surah.number, attempt) {
+    LaunchedEffect(surah.number, layoutMode, attempt) {
         pageChunks = null
         loadFailed = false
 
         try {
-            val chunks = QuranRepository.getSurahPageChunks(
-                context = context,
-                number = surah.number
-            )
+            val chunks = if (layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
+                QuranRepository.getSurah13LinePageChunks(
+                    context = context,
+                    number = surah.number
+                )
+            } else {
+                QuranRepository.getSurahPageChunks(
+                    context = context,
+                    number = surah.number
+                )
+            }
             pageChunks = chunks
             loadFailed = chunks.isNullOrEmpty()
         } catch (e: Throwable) {
@@ -1702,7 +1714,7 @@ private fun SurahReader(
     LaunchedEffect(pageChunks, initialPageNumber, layoutMode) {
         val chunks = pageChunks
         if (!chunks.isNullOrEmpty() && initialPageNumber != null && !isPositionRestored) {
-            if (layoutMode == QuranLayoutMode.TEXT) {
+            if (layoutMode == QuranLayoutMode.TEXT || layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
                 val targetIdx = textItems.indexOfFirst {
                     (it is QuranTextItem.VerseItem && it.pageNumber == initialPageNumber) ||
                     (it is QuranTextItem.PageDividerItem && it.pageNumber == initialPageNumber)
@@ -1728,7 +1740,7 @@ private fun SurahReader(
 
     val currentVisiblePage by remember {
         derivedStateOf {
-            if (layoutMode == QuranLayoutMode.TEXT) {
+            if (layoutMode == QuranLayoutMode.TEXT || layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
                 if (textItems.isNotEmpty()) {
                     val idx = listState.firstVisibleItemIndex.coerceIn(0, textItems.lastIndex)
                     when (val item = textItems[idx]) {
@@ -1736,11 +1748,19 @@ private fun SurahReader(
                         is QuranTextItem.PageDividerItem -> item.pageNumber
                         is QuranTextItem.BismillahItem -> {
                             val firstVerse = textItems.filterIsInstance<QuranTextItem.VerseItem>().firstOrNull()
-                            firstVerse?.pageNumber ?: QuranPages.getPageForVerse(surah.number, 1)
+                            firstVerse?.pageNumber ?: if (layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
+                                QuranPages.get13LinePageForVerse(surah.number, 1)
+                            } else {
+                                QuranPages.getPageForVerse(surah.number, 1)
+                            }
                         }
                     }
                 } else {
-                    QuranPages.getPageForVerse(surah.number, 1)
+                    if (layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
+                        QuranPages.get13LinePageForVerse(surah.number, 1)
+                    } else {
+                        QuranPages.getPageForVerse(surah.number, 1)
+                    }
                 }
             } else {
                 val chunks = pageChunks
@@ -1812,7 +1832,7 @@ private fun SurahReader(
                         ),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (layoutMode == QuranLayoutMode.TEXT) {
+                        if (layoutMode == QuranLayoutMode.TEXT || layoutMode == QuranLayoutMode.INDOPAK_13_LINES) {
                             // ─── DESIGN 1 (DEFAULT): Traditional Uthmanic Text Flow with Per-Ayah Items ───
                             items(
                                 count = textItems.size,
@@ -1832,11 +1852,12 @@ private fun SurahReader(
                                                 .padding(top = 8.dp, bottom = 18.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
+                                            val isIndoPak = layoutMode == QuranLayoutMode.INDOPAK_13_LINES
                                             Text(
-                                                text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
-                                                fontFamily = QuranBismillah,
+                                                text = if (isIndoPak) "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ" else "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf or IndoPak
+                                                fontFamily = if (isIndoPak) QuranIndoPak else QuranBismillah,
                                                 fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                                                fontSize = (42 * fontScale).sp,
+                                                fontSize = (if (isIndoPak) 26 * fontScale else 42 * fontScale).sp,
                                                 color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
                                                 style = TextStyle(
                                                     shadow = if (fontBold) Shadow(
@@ -1881,13 +1902,15 @@ private fun SurahReader(
                                     is QuranTextItem.PageDividerItem -> {
                                         QuranPageDivider(
                                             pageNumber = item.pageNumber,
-                                            colors = colors
+                                            colors = colors,
+                                            layoutMode = layoutMode
                                         )
                                     }
                                     is QuranTextItem.VerseItem -> {
                                         val verse = item.verse
                                         val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
-                                        val sizeSp = (22 * fontScale).sp
+                                        val isIndoPak = layoutMode == QuranLayoutMode.INDOPAK_13_LINES
+                                        val sizeSp = (if (isIndoPak) 23 * fontScale else 22 * fontScale).sp
 
                                         val inlineContent = remember(verse.number, fontScale, colors.ayahMarker, isThisVerseActive) {
                                             mapOf(
@@ -2025,10 +2048,10 @@ private fun SurahReader(
                                             Text(
                                                 text = annotated,
                                                 inlineContent = inlineContent,
-                                                fontFamily = QuranUthmanicHafs,
+                                                fontFamily = if (isIndoPak) QuranIndoPak else QuranUthmanicHafs,
                                                 fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                                                fontSize = (22 * fontScale).sp,
-                                                lineHeight = (42 * fontScale).sp,
+                                                fontSize = if (isIndoPak) (23 * fontScale).sp else (22 * fontScale).sp,
+                                                lineHeight = if (isIndoPak) (48 * fontScale).sp else (42 * fontScale).sp,
                                                 color = colors.text,
                                                 textAlign = TextAlign.Center,
                                                 style = TextStyle(
@@ -2869,7 +2892,7 @@ private fun SurahReader(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(240.dp)
+                            modifier = Modifier.width(295.dp)
                         ) {
                             // Layout Mode Switcher inside Font Panel
                             Text(
@@ -2886,7 +2909,7 @@ private fun SurahReader(
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(colors.floatingPillItemBg)
                                     .padding(3.dp),
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 val isTextSelected = layoutMode == QuranLayoutMode.TEXT
                                 Box(
@@ -2900,7 +2923,7 @@ private fun SurahReader(
                                             RoundedCornerShape(11.dp)
                                         )
                                         .clickable { onLayoutModeChange(QuranLayoutMode.TEXT) }
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        .padding(vertical = 8.dp, horizontal = 2.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(
@@ -2910,7 +2933,7 @@ private fun SurahReader(
                                         Text(
                                             text = stringResource(R.string.quran_layout_text),
                                             fontFamily = ThmanyahSans,
-                                            fontSize = 11.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = if (isTextSelected) FontWeight.Bold else FontWeight.Medium,
                                             color = if (isTextSelected) colors.floatingPillActiveIcon else colors.floatingPillItemIcon,
                                             textAlign = TextAlign.Center,
@@ -2940,7 +2963,7 @@ private fun SurahReader(
                                             RoundedCornerShape(11.dp)
                                         )
                                         .clickable { onLayoutModeChange(QuranLayoutMode.PAGES_SVG) }
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        .padding(vertical = 8.dp, horizontal = 2.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(
@@ -2950,7 +2973,7 @@ private fun SurahReader(
                                         Text(
                                             text = stringResource(R.string.quran_layout_pages),
                                             fontFamily = ThmanyahSans,
-                                            fontSize = 11.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = if (isPagesSelected) FontWeight.Bold else FontWeight.Medium,
                                             color = if (isPagesSelected) colors.floatingPillActiveIcon else colors.floatingPillItemIcon,
                                             textAlign = TextAlign.Center,
@@ -2965,7 +2988,7 @@ private fun SurahReader(
                                                     if (colors.isLight) Color(0xFFC26E28).copy(alpha = 0.4f) else Color(0xFFE58E3A).copy(alpha = 0.45f),
                                                     RoundedCornerShape(4.dp)
                                                 )
-                                                .padding(horizontal = 6.dp, vertical = 1.dp)
+                                                .padding(horizontal = 5.dp, vertical = 1.dp)
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.quran_layout_beta),
@@ -2973,6 +2996,58 @@ private fun SurahReader(
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (colors.isLight) Color(0xFFC26E28) else Color(0xFFE58E3A),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+
+                                val isIndoPakSelected = layoutMode == QuranLayoutMode.INDOPAK_13_LINES
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(11.dp))
+                                        .background(if (isIndoPakSelected) colors.floatingPillBg else Color.Transparent)
+                                        .border(
+                                            1.dp,
+                                            if (isIndoPakSelected) colors.floatingPillActiveIcon.copy(alpha = 0.5f) else Color.Transparent,
+                                            RoundedCornerShape(11.dp)
+                                        )
+                                        .clickable { onLayoutModeChange(QuranLayoutMode.INDOPAK_13_LINES) }
+                                        .padding(vertical = 8.dp, horizontal = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.quran_layout_indopak_13),
+                                            fontFamily = ThmanyahSans,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isIndoPakSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isIndoPakSelected) colors.floatingPillActiveIcon else colors.floatingPillItemIcon,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(if (colors.isLight) AtharPrimary.copy(alpha = 0.12f) else AtharPrimaryLight.copy(alpha = 0.18f))
+                                                .border(
+                                                    0.5.dp,
+                                                    if (colors.isLight) AtharPrimary.copy(alpha = 0.35f) else AtharPrimaryLight.copy(alpha = 0.4f),
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.quran_layout_indopak_badge),
+                                                fontFamily = ThmanyahSans,
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (colors.isLight) AtharPrimary else AtharPrimaryLight,
                                                 textAlign = TextAlign.Center,
                                                 maxLines = 1
                                             )

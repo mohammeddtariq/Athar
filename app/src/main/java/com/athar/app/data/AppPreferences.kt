@@ -505,10 +505,11 @@ enum class QuranReciter(
     }
 }
 
-/** Quran Reader Layout Modes: Traditional Text Flow (Default) vs Vector Mushaf Pages (Beta) */
+/** Quran Reader Layout Modes: Traditional Text Flow (Default), Vector Mushaf Pages (Beta), and 13-Line IndoPak Mushaf */
 enum class QuranLayoutMode(val id: String) {
     TEXT("TEXT"),
-    PAGES_SVG("PAGES_SVG");
+    PAGES_SVG("PAGES_SVG"),
+    INDOPAK_13_LINES("INDOPAK_13_LINES");
 
     companion object {
         fun fromId(id: String): QuranLayoutMode = entries.firstOrNull { it.id == id } ?: TEXT

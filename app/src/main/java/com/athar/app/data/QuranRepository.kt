@@ -35,6 +35,9 @@ object QuranRepository {
     private val ARABIC_INDIC = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
 
     private val memoryCache = ConcurrentHashMap<Int, List<QuranVerse>>()
+    private val indopakMemoryCache = ConcurrentHashMap<Int, List<QuranVerse>>()
+    @Volatile
+    private var allIndoPakVersesJson: JSONObject? = null
 
     fun Int.toArabicIndic(): String = this.toString().map { c ->
         if (c in '0'..'9') ARABIC_INDIC[c - '0'] else c
@@ -170,6 +173,52 @@ object QuranRepository {
         withContext(Dispatchers.IO) {
             val verses = getSurahVerses(context, number) ?: return@withContext null
             QuranPages.getSurahPageChunks(number, verses)
+        }
+
+    /**
+     * Loads surah verses in authentic IndoPak script, bundled offline in assets/quran_indopak.json.
+     */
+    suspend fun getSurahIndoPakVerses(context: Context, number: Int): List<QuranVerse>? =
+        withContext(Dispatchers.IO) {
+            indopakMemoryCache[number]?.let { return@withContext it }
+
+            val list = ArrayList<QuranVerse>()
+            val loaded = runCatching {
+                if (allIndoPakVersesJson == null) {
+                    val am = context.assets ?: context.applicationContext.assets
+                    val jsonStr = am.open("quran_indopak.json").bufferedReader().use { it.readText() }
+                    allIndoPakVersesJson = JSONObject(jsonStr)
+                }
+                val obj = allIndoPakVersesJson ?: return@runCatching false
+                var ayah = 1
+                while (true) {
+                    val key = "$number:$ayah"
+                    if (obj.has(key)) {
+                        list.add(QuranVerse(ayah, obj.getString(key).trim()))
+                        ayah++
+                    } else {
+                        break
+                    }
+                }
+                list.isNotEmpty()
+            }.getOrDefault(false)
+
+            if (loaded && list.isNotEmpty()) {
+                indopakMemoryCache[number] = list
+                return@withContext list
+            }
+
+            // Fallback to standard verses if ever needed
+            getSurahVerses(context, number)
+        }
+
+    /**
+     * Loads surah verses grouped by canonical 13-line IndoPak Mushaf pages (1..848).
+     */
+    suspend fun getSurah13LinePageChunks(context: Context, number: Int): List<QuranPageChunk>? =
+        withContext(Dispatchers.IO) {
+            val verses = getSurahIndoPakVerses(context, number) ?: return@withContext null
+            QuranPages.getSurah13LinePageChunks(number, verses)
         }
 
     fun chunkVerses(verses: List<QuranVerse>, chunkSize: Int = 18): List<VerseChunk> {

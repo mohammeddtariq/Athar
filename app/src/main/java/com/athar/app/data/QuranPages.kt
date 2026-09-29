@@ -113,6 +113,39 @@ object QuranPages {
         }
         return chunks
     }
+
+    /**
+     * Returns the 1-indexed 13-line IndoPak Mushaf page number (1..848) for a given [surah] and [ayah].
+     */
+    fun get13LinePageForVerse(surah: Int, ayah: Int): Int {
+        val madaniPage = getPageForVerse(surah, ayah)
+        return kotlin.math.round((madaniPage - 1).toDouble() / 603.0 * 847.0 + 1.0).toInt().coerceIn(1, 848)
+    }
+
+    /**
+     * Groups a surah's verses by canonical 13-line IndoPak Mushaf pages (1..848).
+     */
+    fun getSurah13LinePageChunks(surah: Int, verses: List<QuranVerse>): List<QuranPageChunk> {
+        if (verses.isEmpty()) return emptyList()
+        val chunks = mutableListOf<QuranPageChunk>()
+        var currentPage = get13LinePageForVerse(surah, verses.first().number)
+        val currentList = mutableListOf<QuranVerse>()
+
+        for (i in verses.indices) {
+            val v = verses[i]
+            val p = get13LinePageForVerse(surah, v.number)
+            if (p != currentPage && currentList.isNotEmpty()) {
+                chunks.add(QuranPageChunk(currentPage, currentList.toList(), false))
+                currentList.clear()
+                currentPage = p
+            }
+            currentList.add(v)
+        }
+        if (currentList.isNotEmpty()) {
+            chunks.add(QuranPageChunk(currentPage, currentList.toList(), true))
+        }
+        return chunks
+    }
 }
 
 data class QuranPageChunk(

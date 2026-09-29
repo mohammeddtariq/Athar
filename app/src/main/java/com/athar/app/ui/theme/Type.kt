@@ -53,6 +53,10 @@ val QuranBismillah = FontFamily(
     Font(R.font.bismillah, FontWeight.Normal)
 )
 
+val QuranIndoPak = FontFamily(
+    Font(R.font.quran_indopak, FontWeight.Normal)
+)
+
 val Typography = Typography(
     // ─── Display styles — Refined Sizes ───
     displayLarge = TextStyle(
