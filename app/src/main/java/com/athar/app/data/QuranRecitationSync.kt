@@ -42,8 +42,41 @@ data class ChapterRecitationTiming(
      */
     fun findActiveWordIndex(verse: VerseTiming, positionMs: Long): Int? {
         if (verse.segments.isEmpty()) return null
-        return verse.segments.firstOrNull { positionMs in it.startMs..it.endMs }?.wordIndex
-            ?: verse.segments.lastOrNull { positionMs >= it.endMs }?.wordIndex
+
+        val firstSeg = verse.segments.first()
+        // If position is before the first word of this verse begins, do not highlight any word
+        if (positionMs < firstSeg.startMs) return null
+
+        // 1. Direct hit inside word segment [startMs .. endMs]
+        val direct = verse.segments.firstOrNull { positionMs in it.startMs..it.endMs }
+        if (direct != null) return direct.wordIndex
+
+        // 2. If position is after the very last word of this verse by >100ms (verse end silence/breath)
+        val lastSeg = verse.segments.last()
+        if (positionMs > lastSeg.endMs + 100L) {
+            return null
+        }
+
+        // 3. In between word N and word N+1 (small gap/pause):
+        // Never jump to word N+1 before it starts!
+        // During gaps > 80ms, stop highlighting so indicator stops during pauses.
+        // During micro gaps (<= 80ms), bridge smoothly on word N.
+        val lastFinished = verse.segments.lastOrNull { positionMs >= it.endMs }
+        if (lastFinished != null) {
+            val nextSeg = verse.segments.firstOrNull { it.startMs > lastFinished.endMs }
+            if (nextSeg != null) {
+                if (positionMs < nextSeg.startMs) {
+                    if (positionMs - lastFinished.endMs > 80L) {
+                        return null
+                    }
+                    return lastFinished.wordIndex
+                }
+            } else {
+                return null
+            }
+        }
+
+        return null
     }
 }
 
@@ -180,11 +213,14 @@ object QuranRecitationSyncRepository {
                 val segments = ArrayList<VerseWordTiming>()
                 if (segmentsArr != null) {
                     for (j in 0 until segmentsArr.length()) {
-                        val seg = segmentsArr.getJSONArray(j)
-                        val wordIdx = seg.optInt(0, j + 1)
-                        val start = seg.optDouble(1, from.toDouble()).toLong()
-                        val end = seg.optDouble(2, to.toDouble()).toLong()
-                        segments.add(VerseWordTiming(wordIdx, start, end))
+                        val seg = segmentsArr.optJSONArray(j) ?: continue
+                        if (seg.length() < 3) continue // Skip malformed/truncated arrays like [1]
+                        val wordIdx = seg.optInt(0, -1)
+                        val start = seg.optDouble(1, -1.0).toLong()
+                        val end = seg.optDouble(2, -1.0).toLong()
+                        if (wordIdx > 0 && start >= 0 && end > start) {
+                            segments.add(VerseWordTiming(wordIdx, start, end))
+                        }
                     }
                 }
 

@@ -1299,6 +1299,7 @@ private fun SurahReader(
     var currentPlaybackMs by remember { mutableLongStateOf(0L) }
     var activeVerseNumber by remember { mutableStateOf<Int?>(null) }
     var activeWordIndex by remember { mutableStateOf<Int?>(null) }
+    var activeWordOffsetYInItem by remember { mutableFloatStateOf(0f) }
     var autoScrollEnabled by rememberSaveable { mutableStateOf(true) }
     var areBarsVisible by remember { mutableStateOf(true) }
     var lastUserInteractionTime by remember { mutableLongStateOf(0L) }
@@ -1352,6 +1353,7 @@ private fun SurahReader(
             currentPlaybackMs = 0L
             activeVerseNumber = null
             activeWordIndex = null
+            activeWordOffsetYInItem = 0f
             return@LaunchedEffect
         }
         while (isActive && isPlaying) {
@@ -1362,11 +1364,15 @@ private fun SurahReader(
                     currentPlaybackMs = pos
                     val timing = chapterTiming
                     if (timing != null) {
-                        val activeVerse = timing.findActiveVerse(pos)
+                        // Android MediaPlayer reports position at the audio buffer queue, which is ~120ms ahead of physical speaker output.
+                        // Compensate buffer latency so visual highlight is timed-perfectly with speaker acoustics.
+                        val acousticPos = (pos - 120L).coerceAtLeast(0L)
+                        val activeVerse = timing.findActiveVerse(acousticPos)
                         val vNum = activeVerse?.verseNumber
-                        val wIdx = if (activeVerse != null) timing.findActiveWordIndex(activeVerse, pos) else null
+                        val wIdx = if (activeVerse != null) timing.findActiveWordIndex(activeVerse, acousticPos) else null
                         if (activeVerseNumber != vNum) {
                             activeVerseNumber = vNum
+                            activeWordOffsetYInItem = 0f
                         }
                         if (activeWordIndex != wIdx) {
                             activeWordIndex = wIdx
@@ -1378,8 +1384,8 @@ private fun SurahReader(
         }
     }
 
-    // Silky smooth auto-scroll following the active recited verse
-    LaunchedEffect(activeVerseNumber, autoScrollEnabled, isPlaying) {
+    // Silky smooth continuous auto-scroll following the active word indicator position
+    LaunchedEffect(activeVerseNumber, activeWordIndex, activeWordOffsetYInItem, autoScrollEnabled, isPlaying) {
         val vNum = activeVerseNumber ?: return@LaunchedEffect
         if (!autoScrollEnabled || !isPlaying) return@LaunchedEffect
         val now = System.currentTimeMillis()
@@ -1391,28 +1397,31 @@ private fun SurahReader(
                 try {
                     val layoutInfo = listState.layoutInfo
                     val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                    if (viewportHeight <= 0) return@LaunchedEffect
+
                     val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == targetIdx }
-                    if (visibleItem != null && viewportHeight > 0) {
-                        val itemTop = visibleItem.offset
-                        val focalTop = (viewportHeight * 0.18f).toInt()
-                        val focalBottom = (viewportHeight * 0.65f).toInt()
-                        if (itemTop in focalTop..focalBottom) {
-                            // Comfortably inside reading focal zone, glide not needed
-                        } else {
-                            val scrollDelta = itemTop - focalTop
+                    val targetFocalY = viewportHeight * 0.28f
+
+                    if (visibleItem != null) {
+                        // Exact position of the active word in the viewport
+                        val wordViewportY = visibleItem.offset + activeWordOffsetYInItem
+                        val scrollDelta = wordViewportY - targetFocalY
+
+                        // Glide smoothly when the word advances down past focal threshold
+                        if (scrollDelta > 28f || scrollDelta < -60f) {
                             listState.animateScrollBy(
-                                value = scrollDelta.toFloat(),
+                                value = scrollDelta,
                                 animationSpec = tween<Float>(
-                                    durationMillis = 750,
+                                    durationMillis = 550,
                                     easing = FastOutSlowInEasing
                                 )
                             )
                         }
                     } else {
-                        val focalOffset = if (viewportHeight > 0) (viewportHeight * 0.18f).toInt() else 120
+                        // Verse not visible in current viewport, bring it into reading focal zone
                         listState.animateScrollToItem(
                             index = targetIdx,
-                            scrollOffset = -focalOffset
+                            scrollOffset = -(targetFocalY.toInt())
                         )
                     }
                 } catch (_: Exception) {}
@@ -1424,28 +1433,32 @@ private fun SurahReader(
                 try {
                     val layoutInfo = listState.layoutInfo
                     val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                    if (viewportHeight <= 0) return@LaunchedEffect
+
                     val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == chunkIdx }
-                    if (visibleItem != null && viewportHeight > 0) {
-                        val itemTop = visibleItem.offset
-                        val focalTop = (viewportHeight * 0.15f).toInt()
-                        val focalBottom = (viewportHeight * 0.70f).toInt()
-                        if (itemTop in focalTop..focalBottom) {
-                            // Already visible
-                        } else {
-                            val scrollDelta = itemTop - focalTop
+                    val targetFocalY = viewportHeight * 0.22f
+
+                    if (visibleItem != null) {
+                        val chunk = chunks[chunkIdx]
+                        val verseIdxInChunk = chunk.verses.indexOfFirst { it.number == vNum }.coerceAtLeast(0)
+                        val wordFraction = ((activeWordIndex ?: 1).toFloat() / 20f).coerceIn(0f, 1f)
+                        val pageProgress = (verseIdxInChunk.toFloat() + wordFraction) / chunk.verses.size.coerceAtLeast(1)
+                        val wordViewportY = visibleItem.offset + (visibleItem.size * pageProgress)
+                        val scrollDelta = wordViewportY - targetFocalY
+
+                        if (scrollDelta > 32f || scrollDelta < -65f) {
                             listState.animateScrollBy(
-                                value = scrollDelta.toFloat(),
+                                value = scrollDelta,
                                 animationSpec = tween<Float>(
-                                    durationMillis = 750,
+                                    durationMillis = 600,
                                     easing = FastOutSlowInEasing
                                 )
                             )
                         }
                     } else {
-                        val focalOffset = if (viewportHeight > 0) (viewportHeight * 0.15f).toInt() else 100
                         listState.animateScrollToItem(
                             index = chunkIdx,
-                            scrollOffset = -focalOffset
+                            scrollOffset = -(targetFocalY.toInt())
                         )
                     }
                 } catch (_: Exception) {}
@@ -1894,7 +1907,7 @@ private fun SurahReader(
                                             )
                                         }
 
-                                        val annotated = remember(
+                                        val (annotated, activeWordCharOffset) = remember(
                                             verse.text,
                                             verse.number,
                                             isPlaying,
@@ -1903,75 +1916,77 @@ private fun SurahReader(
                                             colors.text,
                                             colors.isLight
                                         ) {
-                                            buildAnnotatedString {
-                                                if (!isPlaying) {
-                                                    append(verse.text)
-                                                } else if (!isThisVerseActive) {
-                                                    withStyle(SpanStyle(color = colors.text.copy(alpha = 0.35f))) {
-                                                        append(verse.text)
-                                                    }
-                                                } else {
-                                                    val tokens = parseVerseTokens(verse.text)
-                                                    val currentWIdx = activeWordIndex ?: 0
-                                                    val highlightColor = if (colors.isLight) Color(0xFF163212) else Color(0xFFFFFFFF)
-                                                    val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.14f)
+                                            var charOffset = -1
+                                            val builder = androidx.compose.ui.text.AnnotatedString.Builder()
+                                            if (!isPlaying) {
+                                                builder.append(verse.text)
+                                            } else if (!isThisVerseActive) {
+                                                builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.35f))) {
+                                                    builder.append(verse.text)
+                                                }
+                                            } else {
+                                                val tokens = parseVerseTokens(verse.text)
+                                                val currentWIdx = activeWordIndex ?: 0
+                                                val highlightColor = if (colors.isLight) Color(0xFF163212) else Color(0xFFFFFFFF)
+                                                val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.14f)
 
-                                                    for (w in tokens.indices) {
-                                                        val tokenItem = tokens[w]
-                                                        if (tokenItem.isStopMark) {
-                                                            withStyle(SpanStyle(color = colors.text.copy(alpha = 0.65f))) {
-                                                                append(tokenItem.token)
+                                                for (w in tokens.indices) {
+                                                    val tokenItem = tokens[w]
+                                                    if (tokenItem.isStopMark) {
+                                                        builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.65f))) {
+                                                            builder.append(tokenItem.token)
+                                                        }
+                                                    } else {
+                                                        val word1Based = tokenItem.wordIndex
+                                                        when {
+                                                            word1Based == currentWIdx -> {
+                                                                charOffset = builder.length
+                                                                builder.withStyle(
+                                                                    SpanStyle(
+                                                                        color = highlightColor,
+                                                                        fontWeight = FontWeight.Bold,
+                                                                        background = bgHighlight,
+                                                                        shadow = if (!colors.isLight) Shadow(
+                                                                            color = Color.Black.copy(alpha = 0.75f),
+                                                                            offset = Offset(0f, 1f),
+                                                                            blurRadius = 2f
+                                                                        ) else null
+                                                                    )
+                                                                ) {
+                                                                    builder.append(tokenItem.token)
+                                                                }
                                                             }
-                                                        } else {
-                                                            val word1Based = tokenItem.wordIndex
-                                                            when {
-                                                                word1Based == currentWIdx -> {
-                                                                    withStyle(
-                                                                        SpanStyle(
-                                                                            color = highlightColor,
-                                                                            fontWeight = FontWeight.Bold,
-                                                                            background = bgHighlight,
-                                                                            shadow = if (!colors.isLight) Shadow(
-                                                                                color = Color.Black.copy(alpha = 0.75f),
-                                                                                offset = Offset(0f, 1f),
-                                                                                blurRadius = 2f
-                                                                            ) else null
-                                                                        )
-                                                                    ) {
-                                                                        append(tokenItem.token)
-                                                                    }
+                                                            word1Based < currentWIdx -> {
+                                                                builder.withStyle(
+                                                                    SpanStyle(
+                                                                        color = colors.text,
+                                                                        fontWeight = FontWeight.SemiBold
+                                                                    )
+                                                                ) {
+                                                                    builder.append(tokenItem.token)
                                                                 }
-                                                                word1Based < currentWIdx -> {
-                                                                    withStyle(
-                                                                        SpanStyle(
-                                                                            color = colors.text,
-                                                                            fontWeight = FontWeight.SemiBold
-                                                                        )
-                                                                    ) {
-                                                                        append(tokenItem.token)
-                                                                    }
-                                                                }
-                                                                else -> {
-                                                                    withStyle(
-                                                                        SpanStyle(
-                                                                            color = colors.text.copy(alpha = 0.70f),
-                                                                            fontWeight = FontWeight.Normal
-                                                                        )
-                                                                    ) {
-                                                                        append(tokenItem.token)
-                                                                    }
+                                                            }
+                                                            else -> {
+                                                                builder.withStyle(
+                                                                    SpanStyle(
+                                                                        color = colors.text.copy(alpha = 0.70f),
+                                                                        fontWeight = FontWeight.Normal
+                                                                    )
+                                                                ) {
+                                                                    builder.append(tokenItem.token)
                                                                 }
                                                             }
                                                         }
-                                                        if (w < tokens.lastIndex) {
-                                                            append(" ")
-                                                        }
+                                                    }
+                                                    if (w < tokens.lastIndex) {
+                                                        builder.append(" ")
                                                     }
                                                 }
-
-                                                append("\u202F")
-                                                appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
                                             }
+
+                                            builder.append("\u202F")
+                                            builder.appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
+                                            builder.toAnnotatedString() to charOffset
                                         }
 
                                         val activeVerseBorder = if (colors.isLight) {
@@ -1993,6 +2008,11 @@ private fun SurahReader(
                                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                                         } else {
                                             Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                        }
+
+                                        val density = LocalDensity.current
+                                        val verticalPadPx = remember(isThisVerseActive, density) {
+                                            with(density) { if (isThisVerseActive) 10.dp.toPx() else 6.dp.toPx() }
                                         }
 
                                         Box(
@@ -2019,6 +2039,15 @@ private fun SurahReader(
                                                         blurRadius = 0.5f
                                                     ) else null
                                                 ),
+                                                onTextLayout = { layoutResult ->
+                                                    if (isThisVerseActive && activeWordCharOffset >= 0 && activeWordCharOffset < layoutResult.layoutInput.text.length) {
+                                                        val line = layoutResult.getLineForOffset(activeWordCharOffset)
+                                                        val lineTop = layoutResult.getLineTop(line)
+                                                        val lineBottom = layoutResult.getLineBottom(line)
+                                                        val wordCenterY = (lineTop + lineBottom) / 2f
+                                                        activeWordOffsetYInItem = verticalPadPx + wordCenterY
+                                                    }
+                                                },
                                                 modifier = Modifier.fillMaxWidth()
                                             )
                                         }
