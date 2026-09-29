@@ -59,47 +59,11 @@ Completely offline-capable and free of third-party analytics, account mandates, 
 
 ---
 
-## App Screenshots
-
 <div align="center">
 
-### 1. Home
-| Arabic (العربية) | English |
-| :---: | :---: |
-| <img src="screenshots/home_ar.jpg" width="340" alt="Home Arabic" /> | <img src="screenshots/home_en.jpg" width="340" alt="Home English" /> |
-
-<br>
-
----
-
-### 2. The Holy Quran
-| Arabic (العربية) | English |
-| :---: | :---: |
-| <img src="screenshots/quran_ar.jpg" width="340" alt="Quran Arabic" /> | <img src="screenshots/quran_en.jpg" width="340" alt="Quran English" /> |
-
-<br>
-
-| <img src="screenshots/quran_theme_amoled.jpg" width="245" alt="AMOLED Dark" /> | <img src="screenshots/quran_theme_light.jpg" width="245" alt="Classic Light" /> | <img src="screenshots/quran_theme_olive.jpg" width="245" alt="Athar's Theme" /> |
-| :---: | :---: | :---: |
-| **أسود نقي (AMOLED)**<br>AMOLED Dark | **الأبيض الكلاسيكي**<br>Classic Light | **طابع أثر**<br>Athar's Theme |
-
-<br>
-
----
-
-### 3. Duas
-| Arabic (العربية) | English |
-| :---: | :---: |
-| <img src="screenshots/duas_ar.jpg" width="340" alt="Duas Arabic" /> | <img src="screenshots/duas_en.jpg" width="340" alt="Duas English" /> |
-
-<br>
-
----
-
-### 4. Qibla Direction
-| Arabic (العربية) | English |
-| :---: | :---: |
-| <img src="screenshots/qibla_ar.jpg" width="340" alt="Qibla Arabic" /> | <img src="screenshots/qibla_en.jpg" width="340" alt="Qibla English" /> |
+<p align="center">
+  <img src="brand/athar-poster.svg" alt="Athar" width="100%" />
+</p>
 
 </div>
 
@@ -153,6 +117,7 @@ We express our sincere appreciation to the open source community and public Isla
 - **[Batoul Apps / Adhan-Java](https://github.com/batoulapps/adhan-java)**: Astronomical prayer times calculation library (Licensed under Apache 2.0).
 - **[AndroidSVG](https://bigbadaboom.github.io/androidsvg/)**: Vector graphic rendering engine for Android (Licensed under Apache 2.0).
 - **[Tarteel QUL](https://github.com/tarteel-io)**: Contributions toward vector Mushaf layout assets.
+- **[Quran.com](https://quran.com/)**: Recitation audio streaming endpoints and word-level audio synchronization timing metadata.
 - **[Hisnul Muslim](https://hisnmuslim.com/)**: Supplications collection compiled by Sheikh Sa'id bin Ali bin Wahf Al-Qahtani (may Allah have mercy on him).
 
 ---
