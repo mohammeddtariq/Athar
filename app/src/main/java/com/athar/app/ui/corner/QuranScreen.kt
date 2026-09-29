@@ -1406,27 +1406,46 @@ private fun IndoPak13LinePageCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ─── PAGE HEADER: Surah Name & Mushaf Badge ───
+            // ─── PAGE HEADER: Authentic 13-Line IndoPak Header (Right: Juz Name & Number, Left: Surah Name & Number) ───
+            val firstAyahNum = chunk.verses.firstOrNull()?.number ?: 1
+            val juzInfo = remember(surah.number, firstAyahNum) {
+                getIndoPakJuzForVerse(surah.number, firstAyahNum)
+            }
+            val juzNumStr = formatDigits(juzInfo.number.toString(), numberStylePref)
+            val surahNumStr = formatDigits(surah.number.toString(), numberStylePref)
+
+            val rightHeaderTitle = if (isArabic) {
+                "${juzInfo.arabicTitle} $juzNumStr"
+            } else {
+                "${juzInfo.englishTitle} $juzNumStr"
+            }
+
+            val leftHeaderTitle = if (isArabic) {
+                "${surah.arabicName} $surahNumStr"
+            } else {
+                "${surah.englishName} $surahNumStr"
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isArabic) "سورة ${surah.arabicName}" else "Surah ${surah.englishName}",
+                    text = rightHeaderTitle,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
+                    fontSize = 12.5.sp,
                     color = colors.dividerText
                 )
                 Text(
-                    text = stringResource(R.string.quran_layout_indopak_13),
+                    text = leftHeaderTitle,
                     fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 10.5.sp,
-                    color = colors.dividerText.copy(alpha = 0.65f)
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = colors.dividerText
                 )
             }
 

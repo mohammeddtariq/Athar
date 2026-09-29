@@ -60,6 +60,58 @@ val allJuz: List<JuzMeta> = listOf(
     JuzMeta(30, "الجزء الثلاثون (عم يتساءلون)", "Juz 30", 78, 1, 582)
 )
 
+/** Traditional 13-line IndoPak Mushaf Juz titles and boundaries */
+data class IndoPakJuzTitle(
+    val number: Int,
+    val arabicTitle: String,
+    val englishTitle: String,
+    val startSurahNumber: Int,
+    val startAyah: Int
+)
+
+val allIndoPakJuzTitles: List<IndoPakJuzTitle> = listOf(
+    IndoPakJuzTitle(1, "الٓمٓ", "Alif Lam Meem", 1, 1),
+    IndoPakJuzTitle(2, "سَيَقُولُ", "Sayaqool", 2, 142),
+    IndoPakJuzTitle(3, "تِلْكَ الرُّسُلُ", "Tilkar Rusul", 2, 253),
+    IndoPakJuzTitle(4, "لَنْ تَنَالُوا", "Lan Tanaaloo", 3, 93),
+    IndoPakJuzTitle(5, "وَالْمُحْصَنَاتُ", "Wal Muhsanat", 4, 24),
+    IndoPakJuzTitle(6, "لَا يُحِبُّ اللَّهُ", "La Yuhibbullah", 4, 148),
+    IndoPakJuzTitle(7, "وَإِذَا سَمِعُوا", "Wa Iza Sami'oo", 5, 82),
+    IndoPakJuzTitle(8, "وَلَوْ أَنَّنَا", "Wa Lau Annana", 6, 111),
+    IndoPakJuzTitle(9, "قَالَ الْمَلَأُ", "Qalal Mala'o", 7, 88),
+    IndoPakJuzTitle(10, "وَاعْلَمُوا", "Wa'lamoo", 8, 41),
+    IndoPakJuzTitle(11, "يَعْتَذِرُونَ", "Ya'taziroon", 9, 93),
+    IndoPakJuzTitle(12, "وَمَا مِنْ دَابَّةٍ", "Wa Mamin Da'abbah", 11, 6),
+    IndoPakJuzTitle(13, "وَمَا أُبَرِّئُ", "Wa Ma Obarri'o", 12, 53),
+    IndoPakJuzTitle(14, "رُبَمَا", "Rubama", 15, 1),
+    IndoPakJuzTitle(15, "سُبْحَانَ الَّذِي", "Subhanallazi", 17, 1),
+    IndoPakJuzTitle(16, "قَالَ أَلَمْ", "Qala Alam", 18, 75),
+    IndoPakJuzTitle(17, "اقْتَرَبَ لِلنَّاسِ", "Iqtaraba Linnas", 21, 1),
+    IndoPakJuzTitle(18, "قَدْ أَفْلَحَ", "Qad Aflaha", 23, 1),
+    IndoPakJuzTitle(19, "وَقَالَ الَّذِينَ", "Wa Qalallazina", 25, 21),
+    IndoPakJuzTitle(20, "أَمَّنْ خَلَقَ", "Amman Khalaqa", 27, 56),
+    IndoPakJuzTitle(21, "اتْلُ مَا أُوحِيَ", "Utlu Ma Oohiya", 29, 46),
+    IndoPakJuzTitle(22, "وَمَنْ يَقْنُتْ", "Wa Man Yaqnut", 33, 31),
+    IndoPakJuzTitle(23, "وَمَا لِيَ", "Wa Maliya", 36, 22),
+    IndoPakJuzTitle(24, "فَمَنْ أَظْلَمُ", "Faman Azlamu", 39, 32),
+    IndoPakJuzTitle(25, "إِلَيْهِ يُرَدُّ", "Ilaihi Yuraddu", 41, 47),
+    IndoPakJuzTitle(26, "حم", "Ha'a Meem", 46, 1),
+    IndoPakJuzTitle(27, "قَالَ فَمَا خَطْبُكُمْ", "Qala Fama Khatbukum", 51, 31),
+    IndoPakJuzTitle(28, "قَدْ سَمِعَ اللَّهُ", "Qad Sami'allah", 58, 1),
+    IndoPakJuzTitle(29, "تَبَارَكَ الَّذِي", "Tabarakallazi", 67, 1),
+    IndoPakJuzTitle(30, "عَمَّ", "'Amma", 78, 1)
+)
+
+fun getIndoPakJuzForVerse(surahNumber: Int, ayahNumber: Int): IndoPakJuzTitle {
+    for (i in allIndoPakJuzTitles.indices.reversed()) {
+        val item = allIndoPakJuzTitles[i]
+        if (surahNumber > item.startSurahNumber || (surahNumber == item.startSurahNumber && ayahNumber >= item.startAyah)) {
+            return item
+        }
+    }
+    return allIndoPakJuzTitles.first()
+}
+
 val allSurahs: List<SurahMeta> = listOf(
     SurahMeta(1, "الفاتحة", "Al-Fatihah", "The Opening", 7, 1, RevelationType.MECCAN, 1),
     SurahMeta(2, "البقرة", "Al-Baqarah", "The Cow", 286, 1, RevelationType.MEDINAN, 2),
