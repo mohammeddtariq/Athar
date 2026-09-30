@@ -8,12 +8,17 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.content.res.Configuration
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import com.athar.app.MainActivity
 import com.athar.app.R
+import com.athar.app.data.AppPreferences
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -21,6 +26,7 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.util.Locale
 
 data class AppReleaseInfo(
     val tagName: String,
@@ -66,11 +72,11 @@ data class SemanticVersion(
     companion object {
         fun parse(versionStr: String): SemanticVersion? {
             val clean = versionStr.trim().removePrefix("v").removePrefix("V")
-            val regex = Regex("""^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?""")
+            val regex = Regex("""^(\d+)\.(\d+)(?:\.(\d+))?(?:[-.]([a-zA-Z]+)(?:[-.]?(\d+))?)?""")
             val match = regex.find(clean) ?: return null
             val major = match.groupValues[1].toIntOrNull() ?: 0
             val minor = match.groupValues[2].toIntOrNull() ?: 0
-            val patch = match.groupValues[3].toIntOrNull() ?: 0
+            val patch = match.groups[3]?.value?.toIntOrNull() ?: 0
             val preType = match.groups[4]?.value?.lowercase()
             val preNum = match.groups[5]?.value?.toIntOrNull()
             return SemanticVersion(major, minor, patch, preType, preNum)
@@ -80,81 +86,114 @@ data class SemanticVersion(
 
 object AppUpdateManager {
     private const val GITHUB_REPO = "mohammeddtariq/Athar"
+    private const val RELEASES_API_URL = "https://api.github.com/repos/$GITHUB_REPO/releases?per_page=5"
     private const val LATEST_RELEASE_URL = "https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+    private const val ATOM_FEED_URL = "https://github.com/$GITHUB_REPO/releases.atom"
     const val UPDATE_CHANNEL_ID = "athar_app_updates"
     private const val UPDATE_NOTIF_ID = 9001
     const val EXTRA_OPEN_UPDATER = "com.athar.app.OPEN_UPDATER"
 
     /**
      * Checks GitHub for the latest release and determines if an update is available.
+     * Uses a multi-tiered discovery strategy:
+     * 1. Query /releases?per_page=5 to instantly catch pre-releases and beta versions.
+     * 2. Fall back to /releases/latest if the releases array isn't accessible.
+     * 3. Fall back to GitHub's public Atom feed if unauthenticated API limits (HTTP 403) are encountered.
      */
     suspend fun checkForUpdate(currentVersionName: String): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
-            val connection = URI.create(LATEST_RELEASE_URL).toURL().openConnection() as HttpURLConnection
+            // Tier 1: Query recent releases list (includes pre-releases and betas)
+            val releasesResult = fetchFromReleasesApi(RELEASES_API_URL, currentVersionName)
+            if (releasesResult is UpdateCheckResult.UpdateAvailable || releasesResult is UpdateCheckResult.UpToDate) {
+                return@withContext releasesResult
+            }
+
+            // Tier 2: Query latest release endpoint
+            val latestResult = fetchFromReleasesApi(LATEST_RELEASE_URL, currentVersionName)
+            if (latestResult is UpdateCheckResult.UpdateAvailable || latestResult is UpdateCheckResult.UpToDate) {
+                return@withContext latestResult
+            }
+
+            // Tier 3: Unauthenticated rate-limit resilient Atom feed
+            fetchFromAtomFeed(currentVersionName)
+        } catch (e: Exception) {
+            // Final safety net via Atom feed
+            fetchFromAtomFeed(currentVersionName)
+        }
+    }
+
+    private fun fetchFromReleasesApi(apiUrl: String, currentVersionName: String): UpdateCheckResult {
+        return try {
+            val connection = URI.create(apiUrl).toURL().openConnection() as HttpURLConnection
             connection.apply {
                 requestMethod = "GET"
                 setRequestProperty("Accept", "application/vnd.github.v3+json")
                 setRequestProperty("User-Agent", "Athar-Android")
-                connectTimeout = 12000
-                readTimeout = 12000
+                connectTimeout = 8000
+                readTimeout = 8000
             }
 
             val responseCode = connection.responseCode
             if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                return@withContext UpdateCheckResult.UpToDate
+                return UpdateCheckResult.UpToDate
             }
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                return@withContext UpdateCheckResult.Error("HTTP $responseCode")
+                return UpdateCheckResult.Error("HTTP $responseCode")
             }
 
-            val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(jsonString)
-
-            val tagName = json.optString("tag_name", "").trim()
-            val releaseTitle = json.optString("name", tagName)
-            val changelog = json.optString("body", "").trim()
-            val htmlUrl = json.optString("html_url", "https://github.com/$GITHUB_REPO/releases")
-
-            var downloadUrl: String? = null
-            var assetSize = 0L
-
-            val assets = json.optJSONArray("assets")
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val name = asset.optString("name", "")
-                    if (name.endsWith(".apk", ignoreCase = true)) {
-                        downloadUrl = asset.optString("browser_download_url")
-                        assetSize = asset.optLong("size", 0L)
-                        break
+            val jsonString = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+            if (jsonString.startsWith("[")) {
+                val jsonArray = JSONArray(jsonString)
+                for (i in 0 until jsonArray.length()) {
+                    val releaseObj = jsonArray.getJSONObject(i)
+                    if (releaseObj.optBoolean("draft", false)) continue
+                    val res = parseReleaseJson(releaseObj, currentVersionName)
+                    if (res is UpdateCheckResult.UpdateAvailable) {
+                        return res
                     }
                 }
+                UpdateCheckResult.UpToDate
+            } else {
+                val json = JSONObject(jsonString)
+                parseReleaseJson(json, currentVersionName)
             }
+        } catch (e: Exception) {
+            UpdateCheckResult.Error(e.localizedMessage ?: "Network error")
+        }
+    }
 
-            val remoteVersion = SemanticVersion.parse(tagName)
-            val localVersion = SemanticVersion.parse(currentVersionName)
+    private fun parseReleaseJson(json: JSONObject, currentVersionName: String): UpdateCheckResult {
+        val tagName = json.optString("tag_name", "").trim()
+        val releaseTitle = json.optString("name", tagName)
+        val changelog = json.optString("body", "").trim()
+        val htmlUrl = json.optString("html_url", "https://github.com/$GITHUB_REPO/releases")
 
-            if (remoteVersion != null && localVersion != null) {
-                if (remoteVersion > localVersion) {
-                    val info = AppReleaseInfo(
-                        tagName = tagName,
-                        versionName = tagName.removePrefix("v").removePrefix("V"),
-                        releaseTitle = releaseTitle,
-                        changelogBody = changelog,
-                        htmlUrl = htmlUrl,
-                        downloadUrl = downloadUrl,
-                        assetSize = assetSize
-                    )
-                    return@withContext UpdateCheckResult.UpdateAvailable(info)
-                } else {
-                    return@withContext UpdateCheckResult.UpToDate
+        var downloadUrl: String? = null
+        var assetSize = 0L
+
+        val assets = json.optJSONArray("assets")
+        if (assets != null) {
+            for (i in 0 until assets.length()) {
+                val asset = assets.getJSONObject(i)
+                val name = asset.optString("name", "")
+                if (name.endsWith(".apk", ignoreCase = true)) {
+                    downloadUrl = asset.optString("browser_download_url")
+                    assetSize = asset.optLong("size", 0L)
+                    break
                 }
             }
+        }
 
-            // Fallback string comparison if SemVer couldn't parse
-            if (tagName.isNotEmpty() && !tagName.equals(currentVersionName, ignoreCase = true) &&
-                !tagName.equals("v$currentVersionName", ignoreCase = true)
-            ) {
+        // If no direct asset attached, fallback to release download URL convention
+        if (downloadUrl.isNullOrEmpty() && tagName.isNotEmpty()) {
+            downloadUrl = "https://github.com/$GITHUB_REPO/releases/download/$tagName/athar-$tagName.apk"
+        }
+
+        val remoteVersion = SemanticVersion.parse(tagName)
+        val localVersion = SemanticVersion.parse(currentVersionName)
+
+        if (remoteVersion != null && localVersion != null) {
+            if (remoteVersion > localVersion) {
                 val info = AppReleaseInfo(
                     tagName = tagName,
                     versionName = tagName.removePrefix("v").removePrefix("V"),
@@ -164,12 +203,75 @@ object AppUpdateManager {
                     downloadUrl = downloadUrl,
                     assetSize = assetSize
                 )
+                return UpdateCheckResult.UpdateAvailable(info)
+            } else {
+                return UpdateCheckResult.UpToDate
+            }
+        }
+
+        // Fallback check if SemVer couldn't parse
+        if (tagName.isNotEmpty() && !tagName.equals(currentVersionName, ignoreCase = true) &&
+            !tagName.equals("v$currentVersionName", ignoreCase = true)
+        ) {
+            val info = AppReleaseInfo(
+                tagName = tagName,
+                versionName = tagName.removePrefix("v").removePrefix("V"),
+                releaseTitle = releaseTitle,
+                changelogBody = changelog,
+                htmlUrl = htmlUrl,
+                downloadUrl = downloadUrl,
+                assetSize = assetSize
+            )
+            return UpdateCheckResult.UpdateAvailable(info)
+        }
+
+        return UpdateCheckResult.UpToDate
+    }
+
+    private fun fetchFromAtomFeed(currentVersionName: String): UpdateCheckResult {
+        return try {
+            val connection = URI.create(ATOM_FEED_URL).toURL().openConnection() as HttpURLConnection
+            connection.apply {
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", "Athar-Android")
+                connectTimeout = 8000
+                readTimeout = 8000
+            }
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                return UpdateCheckResult.UpToDate
+            }
+            val content = connection.inputStream.bufferedReader().use { it.readText() }
+            val entryRegex = Regex("""<entry>([\s\S]*?)</entry>""")
+            val entryMatch = entryRegex.find(content) ?: return UpdateCheckResult.UpToDate
+            val entry = entryMatch.groupValues[1]
+
+            val tagRegex = Regex("""releases/tag/([^"/]+)""")
+            val tagMatch = tagRegex.find(entry) ?: return UpdateCheckResult.UpToDate
+            val tagName = tagMatch.groupValues[1].trim()
+
+            val titleRegex = Regex("""<title>([^<]+)</title>""")
+            val title = titleRegex.find(entry)?.groupValues?.get(1)?.trim() ?: tagName
+
+            val remoteVersion = SemanticVersion.parse(tagName)
+            val localVersion = SemanticVersion.parse(currentVersionName)
+
+            if (remoteVersion != null && localVersion != null && remoteVersion > localVersion) {
+                val apkDownloadUrl = "https://github.com/$GITHUB_REPO/releases/download/$tagName/athar-$tagName.apk"
+                val info = AppReleaseInfo(
+                    tagName = tagName,
+                    versionName = tagName.removePrefix("v").removePrefix("V"),
+                    releaseTitle = title,
+                    changelogBody = "",
+                    htmlUrl = "https://github.com/$GITHUB_REPO/releases/tag/$tagName",
+                    downloadUrl = apkDownloadUrl,
+                    assetSize = 0L
+                )
                 UpdateCheckResult.UpdateAvailable(info)
             } else {
                 UpdateCheckResult.UpToDate
             }
-        } catch (e: Exception) {
-            UpdateCheckResult.Error(e.localizedMessage ?: "Unknown error")
+        } catch (_: Exception) {
+            UpdateCheckResult.UpToDate
         }
     }
 
@@ -307,13 +409,22 @@ object AppUpdateManager {
     fun showUpdateNotification(context: Context, releaseInfo: AppReleaseInfo) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        // Localize notification according to app's selected language
+        val prefs = AppPreferences(context.applicationContext)
+        val langCode = runCatching { runBlocking { prefs.selectedLanguage.first() } }.getOrDefault("ar")
+        val locale = Locale.forLanguageTag(langCode)
+        val config = Configuration(context.resources.configuration).apply {
+            setLocale(locale)
+        }
+        val localizedContext = context.createConfigurationContext(config)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 UPDATE_CHANNEL_ID,
-                context.getString(R.string.update_notif_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT
+                localizedContext.getString(R.string.update_notif_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = context.getString(R.string.update_notif_channel_desc)
+                description = localizedContext.getString(R.string.update_notif_channel_desc)
                 enableVibration(true)
             }
             manager.createNotificationChannel(channel)
@@ -332,11 +443,12 @@ object AppUpdateManager {
         )
 
         val notification = NotificationCompat.Builder(context, UPDATE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.update_notif_title))
-            .setContentText(context.getString(R.string.update_notif_body, releaseInfo.versionName))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.update_notif_body, releaseInfo.versionName)))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(localizedContext.getString(R.string.update_notif_title))
+            .setContentText(localizedContext.getString(R.string.update_notif_body, releaseInfo.versionName))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(localizedContext.getString(R.string.update_notif_body, releaseInfo.versionName)))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()

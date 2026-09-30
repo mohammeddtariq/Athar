@@ -280,6 +280,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 PrayerNotifications.scheduleNext(context)
                 com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
                 LiveStatusNotificationManager.update(context)
+                com.athar.app.updater.UpdateCheckWorker.checkIfDue(context.applicationContext, minIntervalMinutes = 120)
             } finally {
                 pendingResult.finish()
             }

@@ -27,6 +27,10 @@ import com.athar.app.updater.AppReleaseInfo
 import com.athar.app.updater.AppUpdateManager
 import com.athar.app.updater.UpdateCheckResult
 import com.athar.app.updater.UpdateCheckWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -62,7 +66,12 @@ class MainActivity : ComponentActivity() {
             // Check for updates and battery optimization after onboarding is completed
             LaunchedEffect(isOnboardingCompleted) {
                 if (isOnboardingCompleted == true) {
-                    val result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
+                    var result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
+                    if (result is UpdateCheckResult.Error) {
+                        // Cold startup retry: connection might need a moment to initialize
+                        delay(3500)
+                        result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
+                    }
                     if (result is UpdateCheckResult.UpdateAvailable) {
                         updateInfo = result.releaseInfo
                         showUpdateDialog = true
@@ -155,6 +164,9 @@ class MainActivity : ComponentActivity() {
         PrayerNotifications.scheduleNextAsync(this)
         com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(applicationContext)
         com.athar.app.notifications.LiveStatusNotificationManager.updateAsync(applicationContext)
+        CoroutineScope(Dispatchers.IO).launch {
+            UpdateCheckWorker.checkIfDue(applicationContext, minIntervalMinutes = 30)
+        }
     }
 
     private fun applyLocale(languageCode: String) {
