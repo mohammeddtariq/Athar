@@ -285,5 +285,28 @@
     <string name="settings_live_status_nowbar_tip_title">Samsung One UI / Now Bar</string>
     <string name="settings_live_status_nowbar_tip_desc">To display Live Activities in the Samsung One UI Now Bar, make sure \"Live notifications for all apps\" is enabled in Developer Options.</string>
     <string name="settings_open_developer_options">Open Developer Options</string>
+
+    <!-- Al-Ma'rifah (Tafsir & Contemplation) -->
+    <string name="al_marifah_name">Al-Ma\'rifah</string>
+    <string name="al_marifah_tagline">Tafsir &amp; Quranic Contemplation</string>
+    <string name="al_marifah_explore">Explore Tafsir</string>
+    <string name="al_marifah_book_saadi">Tafsir Al-Sa\'di</string>
+    <string name="al_marifah_book_ibn_kathir">Tafsir Ibn Kathir</string>
+    <string name="al_marifah_book_tabari">Tafsir Al-Tabari</string>
+    <string name="al_marifah_book_qurtubi">Tafsir Al-Qurtubi</string>
+    <string name="al_marifah_swap_hero">Swap Hero Language</string>
+    <string name="al_marifah_prev_ayah">Previous</string>
+    <string name="al_marifah_next_ayah">Next</string>
+    <string name="al_marifah_loading">Loading contemplative commentary…</string>
+    <string name="al_marifah_error">Unable to load Tafsir. Tap to retry.</string>
+    <string name="al_marifah_copied">Tafsir copied to clipboard</string>
+    <string name="al_marifah_ayah_label">Ayah %1$s</string>
+    <string name="al_marifah_hero_arabic">Arabic (Hero)</string>
+    <string name="al_marifah_hero_english">English (Hero)</string>
+    <string name="al_marifah_expand">Expand</string>
+    <string name="al_marifah_collapse">Collapse</string>
+    <string name="al_marifah_close">Close</string>
+    <string name="al_marifah_share">Share</string>
+    <string name="al_marifah_copy">Copy</string>
 </resources>
 

@@ -285,5 +285,28 @@
     <string name="settings_live_status_nowbar_tip_title">سامسونج One UI / شريط Now Bar</string>
     <string name="settings_live_status_nowbar_tip_desc">لإظهار الأنشطة الحية في شريط Now Bar على أجهزة سامسونج، يرجى التأكد من تفعيل \"إشعارات حية لكافة التطبيقات\" من خيارات المطور.</string>
     <string name="settings_open_developer_options">فتح خيارات المطور</string>
+
+    <!-- Al-Ma'rifah (Tafsir & Contemplation) -->
+    <string name="al_marifah_name">المعرفة</string>
+    <string name="al_marifah_tagline">تفسير وتدبر آيات القرآن الكريم</string>
+    <string name="al_marifah_explore">تصفح التفاسير</string>
+    <string name="al_marifah_book_saadi">تفسير السعدي</string>
+    <string name="al_marifah_book_ibn_kathir">تفسير ابن كثير</string>
+    <string name="al_marifah_book_tabari">تفسير الطبري</string>
+    <string name="al_marifah_book_qurtubi">تفسير القرطبي</string>
+    <string name="al_marifah_swap_hero">تبديل اللغة الرئيسية</string>
+    <string name="al_marifah_prev_ayah">السابق</string>
+    <string name="al_marifah_next_ayah">التالي</string>
+    <string name="al_marifah_loading">جاري استحضار معاني التفسير المباركة…</string>
+    <string name="al_marifah_error">تعذر تحميل التفسير. اضغط للمحاولة مرة أخرى.</string>
+    <string name="al_marifah_copied">تم نسخ التفسير إلى الحافظة</string>
+    <string name="al_marifah_ayah_label">الآية %1$s</string>
+    <string name="al_marifah_hero_arabic">العربية (الأساسية)</string>
+    <string name="al_marifah_hero_english">الإنجليزية (الأساسية)</string>
+    <string name="al_marifah_expand">تكبير</string>
+    <string name="al_marifah_collapse">تصغير</string>
+    <string name="al_marifah_close">إغلاق</string>
+    <string name="al_marifah_share">مشاركة</string>
+    <string name="al_marifah_copy">نسخ</string>
 </resources>
 

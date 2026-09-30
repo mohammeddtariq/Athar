@@ -31,8 +31,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -343,6 +345,7 @@ fun QuranScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(QuranTabIndex.SURAHS) }
+    var tafsirTargetAyah by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
     var lastBackTime by remember { mutableLongStateOf(0L) }
     var showDoubleBackToast by remember { mutableStateOf(false) }
@@ -425,7 +428,8 @@ fun QuranScreen(
                             targetPageToScroll = null
                             openSurah = allSurahs[idx + 1]
                         }
-                    }
+                    },
+                    onOpenTafsir = { s, a -> tafsirTargetAyah = Pair(s, a) }
                 )
 
                 // Double back confirmation floating popup
@@ -463,11 +467,13 @@ fun QuranScreen(
                     selectedTab = selectedTab,
                     onTabSelect = { selectedTab = it },
                     colors = colors,
+                    lastReadSurahNum = lastReadSurahNum,
                     onBack = onBack,
                     onSelectSurah = {
                         targetPageToScroll = null
                         openSurah = it
-                    }
+                    },
+                    onOpenTafsir = { s, a -> tafsirTargetAyah = Pair(s, a) }
                 )
 
                 val lastSurah = remember(lastReadSurahNum) {
@@ -501,6 +507,16 @@ fun QuranScreen(
                 }
             }
         }
+
+        val targetAyah = tafsirTargetAyah
+        if (targetAyah != null) {
+            AlMarifahSheet(
+                initialSurahNumber = targetAyah.first,
+                initialAyahNumber = targetAyah.second,
+                numberStyle = numberStyle,
+                onDismiss = { tafsirTargetAyah = null }
+            )
+        }
     }
 }
 
@@ -511,8 +527,10 @@ private fun SurahListScreen(
     selectedTab: QuranTabIndex,
     onTabSelect: (QuranTabIndex) -> Unit,
     colors: QuranReaderColors,
+    lastReadSurahNum: Int? = null,
     onBack: () -> Unit,
-    onSelectSurah: (SurahMeta) -> Unit
+    onSelectSurah: (SurahMeta) -> Unit,
+    onOpenTafsir: (surahNumber: Int, ayahNumber: Int) -> Unit = { _, _ -> }
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
@@ -686,6 +704,17 @@ private fun SurahListScreen(
                             )
                         }
                         inner()
+                    }
+                )
+            }
+
+            // "Al-Ma'rifah" (المعرفة) Animated Glow Feature Bar Tab
+            if (query.isBlank()) {
+                AlMarifahGlowCard(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                    onClick = {
+                        val sNum = lastReadSurahNum ?: 1
+                        onOpenTafsir(sNum, 1)
                     }
                 )
             }
@@ -1264,7 +1293,8 @@ private fun IndoPak13LinePageCard(
     activeVerseNumber: Int?,
     activeWordIndex: Int?,
     numberStylePref: NumberStylePreference,
-    onActiveWordPosition: (Float) -> Unit
+    onActiveWordPosition: (Float) -> Unit,
+    onAyahClick: ((Int) -> Unit)? = null
 ) {
     val isArabic = remember { Locale.getDefault().language == "ar" }
     val isFirstPageOfSurah = chunk.verses.any { it.number == 1 }
@@ -1294,8 +1324,8 @@ private fun IndoPak13LinePageCard(
         map
     }
 
-    // Build the continuous flowing text of the page with active word highlighting
-    val (annotatedText, activeWordCharOffset) = remember(
+    // Build the continuous flowing text of the page with active word highlighting and verse character ranges
+    val (annotatedText, activeWordCharOffset, verseCharRanges) = remember(
         chunk.verses,
         isPlaying,
         activeVerseNumber,
@@ -1304,10 +1334,12 @@ private fun IndoPak13LinePageCard(
         colors.isLight
     ) {
         var charOffset = -1
+        val ranges = mutableListOf<Pair<Int, IntRange>>()
         val builder = androidx.compose.ui.text.AnnotatedString.Builder()
 
         for (vIdx in chunk.verses.indices) {
             val verse = chunk.verses[vIdx]
+            val vStart = builder.length
             val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
 
             if (!isPlaying) {
@@ -1378,11 +1410,13 @@ private fun IndoPak13LinePageCard(
 
             builder.append("\u202F")
             builder.appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
+            val vEnd = builder.length
+            ranges.add(verse.number to (vStart until vEnd))
             if (vIdx < chunk.verses.lastIndex) {
                 builder.append(" ")
             }
         }
-        builder.toAnnotatedString() to charOffset
+        Triple(builder.toAnnotatedString(), charOffset, ranges)
     }
 
     // Outer Mushaf Page Container Frame
@@ -1489,6 +1523,17 @@ private fun IndoPak13LinePageCard(
                     .fillMaxWidth()
                     .onGloballyPositioned { coords ->
                         contentTopOffsetPx = coords.positionInParent().y
+                    }
+                    .pointerInput(chunk.verses, verseCharRanges) {
+                        detectTapGestures { tapOffset ->
+                            val layout = textLayoutResult ?: return@detectTapGestures
+                            val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                            val targetVerse = verseCharRanges.find { tappedCharOffset in it.second }?.first
+                                ?: chunk.verses.firstOrNull()?.number
+                            if (targetVerse != null && onAyahClick != null) {
+                                onAyahClick(targetVerse)
+                            }
+                        }
                     }
                     .drawBehind {
                         val layout = textLayoutResult ?: return@drawBehind
@@ -1601,7 +1646,8 @@ private fun SurahReader(
     onToggleBold: () -> Unit,
     onBackToList: () -> Unit,
     onSelectSurah: (SurahMeta) -> Unit,
-    onNextSurah: () -> Unit
+    onNextSurah: () -> Unit,
+    onOpenTafsir: (surahNumber: Int, ayahNumber: Int) -> Unit = { _, _ -> }
 )  {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -2409,7 +2455,12 @@ private fun SurahReader(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .widthIn(max = 520.dp)
-                                                .then(activeVerseModifier),
+                                                .then(activeVerseModifier)
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                    onClick = { onOpenTafsir(surah.number, verse.number) }
+                                                ),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
@@ -2463,6 +2514,9 @@ private fun SurahReader(
                                         numberStylePref = numberStylePref,
                                         onActiveWordPosition = { y ->
                                             activeWordOffsetYInItem = y
+                                        },
+                                        onAyahClick = { ayahNumber ->
+                                            onOpenTafsir(surah.number, ayahNumber)
                                         }
                                     )
                                 }
@@ -2477,7 +2531,14 @@ private fun SurahReader(
                                         fontScale = fontScale,
                                         fontBold = fontBold,
                                         showSurahFrame = chunk.verses.firstOrNull()?.number == 1,
-                                        modifier = Modifier
+                                        modifier = Modifier.clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {
+                                                val firstAyah = chunk.verses.firstOrNull()?.number ?: 1
+                                                onOpenTafsir(surah.number, firstAyah)
+                                            }
+                                        )
                                     )
                                 }
                             }
@@ -3874,6 +3935,34 @@ private fun SurahReader(
                         )
                     }
                 }
+            }
+
+            // ─── FLOATING TAFSIR "AL-MA'RIFAH" ACTION BUTTON (Apple Music lyrics translate style) ───
+            AnimatedVisibility(
+                visible = shouldShowBars,
+                enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 2 },
+                exit = fadeOut(tween(180)) + slideOutVertically(tween(180)) { it / 2 },
+                modifier = Modifier
+                    .align(if (isArabic) Alignment.BottomStart else Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(bottom = 96.dp, start = 18.dp, end = 18.dp)
+            ) {
+                AlMarifahFloatingButton(
+                    onClick = {
+                        val currentAyahTarget = activeVerseNumber ?: run {
+                            when (layoutMode) {
+                                QuranLayoutMode.TEXT -> {
+                                    val item = textItems.getOrNull(listState.firstVisibleItemIndex)
+                                    (item as? QuranTextItem.VerseItem)?.verse?.number ?: 1
+                                }
+                                QuranLayoutMode.INDOPAK_13_LINES, QuranLayoutMode.PAGES_SVG -> {
+                                    pageChunks?.getOrNull(listState.firstVisibleItemIndex)?.verses?.firstOrNull()?.number ?: 1
+                                }
+                            }
+                        }
+                        onOpenTafsir(surah.number, currentAyahTarget)
+                    }
+                )
             }
         }
     }
