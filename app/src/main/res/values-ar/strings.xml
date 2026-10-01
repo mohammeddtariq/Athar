@@ -287,7 +287,7 @@
     <string name="settings_open_developer_options">فتح خيارات المطور</string>
 
     <!-- Al-Ma'rifah (Tafsir & Contemplation) -->
-    <string name="al_marifah_name">المعرفة</string>
+    <string name="al_marifah_name">الدِّرَايَة</string>
     <string name="al_marifah_tagline">تفسير وتدبر آيات القرآن الكريم</string>
     <string name="al_marifah_explore">تصفح التفاسير</string>
     <string name="al_marifah_book_saadi">تفسير السعدي</string>

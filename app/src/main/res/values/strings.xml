@@ -287,7 +287,7 @@
     <string name="settings_open_developer_options">Open Developer Options</string>
 
     <!-- Al-Ma'rifah (Tafsir & Contemplation) -->
-    <string name="al_marifah_name">Al-Ma\'rifah</string>
+    <string name="al_marifah_name">Al Dirayah</string>
     <string name="al_marifah_tagline">Tafsir &amp; Quranic Contemplation</string>
     <string name="al_marifah_explore">Explore Tafsir</string>
     <string name="al_marifah_book_saadi">Tafsir Al-Sa\'di</string>

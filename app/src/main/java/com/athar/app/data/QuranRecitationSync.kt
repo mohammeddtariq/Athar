@@ -33,8 +33,9 @@ data class ChapterRecitationTiming(
      */
     fun findActiveVerse(positionMs: Long): VerseTiming? {
         if (verses.isEmpty()) return null
+        if (positionMs <= verses.first().startMs) return verses.first()
         return verses.firstOrNull { positionMs in it.startMs..it.endMs }
-            ?: verses.lastOrNull { positionMs >= it.endMs }?.takeIf { positionMs <= it.endMs + 2000L }
+            ?: verses.lastOrNull { positionMs >= it.endMs }?.takeIf { positionMs <= it.endMs + 3000L }
     }
 
     /**
@@ -47,20 +48,21 @@ data class ChapterRecitationTiming(
         // If position is before the first word of this verse begins, do not highlight any word
         if (positionMs < firstSeg.startMs) return null
 
-        // 1. Direct hit inside word segment [startMs .. endMs]
-        val direct = verse.segments.firstOrNull { positionMs in it.startMs..it.endMs }
+        // 1. Direct hit inside word segment [startMs .. endMs)
+        // Using semi-open interval gives snappy, instantaneous transition to subsequent word
+        val direct = verse.segments.firstOrNull { positionMs >= it.startMs && positionMs < it.endMs }
         if (direct != null) return direct.wordIndex
 
-        // 2. If position is after the very last word of this verse by >100ms (verse end silence/breath)
+        // If at the exact end boundary of the last segment in this verse
         val lastSeg = verse.segments.last()
-        if (positionMs > lastSeg.endMs + 100L) {
+        if (positionMs in lastSeg.startMs..lastSeg.endMs) return lastSeg.wordIndex
+
+        // 2. If position is after the very last word of this verse by >80ms (verse end silence/breath)
+        if (positionMs > lastSeg.endMs + 80L) {
             return null
         }
 
         // 3. In between word N and word N+1 (small gap/pause):
-        // Never jump to word N+1 before it starts!
-        // During gaps > 80ms, stop highlighting so indicator stops during pauses.
-        // During micro gaps (<= 80ms), bridge smoothly on word N.
         val lastFinished = verse.segments.lastOrNull { positionMs >= it.endMs }
         if (lastFinished != null) {
             val nextSeg = verse.segments.firstOrNull { it.startMs > lastFinished.endMs }

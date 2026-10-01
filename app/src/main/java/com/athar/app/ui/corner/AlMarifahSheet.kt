@@ -120,7 +120,7 @@ private sealed interface TafsirUiState {
 }
 
 /**
- * "Al-Ma'rifah" (المعرفة) Floating Tafsir & Contemplation Modal Sheet.
+ * "Al-Dirayah" (الدِّرَايَة) Floating Tafsir & Contemplation Modal Sheet.
  *
  * Features:
  * - Fluid entrance animation with semi-transparent blurred backdrop.
@@ -463,7 +463,7 @@ private fun AlMarifahTopBar(
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
-                    text = if (isArabic) "المعرفة" else "Al-Ma'rifah",
+                    text = if (isArabic) "الدِّرَايَة" else "Al Dirayah",
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Black,
                     fontSize = 12.5.sp,
@@ -1456,7 +1456,7 @@ private fun AlMarifahBottomBar(
 }
 
 /**
- * "Al-Ma'rifah" (المعرفة) Glow Feature Tab Card.
+ * "Al-Dirayah" (الدِّرَايَة) Glow Feature Tab Card.
  * Shown prominently in the Quran screen index with an animated flowing emerald-gold border glow.
  */
 @Composable
@@ -1535,7 +1535,7 @@ fun AlMarifahGlowCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = if (isArabic) "المعرفة • Al-Ma'rifah" else "Al-Ma'rifah • المعرفة",
+                        text = if (isArabic) "الدِّرَايَة • Al Dirayah" else "Al Dirayah • الدِّرَايَة",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Black,
                         fontSize = 14.5.sp,
@@ -1637,7 +1637,7 @@ fun AlMarifahFloatingButton(
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.MenuBook,
-            contentDescription = if (isArabic) "المعرفة • تفسير الآية" else "Al-Ma'rifah • Verse Tafsir",
+            contentDescription = if (isArabic) "الدِّرَايَة • تفسير الآية" else "Al Dirayah • Verse Tafsir",
             tint = AtharPrimaryLight,
             modifier = Modifier.size(20.dp)
         )

@@ -708,7 +708,7 @@ private fun SurahListScreen(
                 )
             }
 
-            // "Al-Ma'rifah" (المعرفة) Animated Glow Feature Bar Tab
+            // "Al-Dirayah" (الدِّرَايَة) Animated Glow Feature Bar Tab
             if (query.isBlank()) {
                 AlMarifahGlowCard(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
@@ -1751,12 +1751,12 @@ private fun SurahReader(
                     currentPlaybackMs = pos
                     val timing = chapterTiming
                     if (timing != null) {
-                        // Android MediaPlayer reports position at the audio buffer queue, which is ~120ms ahead of physical speaker output.
-                        // Compensate buffer latency so visual highlight is timed-perfectly with speaker acoustics.
-                        val acousticPos = (pos - 120L).coerceAtLeast(0L)
-                        val activeVerse = timing.findActiveVerse(acousticPos)
+                        // Compensate audio buffer / hardware latency with reciter-calibrated lead offset
+                        // to ensure word highlight syncs instantaneously with the spoken recitation without delay.
+                        val effectivePos = (pos + reciter.syncLeadMs).coerceAtLeast(0L)
+                        val activeVerse = timing.findActiveVerse(effectivePos)
                         val vNum = activeVerse?.verseNumber
-                        val wIdx = if (activeVerse != null) timing.findActiveWordIndex(activeVerse, acousticPos) else null
+                        val wIdx = if (activeVerse != null) timing.findActiveWordIndex(activeVerse, effectivePos) else null
                         if (activeVerseNumber != vNum) {
                             activeVerseNumber = vNum
                             activeWordOffsetYInItem = 0f
@@ -1767,7 +1767,7 @@ private fun SurahReader(
                     }
                 }
             } catch (_: Exception) {}
-            delay(40)
+            delay(16)
         }
     }
 
