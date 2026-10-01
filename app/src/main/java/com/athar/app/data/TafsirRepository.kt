@@ -74,6 +74,19 @@ enum class TafsirEdition(
         descriptionArabic = "يركز بشكل أساسي على الأحكام الفقهية واستنباطها من الآيات مع العناية باللغة والإعراب.",
         descriptionEnglish = "Focuses predominantly on legal rulings (Ahkam), jurisprudence derivation, Arabic linguistics, and grammar.",
         quranComId = 90
+    ),
+    MUYASSAR(
+        id = "muyassar",
+        arabicName = "التفسير الميسر",
+        englishName = "Al-Tafsir Al-Muyassar",
+        bookTitleArabic = "التفسير الميسر",
+        bookTitleEnglish = "Al-Tafsir Al-Muyassar",
+        authorArabic = "نخبة من العلماء بإشراف مجمع الملك فهد",
+        authorEnglish = "King Fahd Quran Complex",
+        slug = "ar-tafsir-muyassar",
+        descriptionArabic = "تفسير وجيز ميسر للآيات صادر عن مجمع الملك فهد، صِيغ بعبارات واضحة وسهلة في متناول الجميع.",
+        descriptionEnglish = "A concise, accessible commentary published by the King Fahd Complex with clear, simplified phrasing.",
+        quranComId = 16
     )
 }
 
@@ -115,6 +128,46 @@ object TafsirRepository {
             .replace(Regex("#{1,6}\\s*"), "")
             .replace(Regex("\n{3,}"), "\n\n")
             .trim()
+    }
+
+    /**
+     * Isolates the commentary specifically for [ayahNumber] from multi-verse commentaries (e.g. {1} ... {2} ...).
+     */
+    fun extractSingleAyahTafsir(rawText: String, ayahNumber: Int): String {
+        if (rawText.isBlank()) return rawText
+
+        fun normalizeDigit(ch: Char): Char = when (ch) {
+            '٠' -> '0'; '١' -> '1'; '٢' -> '2'; '٣' -> '3'; '٤' -> '4'
+            '٥' -> '5'; '٦' -> '6'; '٧' -> '7'; '٨' -> '8'; '٩' -> '9'
+            else -> ch
+        }
+
+        fun parseNum(str: String): Int? {
+            val normalized = str.map { normalizeDigit(it) }.joinToString("")
+            return normalized.toIntOrNull()
+        }
+
+        // Match occurrences of {N} at line start or paragraph start
+        val markerRegex = Regex("""(?:\n|^)\s*\{([0-9٠-٩]+)\}""")
+        val allMarkers = markerRegex.findAll(rawText).toList()
+        if (allMarkers.size <= 1) return rawText
+
+        val targetIdx = allMarkers.indexOfFirst { match ->
+            parseNum(match.groupValues[1]) == ayahNumber
+        }
+
+        if (targetIdx == -1) return rawText
+
+        val targetMarker = allMarkers[targetIdx]
+        val startPos = if (ayahNumber == 1) 0 else targetMarker.range.first
+        val endPos = if (targetIdx + 1 < allMarkers.size) {
+            allMarkers[targetIdx + 1].range.first
+        } else {
+            rawText.length
+        }
+
+        val extracted = rawText.substring(startPos, endPos).trim()
+        return if (extracted.isNotBlank()) extracted else rawText
     }
 
     /**
@@ -175,6 +228,7 @@ object TafsirRepository {
                         TafsirEdition.IBN_KATHIR -> "ibn_kathir"
                         TafsirEdition.TABARI -> "tabari"
                         TafsirEdition.QURTUBI -> "qurtubi"
+                        TafsirEdition.MUYASSAR -> "saadi"
                     }
                     val edList = seed.optJSONArray(editionKey)
                     val enList = seed.optJSONArray("en_ibn_kathir")
@@ -237,8 +291,8 @@ object TafsirRepository {
                     surahNameArabic = json.optString("surah_ar", surahAr),
                     surahNameEnglish = json.optString("surah_en", surahEn),
                     verseTextArabic = json.optString("verse_text", verseText),
-                    arabicTafsir = json.getString("ar_tafsir"),
-                    englishTafsir = json.optString("en_tafsir", ""),
+                    arabicTafsir = extractSingleAyahTafsir(json.getString("ar_tafsir"), ayah),
+                    englishTafsir = extractSingleAyahTafsir(json.optString("en_tafsir", ""), ayah),
                     englishTranslation = json.optString("en_trans", ""),
                     englishTransliteration = json.optString("en_transliteration", ""),
                     edition = edition
@@ -290,8 +344,8 @@ object TafsirRepository {
                     ?: ""
             }
 
-            val cleanedAr = cleanTafsirText(arText)
-            val cleanedEn = cleanTafsirText(enText ?: enTrans)
+            val cleanedAr = extractSingleAyahTafsir(cleanTafsirText(arText), ayah)
+            val cleanedEn = extractSingleAyahTafsir(cleanTafsirText(enText ?: enTrans), ayah)
             val cleanedTrans = cleanTafsirText(enTrans)
             val translit = verseDetails.transliteration
 

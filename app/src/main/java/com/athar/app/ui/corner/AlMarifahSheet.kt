@@ -7,7 +7,6 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -19,8 +18,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,21 +27,23 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -55,6 +54,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.CircularProgressIndicator
@@ -65,11 +65,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +76,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
@@ -92,7 +91,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.athar.app.R
 import com.athar.app.data.AyahTafsir
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.QuranRepository
@@ -100,17 +98,12 @@ import com.athar.app.data.TafsirEdition
 import com.athar.app.data.TafsirRepository
 import com.athar.app.data.formatDigits
 import com.athar.app.ui.theme.AtharCardBorder
-import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
-import com.athar.app.ui.theme.AtharSurface
-import com.athar.app.ui.theme.AtharTextOnPrimary
-import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.QuranUthmanicHafs
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifText
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 private sealed interface TafsirUiState {
@@ -124,23 +117,23 @@ private sealed interface TafsirUiState {
  *
  * Features:
  * - Fluid entrance animation with semi-transparent blurred backdrop.
- * - Bilingual commentary presentation (Arabic and English).
+ * - Strict bilingual commentary isolation (Arabic and English).
  * - Segmented language switcher to seamlessly toggle commentary and pronunciation.
- * - Modern 4-book Tafsir switcher (Al-Sa'di, Ibn Kathir, Al-Tabari, Al-Qurtubi).
-
+ * - Classical 5-book Tafsir switcher (Al-Sa'di, Ibn Kathir, Al-Tabari, Al-Qurtubi, Al-Muyassar).
  * - Fullscreen expand/collapse toggle for deep contemplation.
- * - Previous/Next Ayah steppers, copy & share actions.
+ * - Searchable 114-Surah index menu when opened from main tab or on demand.
+ * - Previous/Next Ayah steppers matching authentic LTR/RTL reading directions.
  */
 @Composable
 fun AlMarifahSheet(
     initialSurahNumber: Int = 1,
     initialAyahNumber: Int = 1,
+    startWithSurahIndex: Boolean = false,
     numberStyle: NumberStylePreference = NumberStylePreference.WESTERN,
     onDismiss: () -> Unit,
     onNavigateToAyah: ((surah: Int, ayah: Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val isArabic = remember { Locale.getDefault().language == "ar" }
 
     var currentSurah by remember { mutableIntStateOf(initialSurahNumber.coerceIn(1, 114)) }
     val surahMeta = remember(currentSurah) {
@@ -158,8 +151,12 @@ fun AlMarifahSheet(
 
     var selectedEdition by remember { mutableStateOf(TafsirEdition.SAADI) }
     var isEnglishMode by remember { mutableStateOf(false) }
-    var isExpanded by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(startWithSurahIndex) }
+    var showSurahPicker by remember { mutableStateOf(startWithSurahIndex) }
     var uiState by remember { mutableStateOf<TafsirUiState>(TafsirUiState.Loading) }
+
+    val effectiveArabic = !isEnglishMode
+    val sheetLayoutDirection = if (effectiveArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     // Fetch Tafsir whenever surah, ayah, or edition changes
     LaunchedEffect(currentSurah, currentAyah, selectedEdition) {
@@ -177,7 +174,11 @@ fun AlMarifahSheet(
     }
 
     BackHandler {
-        onDismiss()
+        if (showSurahPicker && !startWithSurahIndex) {
+            showSurahPicker = false
+        } else {
+            onDismiss()
+        }
     }
 
     var currentVerseText by remember { mutableStateOf("") }
@@ -187,7 +188,7 @@ fun AlMarifahSheet(
     }
 
     val sheetHeightFraction by animateFloatAsState(
-        targetValue = if (isExpanded) 0.96f else 0.72f,
+        targetValue = if (isExpanded || showSurahPicker) 0.98f else 0.74f,
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
         label = "sheetHeight"
     )
@@ -228,191 +229,457 @@ fun AlMarifahSheet(
                 )
                 .shadow(elevation = 24.dp, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding()
-            ) {
-                // Top Drag Handle & Controls Bar (Sticky)
-                AlMarifahTopBar(
-                    isExpanded = isExpanded,
-                    isEnglishMode = isEnglishMode,
-                    isArabic = isArabic,
-                    onToggleExpand = { isExpanded = !isExpanded },
-                    onSelectLanguageMode = { isEnglishMode = it },
-                    onClose = onDismiss
-                )
-
-                // Sticky 4-Book Tafsir Switcher
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 4.dp)
-                ) {
-                    TafsirBooksBar(
-                        selectedEdition = selectedEdition,
-                        isArabic = isArabic,
-                        onSelectEdition = { selectedEdition = it }
-                    )
-                }
-
-                HorizontalDivider(
-                    thickness = 0.8.dp,
-                    color = Color(0xFF222B1E),
-                    modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
-                )
-
-                // Scrollable Content
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 18.dp)
-                ) {
-                    // Sacred Ayah Card
-                    val activeTafsir = (uiState as? TafsirUiState.Success)?.tafsir
-                    SacredAyahCard(
-                        surahMeta = surahMeta,
-                        ayahNumber = currentAyah,
-                        verseText = currentVerseText.ifEmpty {
-                            activeTafsir?.verseTextArabic ?: ""
-                        },
-                        englishTranslation = activeTafsir?.englishTranslation.orEmpty(),
-                        englishTransliteration = activeTafsir?.englishTransliteration.orEmpty(),
-                        isEnglishMode = isEnglishMode,
-                        isArabic = isArabic
-                    )
-
-                    Spacer(Modifier.height(14.dp))
-
-                    // Tafsir Content Section
-                    AnimatedContent(
-                        targetState = uiState,
-                        transitionSpec = {
-                            fadeIn(tween(220)) togetherWith fadeOut(tween(180))
-                        },
-                        label = "tafsirContent"
-                    ) { state ->
-                        when (state) {
-                            is TafsirUiState.Loading -> {
-                                TafsirLoadingView(isArabic = isArabic)
-                            }
-                            is TafsirUiState.Error -> {
-                                TafsirErrorView(
-                                    isArabic = isArabic,
-                                    errorMessage = state.message,
-                                    onRetry = {
-                                        // Trigger reload
-                                        selectedEdition = selectedEdition
-                                    }
-                                )
-                            }
-                            is TafsirUiState.Success -> {
-                                TafsirContentView(
-                                    tafsir = state.tafsir,
-                                    isEnglishMode = isEnglishMode,
-                                    isArabic = isArabic
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(18.dp))
-                }
-
-                // Bottom Navigation & Actions Bar
-                AlMarifahBottomBar(
-                    currentSurah = currentSurah,
-                    currentAyah = currentAyah,
-                    maxAyahs = surahMeta.ayahs,
-                    numberStyle = numberStyle,
-                    isArabic = isArabic,
-                    onPrevAyah = {
-                        if (currentAyah > 1) {
-                            currentAyah -= 1
-                            onNavigateToAyah?.invoke(currentSurah, currentAyah)
-                        } else if (currentSurah > 1) {
-                            currentSurah -= 1
-                            val prevMeta = allSurahs.firstOrNull { it.number == currentSurah } ?: allSurahs[0]
-                            currentAyah = prevMeta.ayahs
-                            onNavigateToAyah?.invoke(currentSurah, currentAyah)
-                        }
-                    },
-                    onNextAyah = {
-                        if (currentAyah < surahMeta.ayahs) {
-                            currentAyah += 1
-                            onNavigateToAyah?.invoke(currentSurah, currentAyah)
-                        } else if (currentSurah < 114) {
-                            currentSurah += 1
+            CompositionLocalProvider(LocalLayoutDirection provides sheetLayoutDirection) {
+                if (showSurahPicker) {
+                    SurahPickerView(
+                        isArabic = effectiveArabic,
+                        onSelectSurah = { selectedNum ->
+                            currentSurah = selectedNum
                             currentAyah = 1
-                            onNavigateToAyah?.invoke(currentSurah, currentAyah)
+                            showSurahPicker = false
+                            isExpanded = true
+                        },
+                        onClose = {
+                            if (startWithSurahIndex) {
+                                onDismiss()
+                            } else {
+                                showSurahPicker = false
+                            }
                         }
-                    },
-                    onCopy = {
-                        val state = uiState
-                        if (state is TafsirUiState.Success) {
-                            val textToCopy = buildString {
-                                append("﴿ ")
-                                append(state.tafsir.verseTextArabic)
-                                append(" ﴾ [")
-                                append(state.tafsir.surahNameArabic)
-                                append(": ")
-                                append(state.tafsir.ayahNumber)
-                                append("]\n\n")
-                                append(state.tafsir.edition.arabicName)
-                                append(":\n")
-                                append(state.tafsir.arabicTafsir)
-                                if (state.tafsir.englishTafsir.isNotBlank()) {
-                                    append("\n\nEnglish:\n")
-                                    append(state.tafsir.englishTafsir)
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding()
+                    ) {
+                        // Top Drag Handle & Controls Bar (Sticky)
+                        AlMarifahTopBar(
+                            isExpanded = isExpanded,
+                            isEnglishMode = isEnglishMode,
+                            isArabic = effectiveArabic,
+                            onToggleExpand = { isExpanded = !isExpanded },
+                            onSelectLanguageMode = { isEnglishMode = it },
+                            onClose = onDismiss
+                        )
+
+                        // Classical 5-Book Tafsir Switcher
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 4.dp)
+                        ) {
+                            TafsirBooksBar(
+                                selectedEdition = selectedEdition,
+                                isArabic = effectiveArabic,
+                                onSelectEdition = { selectedEdition = it }
+                            )
+                        }
+
+                        HorizontalDivider(
+                            thickness = 0.8.dp,
+                            color = Color(0xFF222B1E),
+                            modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                        )
+
+                        // Scrollable Content
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 18.dp)
+                        ) {
+                            // Sacred Ayah Card
+                            val activeTafsir = (uiState as? TafsirUiState.Success)?.tafsir
+                            SacredAyahCard(
+                                surahMeta = surahMeta,
+                                ayahNumber = currentAyah,
+                                verseText = currentVerseText.ifEmpty {
+                                    activeTafsir?.verseTextArabic ?: ""
+                                },
+                                englishTranslation = activeTafsir?.englishTranslation.orEmpty(),
+                                englishTransliteration = activeTafsir?.englishTransliteration.orEmpty(),
+                                isEnglishMode = isEnglishMode,
+                                isArabic = effectiveArabic,
+                                onOpenSurahPicker = { showSurahPicker = true }
+                            )
+
+                            Spacer(Modifier.height(14.dp))
+
+                            // Tafsir Content Section (Single isolated commentary card matching design)
+                            AnimatedContent(
+                                targetState = uiState,
+                                transitionSpec = {
+                                    fadeIn(tween(220)) togetherWith fadeOut(tween(180))
+                                },
+                                label = "tafsirContent"
+                            ) { state ->
+                                when (state) {
+                                    is TafsirUiState.Loading -> {
+                                        TafsirLoadingView(isArabic = effectiveArabic)
+                                    }
+                                    is TafsirUiState.Error -> {
+                                        TafsirErrorView(
+                                            isArabic = effectiveArabic,
+                                            errorMessage = state.message,
+                                            onRetry = {
+                                                selectedEdition = selectedEdition
+                                            }
+                                        )
+                                    }
+                                    is TafsirUiState.Success -> {
+                                        TafsirContentView(
+                                            tafsir = state.tafsir,
+                                            isEnglishMode = isEnglishMode
+                                        )
+                                    }
                                 }
-                                append("\n\n— Athar • أثـر")
                             }
-                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            cm.setPrimaryClip(ClipData.newPlainText("Athar Tafsir", textToCopy))
-                            Toast.makeText(
-                                context,
-                                if (isArabic) "تم نسخ التفسير إلى الحافظة" else "Tafsir copied to clipboard",
-                                Toast.LENGTH_SHORT
-                            ).show()
+
+                            Spacer(Modifier.height(18.dp))
                         }
-                    },
-                    onShare = {
-                        val state = uiState
-                        if (state is TafsirUiState.Success) {
-                            val shareText = buildString {
-                                append("﴿ ")
-                                append(state.tafsir.verseTextArabic)
-                                append(" ﴾ [")
-                                append(state.tafsir.surahNameArabic)
-                                append(": ")
-                                append(state.tafsir.ayahNumber)
-                                append("]\n\n")
-                                append(state.tafsir.edition.arabicName)
-                                append(":\n")
-                                append(state.tafsir.arabicTafsir)
-                                if (state.tafsir.englishTafsir.isNotBlank()) {
-                                    append("\n\nEnglish:\n")
-                                    append(state.tafsir.englishTafsir)
+
+                        // Bottom Navigation & Actions Bar
+                        AlMarifahBottomBar(
+                            currentSurah = currentSurah,
+                            currentAyah = currentAyah,
+                            maxAyahs = surahMeta.ayahs,
+                            numberStyle = numberStyle,
+                            isArabic = effectiveArabic,
+                            onPrevAyah = {
+                                if (currentAyah > 1) {
+                                    currentAyah -= 1
+                                    onNavigateToAyah?.invoke(currentSurah, currentAyah)
+                                } else if (currentSurah > 1) {
+                                    currentSurah -= 1
+                                    val prevMeta = allSurahs.firstOrNull { it.number == currentSurah } ?: allSurahs[0]
+                                    currentAyah = prevMeta.ayahs
+                                    onNavigateToAyah?.invoke(currentSurah, currentAyah)
                                 }
-                                append("\n\n— Athar • أثـر")
+                            },
+                            onNextAyah = {
+                                if (currentAyah < surahMeta.ayahs) {
+                                    currentAyah += 1
+                                    onNavigateToAyah?.invoke(currentSurah, currentAyah)
+                                } else if (currentSurah < 114) {
+                                    currentSurah += 1
+                                    currentAyah = 1
+                                    onNavigateToAyah?.invoke(currentSurah, currentAyah)
+                                }
+                            },
+                            onCopy = {
+                                val state = uiState
+                                if (state is TafsirUiState.Success) {
+                                    val textToCopy = buildString {
+                                        append("﴿ ")
+                                        append(state.tafsir.verseTextArabic)
+                                        append(" ﴾ [")
+                                        append(state.tafsir.surahNameArabic)
+                                        append(": ")
+                                        append(state.tafsir.ayahNumber)
+                                        append("]\n\n")
+                                        if (effectiveArabic) {
+                                            append(state.tafsir.edition.arabicName)
+                                            append(":\n")
+                                            append(state.tafsir.arabicTafsir)
+                                        } else {
+                                            append(state.tafsir.edition.englishName)
+                                            append(":\n")
+                                            append(state.tafsir.englishTafsir)
+                                        }
+                                        append("\n\n— Athar • أثـر")
+                                    }
+                                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    cm.setPrimaryClip(ClipData.newPlainText("Athar Tafsir", textToCopy))
+                                    Toast.makeText(
+                                        context,
+                                        if (effectiveArabic) "تم نسخ التفسير إلى الحافظة" else "Tafsir copied to clipboard",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            onShare = {
+                                val state = uiState
+                                if (state is TafsirUiState.Success) {
+                                    val shareText = buildString {
+                                        append("﴿ ")
+                                        append(state.tafsir.verseTextArabic)
+                                        append(" ﴾ [")
+                                        append(state.tafsir.surahNameArabic)
+                                        append(": ")
+                                        append(state.tafsir.ayahNumber)
+                                        append("]\n\n")
+                                        if (effectiveArabic) {
+                                            append(state.tafsir.edition.arabicName)
+                                            append(":\n")
+                                            append(state.tafsir.arabicTafsir)
+                                        } else {
+                                            append(state.tafsir.edition.englishName)
+                                            append(":\n")
+                                            append(state.tafsir.englishTafsir)
+                                        }
+                                        append("\n\n— Athar • أثـر")
+                                    }
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, "Tafsir: ${state.tafsir.surahNameArabic}")
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Tafsir"))
+                                }
                             }
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "Tafsir: ${state.tafsir.surahNameArabic}")
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Tafsir"))
-                        }
+                        )
                     }
-                )
+                }
             }
         }
     }
 }
 
 /**
- * Top control bar with drag indicator, title branding, language reverse swap, expand/collapse, and close.
+ * Fullscreen searchable 114-Surah index menu.
+ */
+@Composable
+private fun SurahPickerView(
+    isArabic: Boolean,
+    onSelectSurah: (surahNumber: Int) -> Unit,
+    onClose: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredSurahs = remember(searchQuery) {
+        if (searchQuery.isBlank()) allSurahs
+        else allSurahs.filter {
+            it.arabicName.contains(searchQuery.trim()) ||
+            it.englishName.contains(searchQuery.trim(), ignoreCase = true) ||
+            it.number.toString() == searchQuery.trim() ||
+            formatDigits(it.number.toString(), NumberStylePreference.ARABIC_INDIC).contains(searchQuery.trim())
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+    ) {
+        // Drag Handle
+        Box(
+            modifier = Modifier
+                .padding(top = 10.dp, bottom = 6.dp)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(42.dp)
+                    .height(4.5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color.White.copy(alpha = 0.22f))
+            )
+        }
+
+        // Top Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isArabic) "الدِّرَايَة • فهرس السور" else "Al Dirayah • Surah Index",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 17.sp,
+                    color = Color.White
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = if (isArabic) "اختر سورة لعرض تفسيرها آية بآية" else "Select a surah for verse-by-verse commentary",
+                    fontFamily = ThmanyahSans,
+                    fontSize = 12.sp,
+                    color = AtharTextSecondary
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClose
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = "Close",
+                    tint = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+        }
+
+        // Search Box
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 18.dp, vertical = 8.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF161E14))
+                .border(1.dp, Color(0xFF283623), RoundedCornerShape(16.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = AtharPrimaryLight,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp,
+                        color = Color.White,
+                        textAlign = TextAlign.Start,
+                        textDirection = if (isArabic) TextDirection.Rtl else TextDirection.Ltr
+                    ),
+                    cursorBrush = SolidColor(AtharPrimaryLight),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = if (isArabic) "ابحث باسم السورة أو رقمها…" else "Search surah by name or number…",
+                                fontFamily = ThmanyahSans,
+                                fontSize = 13.5.sp,
+                                color = AtharTextSecondary.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Start
+                            )
+                        }
+                        inner()
+                    }
+                )
+                if (searchQuery.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable { searchQuery = "" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Clear",
+                            tint = AtharTextSecondary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Surah List
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filteredSurahs, key = { it.number }) { surah ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF141912))
+                        .border(1.dp, Color(0xFF243021), RoundedCornerShape(16.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onSelectSurah(surah.number) }
+                        )
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Number Badge
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AtharPrimary.copy(alpha = 0.20f))
+                                .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.40f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isArabic) formatDigits(surah.number.toString(), NumberStylePreference.ARABIC_INDIC)
+                                       else surah.number.toString(),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = AtharPrimaryLight
+                            )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        // Names & Details
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = if (isArabic) "سورة ${surah.arabicName}" else "Surah ${surah.englishName}",
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.5.sp,
+                                    color = Color(0xFFF3F7F2)
+                                )
+                                Text(
+                                    text = if (isArabic) surah.englishName else surah.arabicName,
+                                    fontFamily = if (isArabic) ThmanyahSans else QuranUthmanicHafs,
+                                    fontSize = 12.sp,
+                                    color = AtharTextSecondary.copy(alpha = 0.8f)
+                                )
+                            }
+                            Spacer(Modifier.height(3.dp))
+                            val typeLabel = if (isArabic) surah.revelationType.arabicLabel else surah.revelationType.englishLabel
+                            val ayahsLabel = if (isArabic) "${formatDigits(surah.ayahs.toString(), NumberStylePreference.ARABIC_INDIC)} آية"
+                                             else "${surah.ayahs} Verses"
+                            Text(
+                                text = "$typeLabel • $ayahsLabel",
+                                fontFamily = ThmanyahSans,
+                                fontSize = 11.5.sp,
+                                color = AtharTextSecondary
+                            )
+                        }
+
+                        Icon(
+                            imageVector = if (isArabic) Icons.AutoMirrored.Rounded.ArrowBack else Icons.AutoMirrored.Rounded.ArrowForward,
+                            contentDescription = null,
+                            tint = AtharPrimaryLight.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Top control bar with drag indicator, title branding, segmented language switcher, expand/collapse, and close.
  */
 @Composable
 private fun AlMarifahTopBar(
@@ -540,7 +807,6 @@ private fun AlMarifahTopBar(
                 }
             }
 
-
             Spacer(Modifier.width(8.dp))
 
             // Expand / Collapse Fullscreen Button
@@ -591,7 +857,7 @@ private fun AlMarifahTopBar(
 }
 
 /**
- * Sacred Ayah header card displaying the calligraphic verse text.
+ * Sacred Ayah header card displaying the calligraphic verse text and surah selector.
  */
 @Composable
 private fun SacredAyahCard(
@@ -601,7 +867,8 @@ private fun SacredAyahCard(
     englishTranslation: String = "",
     englishTransliteration: String = "",
     isEnglishMode: Boolean,
-    isArabic: Boolean
+    isArabic: Boolean,
+    onOpenSurahPicker: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -612,24 +879,42 @@ private fun SacredAyahCard(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Reference pill: e.g. "سورة الفاتحة • الآية ١" (Ayah number always in Arabic-Indic style)
+        // Reference pill: e.g. "سورة الفاتحة • الآية ١"
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Surah Pill with quick switch action
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(AtharPrimary.copy(alpha = 0.18f))
+                    .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onOpenSurahPicker
+                    )
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Text(
-                    text = if (isArabic) "سورة ${surahMeta.arabicName}" else "Surah ${surahMeta.englishName}",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = AtharPrimaryLight
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        text = if (isArabic) "سورة ${surahMeta.arabicName}" else "Surah ${surahMeta.englishName}",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = AtharPrimaryLight
+                    )
+                    Icon(
+                        imageVector = Icons.Rounded.SwapHoriz,
+                        contentDescription = "Change Surah",
+                        tint = AtharPrimaryLight.copy(alpha = 0.8f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
 
             Text(
@@ -638,6 +923,7 @@ private fun SacredAyahCard(
                 fontSize = 12.sp
             )
 
+            // Ayah pill (number in Arabic-Indic numerals)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -744,9 +1030,8 @@ private fun SacredAyahCard(
     }
 }
 
-
 /**
- * 4-Book Tafsir switcher pills matching Athar's Duas category styling.
+ * Classical 5-Book Tafsir switcher pills matching Athar's authentic styling.
  */
 @Composable
 private fun TafsirBooksBar(
@@ -814,7 +1099,7 @@ private fun TafsirBooksBar(
 
         Spacer(Modifier.height(6.dp))
 
-        // Brief authentic description of the active book (from the uploaded screenshot)
+        // Brief authentic description of the active book
         Text(
             text = if (isArabic) selectedEdition.descriptionArabic else selectedEdition.descriptionEnglish,
             fontFamily = ThmanyahSans,
@@ -825,6 +1110,105 @@ private fun TafsirBooksBar(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
+    }
+}
+
+/**
+ * Main Tafsir text view displaying commentary with dimmed card styling matching target design.
+ * Features:
+ * - Single isolated card strictly for the selected language.
+ * - Green dot bullet • with book edition and language badge.
+ * - Words before ':' styled prominent white.
+ * - Words after ':' styled sage green.
+ * - '{...}' Quran tokens styled in gold.
+ * - '«...»' Hadith quotes styled in soft emerald.
+ */
+@Composable
+private fun TafsirContentView(
+    tafsir: AyahTafsir,
+    isEnglishMode: Boolean
+) {
+    val isAr = !isEnglishMode
+    val containerShape = RoundedCornerShape(20.dp)
+
+    CompositionLocalProvider(
+        LocalLayoutDirection provides if (isAr) LayoutDirection.Rtl else LayoutDirection.Ltr
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(containerShape)
+                .background(Color(0xFF10150E))
+                .border(1.dp, Color(0xFF222B1E), containerShape)
+                .padding(18.dp)
+        ) {
+            // Card Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Bullet + Title
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(AtharPrimaryLight)
+                    )
+                    Text(
+                        text = if (isAr) "التفسير بالعربية • ${tafsir.edition.arabicName}"
+                               else "English Commentary • ${tafsir.edition.englishName}",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color(0xFFE2EEE0)
+                    )
+                }
+
+                // Language Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF192217))
+                        .border(0.7.dp, Color(0xFF283624), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = if (isAr) "العربية" else "English",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.5.sp,
+                        color = AtharPrimaryLight
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF1E281B))
+            Spacer(Modifier.height(14.dp))
+
+            // Commentary Text
+            val textToDisplay = if (isAr) tafsir.arabicTafsir else tafsir.englishTafsir
+            val styledText = remember(textToDisplay) {
+                buildStyledTafsirAnnotatedString(textToDisplay)
+            }
+
+            Text(
+                text = styledText,
+                fontFamily = if (isAr) ThmanyahSerifText else ThmanyahSans,
+                fontSize = if (isAr) 18.sp else 15.sp,
+                lineHeight = if (isAr) 34.sp else 24.sp,
+                style = TextStyle(
+                    textAlign = TextAlign.Start,
+                    textDirection = if (isAr) TextDirection.Rtl else TextDirection.Ltr
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
@@ -926,283 +1310,6 @@ private fun AnnotatedString.Builder.appendStyledTafsirChunk(
         append(text)
     }
 }
-
-/**
- * Main Tafsir text view displaying commentary with dimmed card styling and clean headers.
- */
-@Composable
-private fun TafsirContentView(
-    tafsir: AyahTafsir,
-    isEnglishMode: Boolean,
-    isArabic: Boolean
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        if (!isEnglishMode) {
-            // ══════════════════════════════════════════════════════════
-            // ─── CARD 1: ARABIC COMMENTARY ───
-            // ══════════════════════════════════════════════════════════
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF141912))
-                    .border(1.dp, Color(0xFF263322), RoundedCornerShape(20.dp))
-                    .padding(18.dp)
-            ) {
-                // Header: Edition & Author (Full width, zero overlap)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(AtharPrimary.copy(alpha = 0.20f))
-                            .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.50f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.MenuBook,
-                            contentDescription = null,
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = tafsir.edition.bookTitleArabic,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = Color(0xFFF4F7F2)
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = tafsir.edition.authorArabic,
-                            fontFamily = ThmanyahSans,
-                            fontSize = 12.sp,
-                            color = AtharPrimaryLight.copy(alpha = 0.90f)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF243020))
-                Spacer(Modifier.height(14.dp))
-
-                // Arabic Commentary Text (Strictly RTL) with styled text before/after ':'
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    val styledText = remember(tafsir.arabicTafsir) {
-                        buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
-                    }
-                    Text(
-                        text = styledText,
-                        fontFamily = ThmanyahSerifText,
-                        fontSize = 18.5.sp,
-                        lineHeight = 35.sp,
-                        style = TextStyle(
-                            textAlign = TextAlign.Start,
-                            textDirection = TextDirection.Rtl
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            // ══════════════════════════════════════════════════════════
-            // ─── CARD 2: ENGLISH COMMENTARY (Secondary) ───
-            // ══════════════════════════════════════════════════════════
-            if (tafsir.englishTafsir.isNotBlank() && tafsir.englishTafsir != tafsir.englishTranslation) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFF10150E))
-                        .border(1.dp, Color(0xFF222B1E), RoundedCornerShape(18.dp))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(AtharTextSecondary.copy(alpha = 0.70f))
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "English Commentary",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = AtharTextSecondary
-                        )
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        val styledEnText = remember(tafsir.englishTafsir) {
-                            buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
-                        }
-                        Text(
-                            text = styledEnText,
-                            fontFamily = ThmanyahSans,
-                            fontSize = 14.5.sp,
-                            lineHeight = 23.sp,
-                            style = TextStyle(
-                                textAlign = TextAlign.Start,
-                                textDirection = TextDirection.Ltr
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-        } else {
-            // ══════════════════════════════════════════════════════════
-            // ─── CARD 1: ENGLISH COMMENTARY ───
-            // ══════════════════════════════════════════════════════════
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF141912))
-                    .border(1.dp, Color(0xFF263322), RoundedCornerShape(20.dp))
-                    .padding(18.dp)
-            ) {
-                // Header: Edition & Author (Full width, zero overlap)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(AtharPrimary.copy(alpha = 0.20f))
-                            .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.50f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.MenuBook,
-                            contentDescription = null,
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = tafsir.edition.englishName,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = Color(0xFFF4F7F2)
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = tafsir.edition.authorEnglish,
-                            fontFamily = ThmanyahSans,
-                            fontSize = 12.sp,
-                            color = AtharPrimaryLight.copy(alpha = 0.90f)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF243020))
-                Spacer(Modifier.height(14.dp))
-
-                // English Commentary Text (Strictly LTR)
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    val styledEnText = remember(tafsir.englishTafsir) {
-                        buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
-                    }
-                    Text(
-                        text = styledEnText,
-                        fontFamily = ThmanyahSans,
-                        fontSize = 15.sp,
-                        lineHeight = 24.sp,
-                        style = TextStyle(
-                            textAlign = TextAlign.Start,
-                            textDirection = TextDirection.Ltr
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            // ══════════════════════════════════════════════════════════
-            // ─── CARD 2: ARABIC COMMENTARY (Secondary) ───
-            // ══════════════════════════════════════════════════════════
-            if (tafsir.arabicTafsir.isNotBlank()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFF10150E))
-                        .border(1.dp, Color(0xFF222B1E), RoundedCornerShape(18.dp))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(AtharTextSecondary.copy(alpha = 0.70f))
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "التفسير بالعربية • ${tafsir.edition.arabicName}",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = AtharTextSecondary
-                        )
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    // Arabic Commentary Text (Strictly RTL)
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                        val styledArText = remember(tafsir.arabicTafsir) {
-                            buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
-                        }
-                        Text(
-                            text = styledArText,
-                            fontFamily = ThmanyahSerifText,
-                            fontSize = 16.5.sp,
-                            lineHeight = 31.sp,
-                            style = TextStyle(
-                                textAlign = TextAlign.Start,
-                                textDirection = TextDirection.Rtl
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 /**
  * Serene loading state with soft pulsing glow indicator.
@@ -1313,6 +1420,9 @@ private fun TafsirErrorView(
 
 /**
  * Bottom actions bar with Prev/Next Ayah steppers, copy, and share actions.
+ * Authentically follows reading direction:
+ * In Arabic (RTL): [السابق ->] on the right, [<- التالي] on the left.
+ * In English (LTR): [<- Previous] on the left, [Next ->] on the right.
  */
 @Composable
 private fun AlMarifahBottomBar(
@@ -1326,131 +1436,154 @@ private fun AlMarifahBottomBar(
     onCopy: () -> Unit,
     onShare: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF131711))
-            .border(width = 0.8.dp, color = Color(0xFF222B1E))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+    CompositionLocalProvider(
+        LocalLayoutDirection provides if (isArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
-        // Prev Ayah Button
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.08f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onPrevAyah
+                .fillMaxWidth()
+                .background(Color(0xFF131711))
+                .border(width = 0.8.dp, color = Color(0xFF222B1E))
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Previous Ayah Button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onPrevAyah
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                if (!isArabic) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Previous Ayah",
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = if (isArabic) "السابق" else "Previous",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.85f)
                 )
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            Icon(
-                imageVector = if (isArabic) Icons.AutoMirrored.Rounded.ArrowForward else Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Previous Ayah",
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp)
-            )
+                if (isArabic) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Previous Ayah",
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Ayah stepper counter indicator: Arabic-Indic numerals
             Text(
-                text = if (isArabic) "السابق" else "Previous",
+                text = "${formatDigits(currentAyah.toString(), NumberStylePreference.ARABIC_INDIC)} / ${formatDigits(maxAyahs.toString(), NumberStylePreference.ARABIC_INDIC)}",
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.85f)
-            )
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        // Ayah stepper counter indicator: Always in Arabic-Indic numerals
-        Text(
-            text = "${formatDigits(currentAyah.toString(), NumberStylePreference.ARABIC_INDIC)} / ${formatDigits(maxAyahs.toString(), NumberStylePreference.ARABIC_INDIC)}",
-            fontFamily = ThmanyahSans,
-            fontWeight = FontWeight.Black,
-            fontSize = 13.sp,
-            color = AtharPrimaryLight
-        )
-
-
-        Spacer(Modifier.weight(1f))
-
-        // Copy Action
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onCopy
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.ContentCopy,
-                contentDescription = "Copy Tafsir",
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        Spacer(Modifier.width(8.dp))
-
-        // Share Action
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onShare
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Share,
-                contentDescription = "Share Tafsir",
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        Spacer(Modifier.width(8.dp))
-
-        // Next Ayah Button
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(AtharPrimary.copy(alpha = 0.22f))
-                .border(1.dp, AtharPrimaryLight.copy(alpha = 0.40f), RoundedCornerShape(12.dp))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onNextAyah
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = if (isArabic) "التالي" else "Next",
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp,
                 color = AtharPrimaryLight
             )
-            Icon(
-                imageVector = if (isArabic) Icons.AutoMirrored.Rounded.ArrowBack else Icons.AutoMirrored.Rounded.ArrowForward,
-                contentDescription = "Next Ayah",
-                tint = AtharPrimaryLight,
-                modifier = Modifier.size(16.dp)
-            )
+
+            Spacer(Modifier.weight(1f))
+
+            // Copy Action
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onCopy
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ContentCopy,
+                    contentDescription = "Copy Tafsir",
+                    tint = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Share Action
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onShare
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Share,
+                    contentDescription = "Share Tafsir",
+                    tint = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Next Ayah Button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(AtharPrimary.copy(alpha = 0.22f))
+                    .border(1.dp, AtharPrimaryLight.copy(alpha = 0.40f), RoundedCornerShape(12.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onNextAyah
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                if (isArabic) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                        contentDescription = "Next Ayah",
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = if (isArabic) "التالي" else "Next",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = AtharPrimaryLight
+                )
+                if (!isArabic) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                        contentDescription = "Next Ayah",
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -1560,7 +1693,7 @@ fun AlMarifahGlowCard(
                 }
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    text = if (isArabic) "تفسير وتدبر آيات الذكر الحكيم بأربعة تفاسير معتمدة" else "Contemplate verses with 4 classical commentary editions",
+                    text = if (isArabic) "تفسير وتدبر آيات الذكر الحكيم بالتفاسير المعتمدة" else "Contemplate verses with authentic commentary editions",
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Normal,
                     fontSize = 11.5.sp,
@@ -1643,4 +1776,3 @@ fun AlMarifahFloatingButton(
         )
     }
 }
-

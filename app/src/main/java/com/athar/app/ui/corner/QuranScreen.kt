@@ -346,6 +346,7 @@ fun QuranScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(QuranTabIndex.SURAHS) }
     var tafsirTargetAyah by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var showTafsirWithSurahIndex by remember { mutableStateOf(false) }
 
     var lastBackTime by remember { mutableLongStateOf(0L) }
     var showDoubleBackToast by remember { mutableStateOf(false) }
@@ -371,8 +372,8 @@ fun QuranScreen(
         }
     }
 
-    LaunchedEffect(openSurah, tafsirTargetAyah) {
-        onReadingModeChanged(openSurah != null || tafsirTargetAyah != null)
+    LaunchedEffect(openSurah, tafsirTargetAyah, showTafsirWithSurahIndex) {
+        onReadingModeChanged(openSurah != null || tafsirTargetAyah != null || showTafsirWithSurahIndex)
     }
 
     DisposableEffect(Unit) {
@@ -473,7 +474,8 @@ fun QuranScreen(
                         targetPageToScroll = null
                         openSurah = it
                     },
-                    onOpenTafsir = { s, a -> tafsirTargetAyah = Pair(s, a) }
+                    onOpenTafsir = { s, a -> tafsirTargetAyah = Pair(s, a) },
+                    onOpenTafsirIndex = { showTafsirWithSurahIndex = true }
                 )
 
                 val lastSurah = remember(lastReadSurahNum) {
@@ -508,14 +510,25 @@ fun QuranScreen(
             }
         }
 
-        val targetAyah = tafsirTargetAyah
-        if (targetAyah != null) {
+        if (showTafsirWithSurahIndex) {
             AlMarifahSheet(
-                initialSurahNumber = targetAyah.first,
-                initialAyahNumber = targetAyah.second,
+                initialSurahNumber = lastReadSurahNum ?: 1,
+                initialAyahNumber = 1,
+                startWithSurahIndex = true,
                 numberStyle = numberStyle,
-                onDismiss = { tafsirTargetAyah = null }
+                onDismiss = { showTafsirWithSurahIndex = false }
             )
+        } else {
+            val targetAyah = tafsirTargetAyah
+            if (targetAyah != null) {
+                AlMarifahSheet(
+                    initialSurahNumber = targetAyah.first,
+                    initialAyahNumber = targetAyah.second,
+                    startWithSurahIndex = false,
+                    numberStyle = numberStyle,
+                    onDismiss = { tafsirTargetAyah = null }
+                )
+            }
         }
     }
 }
@@ -530,7 +543,8 @@ private fun SurahListScreen(
     lastReadSurahNum: Int? = null,
     onBack: () -> Unit,
     onSelectSurah: (SurahMeta) -> Unit,
-    onOpenTafsir: (surahNumber: Int, ayahNumber: Int) -> Unit = { _, _ -> }
+    onOpenTafsir: (surahNumber: Int, ayahNumber: Int) -> Unit = { _, _ -> },
+    onOpenTafsirIndex: () -> Unit = {}
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
@@ -712,10 +726,7 @@ private fun SurahListScreen(
             if (query.isBlank()) {
                 AlMarifahGlowCard(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-                    onClick = {
-                        val sNum = lastReadSurahNum ?: 1
-                        onOpenTafsir(sNum, 1)
-                    }
+                    onClick = onOpenTafsirIndex
                 )
             }
 

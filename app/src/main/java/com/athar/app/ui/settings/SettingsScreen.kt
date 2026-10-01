@@ -2,9 +2,13 @@ package com.athar.app.ui.settings
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
+import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -288,7 +292,8 @@ fun SettingsScreen(
                                 scope.launch {
                                     prefs.setLanguage("ar")
                                     AtharWidgetUpdater.updateAllWidgetsSuspend(context)
-                                    (context as? Activity)?.recreate()
+                                    applyLocaleToContext(context, "ar")
+                                    context.findActivity()?.recreate()
                                 }
                             }
                         )
@@ -300,7 +305,8 @@ fun SettingsScreen(
                                 scope.launch {
                                     prefs.setLanguage("en")
                                     AtharWidgetUpdater.updateAllWidgetsSuspend(context)
-                                    (context as? Activity)?.recreate()
+                                    applyLocaleToContext(context, "en")
+                                    context.findActivity()?.recreate()
                                 }
                             }
                         )
@@ -2519,4 +2525,27 @@ private fun NowBarLivePreviewCard(
         }
     }
 }
+
+fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
+}
+
+fun applyLocaleToContext(context: Context, languageCode: String) {
+    val locale = Locale.forLanguageTag(languageCode)
+    Locale.setDefault(locale)
+    val res = context.resources
+    val config = Configuration(res.configuration)
+    config.setLocale(locale)
+    config.setLayoutDirection(locale)
+    @Suppress("DEPRECATION")
+    res.updateConfiguration(config, res.displayMetrics)
+    @Suppress("DEPRECATION")
+    context.applicationContext.resources.updateConfiguration(config, context.applicationContext.resources.displayMetrics)
+}
+
 

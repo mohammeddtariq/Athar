@@ -30,7 +30,10 @@ import com.athar.app.updater.UpdateCheckWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -48,6 +51,15 @@ class MainActivity : ComponentActivity() {
         UpdateCheckWorker.schedule(applicationContext)
 
         appPreferences = AppPreferences(applicationContext)
+        val initialLang = runCatching {
+            runBlocking {
+                withTimeoutOrNull(250) {
+                    appPreferences.selectedLanguage.first()
+                }
+            }
+        }.getOrNull() ?: "ar"
+        applyLocale(initialLang)
+
         pendingUpdatePrompt = intent?.getBooleanExtra(AppUpdateManager.EXTRA_OPEN_UPDATER, false) == true
         if (intent?.getBooleanExtra("open_widget_settings", false) == true) {
             openWidgetSettingsState.value = true

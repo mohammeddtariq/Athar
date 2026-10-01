@@ -81,8 +81,7 @@ object AtharWidgetUpdater {
             renderPrayersWideWidget(appContext, appWidgetManager, widgetId, snapshot, day, next)
         }
 
-        val requiresMinuteTick = (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC)
-        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick = requiresMinuteTick)
+        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick = false)
     }
 
 
@@ -407,35 +406,15 @@ object AtharWidgetUpdater {
         val targetDate = prayerDateToday(targetTime, isTomorrow)
         val diffMillis = targetDate.time - System.currentTimeMillis()
 
-        if (numberStyle == NumberStylePreference.ARABIC_INDIC) {
-            views.setViewVisibility(chronoId, View.GONE)
-            views.setViewVisibility(textId, View.VISIBLE)
-            val timeText = if (diffMillis > 0) {
-                val totalSeconds = (diffMillis / 1000).coerceAtLeast(0)
-                val hours = totalSeconds / 3600
-                val minutes = (totalSeconds % 3600) / 60
-                val seconds = totalSeconds % 60
-                val formatted = if (hours > 0) {
-                    String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
-                } else {
-                    String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
-                }
-                formatDigits(formatted, numberStyle)
-            } else {
-                formatDigits("00:00", numberStyle)
-            }
-            views.setTextViewText(textId, timeText)
+        views.setViewVisibility(textId, View.GONE)
+        views.setViewVisibility(chronoId, View.VISIBLE)
+        if (diffMillis > 0) {
+            val base = SystemClock.elapsedRealtime() + diffMillis
+            views.setChronometerCountDown(chronoId, true)
+            views.setChronometer(chronoId, base, null, true)
         } else {
-            views.setViewVisibility(textId, View.GONE)
-            views.setViewVisibility(chronoId, View.VISIBLE)
-            if (diffMillis > 0) {
-                val base = SystemClock.elapsedRealtime() + diffMillis
-                views.setChronometerCountDown(chronoId, true)
-                views.setChronometer(chronoId, base, null, true)
-            } else {
-                views.setChronometerCountDown(chronoId, false)
-                views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
-            }
+            views.setChronometerCountDown(chronoId, false)
+            views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
         }
     }
 
