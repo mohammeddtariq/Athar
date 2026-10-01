@@ -45,7 +45,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -334,7 +333,7 @@ fun AlMarifahSheet(
                             onNavigateToAyah?.invoke(currentSurah, currentAyah)
                         } else if (currentSurah > 1) {
                             currentSurah -= 1
-                            val prevMeta = allSurahs.first { it.number == currentSurah }
+                            val prevMeta = allSurahs.firstOrNull { it.number == currentSurah } ?: allSurahs[0]
                             currentAyah = prevMeta.ayahs
                             onNavigateToAyah?.invoke(currentSurah, currentAyah)
                         }
@@ -837,89 +836,94 @@ private fun TafsirBooksBar(
  * - Hadith quotes '«...»' are styled in soft green
  */
 private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
-    return buildAnnotatedString {
-        val lines = text.split("\n")
-        lines.forEachIndexed { index, rawLine ->
-            val line = rawLine.trim()
-            if (line.isNotEmpty()) {
-                val colonIdx = line.indexOf(':')
-                if (colonIdx != -1 && colonIdx < line.length - 1) {
-                    val prefix = line.substring(0, colonIdx + 1)
-                    val suffix = line.substring(colonIdx + 1)
+    if (text.isBlank()) return AnnotatedString("")
+    return try {
+        buildAnnotatedString {
+            val lines = text.split("\n")
+            lines.forEachIndexed { index, rawLine ->
+                val line = rawLine.trim()
+                if (line.isNotEmpty()) {
+                    val colonIdx = line.indexOf(':')
+                    if (colonIdx != -1 && colonIdx < line.length - 1) {
+                        val prefix = line.substring(0, colonIdx + 1)
+                        val suffix = line.substring(colonIdx + 1)
 
-                    appendStyledTafsirChunk(
-                        text = prefix,
-                        baseWeight = FontWeight.Bold,
-                        baseColor = Color(0xFFF2F7F0)
-                    )
-                    appendStyledTafsirChunk(
-                        text = suffix,
-                        baseWeight = FontWeight.Normal,
-                        baseColor = Color(0xFFBACABA)
-                    )
-                } else if (colonIdx != -1 && colonIdx == line.length - 1) {
-                    appendStyledTafsirChunk(
-                        text = line,
-                        baseWeight = FontWeight.Bold,
-                        baseColor = Color(0xFFF2F7F0)
-                    )
-                } else {
-                    val isHeading = line.startsWith("وهي مكية") || line.startsWith("وهي مدنية") ||
-                                    line.startsWith("سورة ") || line.startsWith("تفسير سورة")
-                    appendStyledTafsirChunk(
-                        text = line,
-                        baseWeight = if (isHeading) FontWeight.Bold else FontWeight.Normal,
-                        baseColor = if (isHeading) Color(0xFFE2EEE0) else Color(0xFFBACABA)
-                    )
+                        appendStyledTafsirChunk(
+                            text = prefix,
+                            baseColor = Color(0xFFFFFFFF)
+                        )
+                        appendStyledTafsirChunk(
+                            text = suffix,
+                            baseColor = Color(0xFFBACABA)
+                        )
+                    } else if (colonIdx != -1 && colonIdx == line.length - 1) {
+                        appendStyledTafsirChunk(
+                            text = line,
+                            baseColor = Color(0xFFFFFFFF)
+                        )
+                    } else {
+                        val isHeading = line.startsWith("وهي مكية") || line.startsWith("وهي مدنية") ||
+                                        line.startsWith("سورة ") || line.startsWith("تفسير سورة")
+                        appendStyledTafsirChunk(
+                            text = line,
+                            baseColor = if (isHeading) Color(0xFFE2EEE0) else Color(0xFFBACABA)
+                        )
+                    }
+                }
+                if (index < lines.size - 1) {
+                    append("\n")
                 }
             }
-            if (index < lines.size - 1) {
-                append("\n")
-            }
         }
+    } catch (_: Exception) {
+        AnnotatedString(text)
     }
 }
 
 private fun AnnotatedString.Builder.appendStyledTafsirChunk(
     text: String,
-    baseWeight: FontWeight,
     baseColor: Color
 ) {
-    val tokenRegex = Regex("(\\{[^}]+}|«[^»]+»)")
-    var lastIdx = 0
-    val matches = tokenRegex.findAll(text)
+    if (text.isEmpty()) return
+    try {
+        val tokenRegex = Regex("(\\{[^}]+}|«[^»]+»)")
+        var lastIdx = 0
+        val matches = tokenRegex.findAll(text)
 
-    for (match in matches) {
-        val start = match.range.first
-        val end = match.range.last + 1
+        for (match in matches) {
+            val start = match.range.first.coerceIn(0, text.length)
+            val end = (match.range.last + 1).coerceIn(0, text.length)
 
-        if (start > lastIdx) {
-            withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
-                append(text.substring(lastIdx, start))
+            if (start > lastIdx) {
+                withStyle(SpanStyle(color = baseColor)) {
+                    append(text.substring(lastIdx, start))
+                }
             }
+
+            val token = match.value
+            if (token.startsWith("{") && token.endsWith("}")) {
+                withStyle(SpanStyle(color = Color(0xFFE5C158))) {
+                    append(token)
+                }
+            } else if (token.startsWith("«") && token.endsWith("»")) {
+                withStyle(SpanStyle(color = AtharPrimaryLight)) {
+                    append(token)
+                }
+            } else {
+                withStyle(SpanStyle(color = baseColor)) {
+                    append(token)
+                }
+            }
+            lastIdx = end
         }
 
-        val token = match.value
-        if (token.startsWith("{") && token.endsWith("}")) {
-            withStyle(SpanStyle(color = Color(0xFFE5C158), fontWeight = FontWeight.Bold)) {
-                append(token)
-            }
-        } else if (token.startsWith("«") && token.endsWith("»")) {
-            withStyle(SpanStyle(color = AtharPrimaryLight, fontWeight = FontWeight.SemiBold)) {
-                append(token)
-            }
-        } else {
-            withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
-                append(token)
+        if (lastIdx < text.length) {
+            withStyle(SpanStyle(color = baseColor)) {
+                append(text.substring(lastIdx))
             }
         }
-        lastIdx = end
-    }
-
-    if (lastIdx < text.length) {
-        withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
-            append(text.substring(lastIdx))
-        }
+    } catch (_: Exception) {
+        append(text)
     }
 }
 
@@ -996,22 +1000,20 @@ private fun TafsirContentView(
 
                 // Arabic Commentary Text (Strictly RTL) with styled text before/after ':'
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    SelectionContainer {
-                        val styledText = remember(tafsir.arabicTafsir) {
-                            buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
-                        }
-                        Text(
-                            text = styledText,
-                            fontFamily = ThmanyahSerifText,
-                            fontSize = 18.5.sp,
-                            lineHeight = 35.sp,
-                            style = TextStyle(
-                                textAlign = TextAlign.Start,
-                                textDirection = TextDirection.Rtl
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    val styledText = remember(tafsir.arabicTafsir) {
+                        buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
                     }
+                    Text(
+                        text = styledText,
+                        fontFamily = ThmanyahSerifText,
+                        fontSize = 18.5.sp,
+                        lineHeight = 35.sp,
+                        style = TextStyle(
+                            textAlign = TextAlign.Start,
+                            textDirection = TextDirection.Rtl
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -1050,22 +1052,20 @@ private fun TafsirContentView(
                     Spacer(Modifier.height(10.dp))
 
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        SelectionContainer {
-                            val styledEnText = remember(tafsir.englishTafsir) {
-                                buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
-                            }
-                            Text(
-                                text = styledEnText,
-                                fontFamily = ThmanyahSans,
-                                fontSize = 14.5.sp,
-                                lineHeight = 23.sp,
-                                style = TextStyle(
-                                    textAlign = TextAlign.Start,
-                                    textDirection = TextDirection.Ltr
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                        val styledEnText = remember(tafsir.englishTafsir) {
+                            buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
                         }
+                        Text(
+                            text = styledEnText,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 14.5.sp,
+                            lineHeight = 23.sp,
+                            style = TextStyle(
+                                textAlign = TextAlign.Start,
+                                textDirection = TextDirection.Ltr
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -1129,22 +1129,20 @@ private fun TafsirContentView(
 
                 // English Commentary Text (Strictly LTR)
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    SelectionContainer {
-                        val styledEnText = remember(tafsir.englishTafsir) {
-                            buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
-                        }
-                        Text(
-                            text = styledEnText,
-                            fontFamily = ThmanyahSans,
-                            fontSize = 15.sp,
-                            lineHeight = 24.sp,
-                            style = TextStyle(
-                                textAlign = TextAlign.Start,
-                                textDirection = TextDirection.Ltr
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    val styledEnText = remember(tafsir.englishTafsir) {
+                        buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
                     }
+                    Text(
+                        text = styledEnText,
+                        fontFamily = ThmanyahSans,
+                        fontSize = 15.sp,
+                        lineHeight = 24.sp,
+                        style = TextStyle(
+                            textAlign = TextAlign.Start,
+                            textDirection = TextDirection.Ltr
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -1184,22 +1182,20 @@ private fun TafsirContentView(
 
                     // Arabic Commentary Text (Strictly RTL)
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                        SelectionContainer {
-                            val styledArText = remember(tafsir.arabicTafsir) {
-                                buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
-                            }
-                            Text(
-                                text = styledArText,
-                                fontFamily = ThmanyahSerifText,
-                                fontSize = 16.5.sp,
-                                lineHeight = 31.sp,
-                                style = TextStyle(
-                                    textAlign = TextAlign.Start,
-                                    textDirection = TextDirection.Rtl
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                        val styledArText = remember(tafsir.arabicTafsir) {
+                            buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
                         }
+                        Text(
+                            text = styledArText,
+                            fontFamily = ThmanyahSerifText,
+                            fontSize = 16.5.sp,
+                            lineHeight = 31.sp,
+                            style = TextStyle(
+                                textAlign = TextAlign.Start,
+                                textDirection = TextDirection.Rtl
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
