@@ -81,9 +81,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -91,6 +92,7 @@ import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.AyahTafsir
 import com.athar.app.data.NumberStylePreference
+import com.athar.app.data.QuranRepository
 import com.athar.app.data.TafsirEdition
 import com.athar.app.data.TafsirRepository
 import com.athar.app.data.formatDigits
@@ -174,6 +176,12 @@ fun AlMarifahSheet(
         onDismiss()
     }
 
+    var currentVerseText by remember { mutableStateOf("") }
+    LaunchedEffect(currentSurah, currentAyah) {
+        val verses = QuranRepository.getSurahVerses(context, currentSurah)
+        currentVerseText = verses?.firstOrNull { it.number == currentAyah }?.text ?: ""
+    }
+
     val sheetHeightFraction by animateFloatAsState(
         targetValue = if (isExpanded) 0.96f else 0.72f,
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
@@ -221,14 +229,33 @@ fun AlMarifahSheet(
                     .fillMaxSize()
                     .navigationBarsPadding()
             ) {
-                // Top Drag Handle & Controls Bar
+                // Top Drag Handle & Controls Bar (Sticky)
                 AlMarifahTopBar(
                     isExpanded = isExpanded,
                     isEnglishHero = isEnglishHero,
                     isArabic = isArabic,
                     onToggleExpand = { isExpanded = !isExpanded },
-                    onSwapHero = { isEnglishHero = !isEnglishHero },
+                    onSelectHeroLanguage = { isEnglishHero = it },
                     onClose = onDismiss
+                )
+
+                // Sticky 4-Book Tafsir Switcher
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 4.dp)
+                ) {
+                    TafsirBooksBar(
+                        selectedEdition = selectedEdition,
+                        isArabic = isArabic,
+                        onSelectEdition = { selectedEdition = it }
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = 0.8.dp,
+                    color = Color(0xFF222B1E),
+                    modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
                 )
 
                 // Scrollable Content
@@ -242,18 +269,11 @@ fun AlMarifahSheet(
                     SacredAyahCard(
                         surahMeta = surahMeta,
                         ayahNumber = currentAyah,
-                        verseText = (uiState as? TafsirUiState.Success)?.tafsir?.verseTextArabic ?: "",
+                        verseText = currentVerseText.ifEmpty {
+                            (uiState as? TafsirUiState.Success)?.tafsir?.verseTextArabic ?: ""
+                        },
                         isArabic = isArabic,
                         numberStyle = numberStyle
-                    )
-
-                    Spacer(Modifier.height(14.dp))
-
-                    // 4-Book Tafsir Switcher
-                    TafsirBooksBar(
-                        selectedEdition = selectedEdition,
-                        isArabic = isArabic,
-                        onSelectEdition = { selectedEdition = it }
                     )
 
                     Spacer(Modifier.height(14.dp))
@@ -393,7 +413,7 @@ private fun AlMarifahTopBar(
     isEnglishHero: Boolean,
     isArabic: Boolean,
     onToggleExpand: () -> Unit,
-    onSwapHero: () -> Unit,
+    onSelectHeroLanguage: (isEnglish: Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -422,58 +442,95 @@ private fun AlMarifahTopBar(
             // Brand Title Badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(AtharPrimary.copy(alpha = 0.16f))
                     .border(1.dp, AtharPrimaryLight.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(horizontal = 9.dp, vertical = 6.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.MenuBook,
                     contentDescription = null,
                     tint = AtharPrimaryLight,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
                 Text(
-                    text = if (isArabic) "المعرفة • تَفْسِير" else "Al-Ma'rifah • Tafsir",
+                    text = if (isArabic) "المعرفة" else "Al-Ma'rifah",
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Black,
-                    fontSize = 13.sp,
+                    fontSize = 12.5.sp,
                     color = AtharPrimaryLight
                 )
             }
 
             Spacer(Modifier.weight(1f))
 
-            // Google Translate Style Hero Swap Pill
+            // Segmented Hero Language Switcher (Crystal clear active state)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(14.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onSwapHero
-                    )
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .background(Color(0xFF161E14))
+                    .border(1.dp, Color(0xFF283623), RoundedCornerShape(14.dp))
+                    .padding(2.5.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.SwapHoriz,
-                    contentDescription = "Swap Hero Language",
-                    tint = if (isEnglishHero) AtharPrimaryLight else Color(0xFFE2E8DF),
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = if (!isEnglishHero) "عربي ⇄ En" else "En ⇄ عربي",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.5.sp,
-                    color = if (isEnglishHero) AtharPrimaryLight else Color(0xFFE2E8DF)
-                )
+                val arActive = !isEnglishHero
+                val enActive = isEnglishHero
+
+                // Arabic Pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(if (arActive) AtharPrimary else Color.Transparent)
+                        .border(
+                            width = if (arActive) 1.dp else 0.dp,
+                            color = if (arActive) AtharPrimaryLight.copy(alpha = 0.6f) else Color.Transparent,
+                            shape = RoundedCornerShape(11.dp)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onSelectHeroLanguage(false) }
+                        )
+                        .padding(horizontal = 9.dp, vertical = 4.5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "عربي",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = if (arActive) FontWeight.Black else FontWeight.Medium,
+                        fontSize = 11.5.sp,
+                        color = if (arActive) Color.White else AtharTextSecondary.copy(alpha = 0.75f)
+                    )
+                }
+
+                // English Pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(if (enActive) AtharPrimary else Color.Transparent)
+                        .border(
+                            width = if (enActive) 1.dp else 0.dp,
+                            color = if (enActive) AtharPrimaryLight.copy(alpha = 0.6f) else Color.Transparent,
+                            shape = RoundedCornerShape(11.dp)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onSelectHeroLanguage(true) }
+                        )
+                        .padding(horizontal = 9.dp, vertical = 4.5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "English",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = if (enActive) FontWeight.Black else FontWeight.Medium,
+                        fontSize = 11.5.sp,
+                        color = if (enActive) Color.White else AtharTextSecondary.copy(alpha = 0.75f)
+                    )
+                }
             }
 
             Spacer(Modifier.width(8.dp))
@@ -481,7 +538,7 @@ private fun AlMarifahTopBar(
             // Expand / Collapse Fullscreen Button
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.08f))
                     .clickable(
@@ -495,16 +552,16 @@ private fun AlMarifahTopBar(
                     imageVector = if (isExpanded) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
                     contentDescription = "Toggle Expand",
                     tint = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(19.dp)
                 )
             }
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
 
             // Close Button
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.08f))
                     .clickable(
@@ -518,7 +575,7 @@ private fun AlMarifahTopBar(
                     imageVector = Icons.Rounded.Close,
                     contentDescription = "Close",
                     tint = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
         }
@@ -696,176 +753,339 @@ private fun TafsirContentView(
     isEnglishHero: Boolean,
     isArabic: Boolean
 ) {
+    val heroBorderBrush = Brush.linearGradient(
+        colors = listOf(
+            AtharPrimaryLight.copy(alpha = 0.50f),
+            Color(0xFFE5C158).copy(alpha = 0.35f),
+            Color(0xFF283623)
+        )
+    )
+
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF161C14))
-            .border(1.dp, Color(0xFF263022), RoundedCornerShape(20.dp))
-            .padding(18.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         if (!isEnglishHero) {
-            // ─── ARABIC IS HERO (Default) ───
-            // Arabic Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
+            // ══════════════════════════════════════════════════════════
+            // ─── CARD 1: ARABIC HERO COMMENTARY ───
+            // ══════════════════════════════════════════════════════════
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF131911))
+                    .border(1.2.dp, heroBorderBrush, RoundedCornerShape(20.dp))
+                    .padding(18.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(AtharPrimaryLight)
-                )
-                Text(
-                    text = if (isArabic) "التفسير المعتمد • ${tafsir.edition.arabicName}"
-                           else "Authentic Commentary • ${tafsir.edition.englishName}",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = AtharPrimaryLight
-                )
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Arabic Tafsir (Hero - Larger font, rich leading)
-            SelectionContainer {
-                Text(
-                    text = tafsir.arabicTafsir,
-                    fontFamily = ThmanyahSerifText,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 19.5.sp,
-                    lineHeight = 36.sp,
-                    color = Color(0xFFF0F5EE),
-                    textAlign = TextAlign.Start,
+                // Header: Edition & Author with Hero Badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(AtharPrimary.copy(alpha = 0.20f))
+                            .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.50f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.MenuBook,
+                            contentDescription = null,
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(10.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = tafsir.edition.bookTitleArabic,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 13.5.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = tafsir.edition.authorArabic,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 11.5.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
+
+                    // Hero Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE5C158).copy(alpha = 0.15f))
+                            .border(0.8.dp, Color(0xFFE5C158).copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (isArabic) "التفسير الرئيسي" else "Hero Commentary",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.5.sp,
+                            color = Color(0xFFE5C158)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF243020))
+                Spacer(Modifier.height(14.dp))
+
+                // Arabic Commentary Text (Strictly RTL)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    SelectionContainer {
+                        Text(
+                            text = tafsir.arabicTafsir,
+                            fontFamily = ThmanyahSerifText,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 19.sp,
+                            lineHeight = 36.sp,
+                            color = Color(0xFFF4F7F2),
+                            style = TextStyle(
+                                textAlign = TextAlign.Start,
+                                textDirection = TextDirection.Rtl
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
 
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(
-                thickness = 0.8.dp,
-                color = Color(0xFF283424)
-            )
-            Spacer(Modifier.height(14.dp))
-
-            // English Translation / Tafsir (Secondary - smaller font)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
+            // ══════════════════════════════════════════════════════════
+            // ─── CARD 2: ENGLISH MEANING & TRANSLATION (Secondary) ───
+            // ══════════════════════════════════════════════════════════
+            if (tafsir.englishTafsir.isNotBlank()) {
+                Column(
                     modifier = Modifier
-                        .size(5.dp)
-                        .clip(CircleShape)
-                        .background(AtharTextSecondary.copy(alpha = 0.7f))
-                )
-                Text(
-                    text = "English Commentary & Meaning",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.5.sp,
-                    color = AtharTextSecondary
-                )
-            }
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xFF0F140D))
+                        .border(1.dp, Color(0xFF222B1E), RoundedCornerShape(18.dp))
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(AtharTextSecondary.copy(alpha = 0.70f))
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "English Meaning & Commentary",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = AtharTextSecondary
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Meaning",
+                                fontFamily = ThmanyahSans,
+                                fontSize = 10.sp,
+                                color = AtharTextSecondary.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
 
-            Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
 
-            SelectionContainer {
-                Text(
-                    text = tafsir.englishTafsir,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 13.5.sp,
-                    lineHeight = 21.sp,
-                    color = Color(0xFFB4C4B0),
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    // English Commentary Text (Strictly LTR)
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        SelectionContainer {
+                            Text(
+                                text = tafsir.englishTafsir,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 14.5.sp,
+                                lineHeight = 23.sp,
+                                color = Color(0xFFB8C8B5),
+                                style = TextStyle(
+                                    textAlign = TextAlign.Start,
+                                    textDirection = TextDirection.Ltr
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
             }
         } else {
-            // ─── ENGLISH IS HERO (Reversed) ───
-            // English Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
+            // ══════════════════════════════════════════════════════════
+            // ─── CARD 1: ENGLISH HERO COMMENTARY ───
+            // ══════════════════════════════════════════════════════════
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF131911))
+                    .border(1.2.dp, heroBorderBrush, RoundedCornerShape(20.dp))
+                    .padding(18.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(AtharPrimaryLight)
-                )
-                Text(
-                    text = "English Commentary • ${tafsir.edition.englishName}",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = AtharPrimaryLight
-                )
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // English Tafsir (Hero - Larger font)
-            SelectionContainer {
-                Text(
-                    text = tafsir.englishTafsir,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 17.5.sp,
-                    lineHeight = 28.sp,
-                    color = Color(0xFFF0F5EE),
-                    textAlign = TextAlign.Start,
+                // Header: Edition & Author with Hero Badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(AtharPrimary.copy(alpha = 0.20f))
+                            .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.50f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.MenuBook,
+                            contentDescription = null,
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(10.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = tafsir.edition.englishName,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 13.5.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = tafsir.edition.authorEnglish,
+                            fontFamily = ThmanyahSans,
+                            fontSize = 11.5.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
+
+                    // Hero Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE5C158).copy(alpha = 0.15f))
+                            .border(0.8.dp, Color(0xFFE5C158).copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "Hero Commentary",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.5.sp,
+                            color = Color(0xFFE5C158)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF243020))
+                Spacer(Modifier.height(14.dp))
+
+                // English Commentary Text (Strictly LTR)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    SelectionContainer {
+                        Text(
+                            text = tafsir.englishTafsir,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 16.sp,
+                            lineHeight = 26.sp,
+                            color = Color(0xFFF4F7F2),
+                            style = TextStyle(
+                                textAlign = TextAlign.Start,
+                                textDirection = TextDirection.Ltr
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
 
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(
-                thickness = 0.8.dp,
-                color = Color(0xFF283424)
-            )
-            Spacer(Modifier.height(14.dp))
-
-            // Arabic Tafsir (Secondary)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
+            // ══════════════════════════════════════════════════════════
+            // ─── CARD 2: ARABIC COMMENTARY (Secondary) ───
+            // ══════════════════════════════════════════════════════════
+            if (tafsir.arabicTafsir.isNotBlank()) {
+                Column(
                     modifier = Modifier
-                        .size(5.dp)
-                        .clip(CircleShape)
-                        .background(AtharTextSecondary.copy(alpha = 0.7f))
-                )
-                Text(
-                    text = "التفسير بالعربية • ${tafsir.edition.arabicName}",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.5.sp,
-                    color = AtharTextSecondary
-                )
-            }
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xFF0F140D))
+                        .border(1.dp, Color(0xFF222B1E), RoundedCornerShape(18.dp))
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(AtharTextSecondary.copy(alpha = 0.70f))
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "التفسير بالعربية • ${tafsir.edition.arabicName}",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = AtharTextSecondary
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "العربية",
+                                fontFamily = ThmanyahSans,
+                                fontSize = 10.sp,
+                                color = AtharTextSecondary.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
 
-            Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
 
-            SelectionContainer {
-                Text(
-                    text = tafsir.arabicTafsir,
-                    fontFamily = ThmanyahSerifText,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 16.sp,
-                    lineHeight = 30.sp,
-                    color = Color(0xFFB4C4B0),
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    // Arabic Commentary Text (Strictly RTL)
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        SelectionContainer {
+                            Text(
+                                text = tafsir.arabicTafsir,
+                                fontFamily = ThmanyahSerifText,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 16.sp,
+                                lineHeight = 31.sp,
+                                color = Color(0xFFB8C8B5),
+                                style = TextStyle(
+                                    textAlign = TextAlign.Start,
+                                    textDirection = TextDirection.Rtl
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
             }
         }
     }

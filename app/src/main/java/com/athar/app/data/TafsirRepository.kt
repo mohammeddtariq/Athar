@@ -107,6 +107,10 @@ object TafsirRepository {
             .replace("&gt;", ">")
             .replace("&#39;", "'")
             .replace("&nbsp;", " ")
+            .replace("[[", "«")
+            .replace("]]", "»")
+            .replace(Regex("\\*\\s*\\*\\s*\\*?"), "")
+            .replace(Regex("#{1,6}\\s*"), "")
             .replace(Regex("\n{3,}"), "\n\n")
             .trim()
     }

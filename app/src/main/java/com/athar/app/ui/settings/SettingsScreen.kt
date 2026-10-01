@@ -740,7 +740,8 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setWidgetNumberStyle(NumberStylePreference.WESTERN)
-                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                    val snap = prefs.getPreferencesSnapshot().copy(widgetNumberStyle = NumberStylePreference.WESTERN)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context, snap)
                                 }
                             }
                         )
@@ -751,7 +752,8 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     prefs.setWidgetNumberStyle(NumberStylePreference.ARABIC_INDIC)
-                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                                    val snap = prefs.getPreferencesSnapshot().copy(widgetNumberStyle = NumberStylePreference.ARABIC_INDIC)
+                                    AtharWidgetUpdater.updateAllWidgetsSuspend(context, snap)
                                 }
                             }
                         )

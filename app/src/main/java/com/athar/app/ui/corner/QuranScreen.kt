@@ -371,8 +371,8 @@ fun QuranScreen(
         }
     }
 
-    LaunchedEffect(openSurah) {
-        onReadingModeChanged(openSurah != null)
+    LaunchedEffect(openSurah, tafsirTargetAyah) {
+        onReadingModeChanged(openSurah != null || tafsirTargetAyah != null)
     }
 
     DisposableEffect(Unit) {
