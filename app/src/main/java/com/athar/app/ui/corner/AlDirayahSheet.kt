@@ -60,6 +60,7 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -125,7 +126,7 @@ private sealed interface TafsirUiState {
  * - Previous/Next Ayah steppers matching authentic LTR/RTL reading directions.
  */
 @Composable
-fun AlMarifahSheet(
+fun AlDirayahSheet(
     initialSurahNumber: Int = 1,
     initialAyahNumber: Int = 1,
     startWithSurahIndex: Boolean = false,
@@ -254,7 +255,7 @@ fun AlMarifahSheet(
                             .navigationBarsPadding()
                     ) {
                         // Top Drag Handle & Controls Bar (Sticky)
-                        AlMarifahTopBar(
+                        AlDirayahTopBar(
                             isExpanded = isExpanded,
                             isEnglishMode = isEnglishMode,
                             isArabic = effectiveArabic,
@@ -340,7 +341,7 @@ fun AlMarifahSheet(
                         }
 
                         // Bottom Navigation & Actions Bar
-                        AlMarifahBottomBar(
+                        AlDirayahBottomBar(
                             currentSurah = currentSurah,
                             currentAyah = currentAyah,
                             maxAyahs = surahMeta.ayahs,
@@ -682,7 +683,7 @@ private fun SurahPickerView(
  * Top control bar with drag indicator, title branding, segmented language switcher, expand/collapse, and close.
  */
 @Composable
-private fun AlMarifahTopBar(
+private fun AlDirayahTopBar(
     isExpanded: Boolean,
     isEnglishMode: Boolean,
     isArabic: Boolean,
@@ -1132,7 +1133,8 @@ private fun TafsirContentView(
     val containerShape = RoundedCornerShape(20.dp)
 
     CompositionLocalProvider(
-        LocalLayoutDirection provides if (isAr) LayoutDirection.Rtl else LayoutDirection.Ltr
+        LocalLayoutDirection provides if (isAr) LayoutDirection.Rtl else LayoutDirection.Ltr,
+        LocalContentColor provides Color(0xFFBACABA)
     ) {
         Column(
             modifier = Modifier
@@ -1202,7 +1204,9 @@ private fun TafsirContentView(
                 fontFamily = if (isAr) ThmanyahSerifText else ThmanyahSans,
                 fontSize = if (isAr) 18.sp else 15.sp,
                 lineHeight = if (isAr) 34.sp else 24.sp,
+                color = Color(0xFFBACABA),
                 style = TextStyle(
+                    color = Color(0xFFBACABA),
                     textAlign = TextAlign.Start,
                     textDirection = if (isAr) TextDirection.Rtl else TextDirection.Ltr
                 ),
@@ -1214,10 +1218,10 @@ private fun TafsirContentView(
 
 /**
  * Formats Tafsir commentary:
- * - Words before ':' are bold and prominent ivory tint
- * - Words after ':' are normal weight reading sage
- * - Ayah/verse tokens '{...}' are highlighted in warm amber gold
- * - Hadith quotes '«...»' are styled in soft green
+ * - Words before ':' are bold and prominent ivory white (#FFFFFF)
+ * - Words after ':' are normal weight reading sage (#BACABA)
+ * - Ayah/verse tokens '{...}' and '﴿...﴾' are highlighted in warm amber gold (#E5C158)
+ * - Hadith quotes '«...»' are styled in soft emerald
  */
 private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
     if (text.isBlank()) return AnnotatedString("")
@@ -1234,80 +1238,109 @@ private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
 
                         appendStyledTafsirChunk(
                             text = prefix,
-                            baseColor = Color(0xFFFFFFFF)
+                            baseColor = Color(0xFFFFFFFF),
+                            baseWeight = FontWeight.Bold
                         )
                         appendStyledTafsirChunk(
                             text = suffix,
-                            baseColor = Color(0xFFBACABA)
+                            baseColor = Color(0xFFBACABA),
+                            baseWeight = FontWeight.Normal
                         )
                     } else if (colonIdx != -1 && colonIdx == line.length - 1) {
                         appendStyledTafsirChunk(
                             text = line,
-                            baseColor = Color(0xFFFFFFFF)
+                            baseColor = Color(0xFFFFFFFF),
+                            baseWeight = FontWeight.Bold
                         )
                     } else {
                         val isHeading = line.startsWith("وهي مكية") || line.startsWith("وهي مدنية") ||
-                                        line.startsWith("سورة ") || line.startsWith("تفسير سورة")
+                                        line.startsWith("سورة ") || line.startsWith("تفسير سورة") ||
+                                        line.startsWith("The Discussion of") || line.startsWith("The Virtues of")
                         appendStyledTafsirChunk(
                             text = line,
-                            baseColor = if (isHeading) Color(0xFFE2EEE0) else Color(0xFFBACABA)
+                            baseColor = if (isHeading) Color(0xFFFFFFFF) else Color(0xFFBACABA),
+                            baseWeight = if (isHeading) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 }
                 if (index < lines.size - 1) {
-                    append("\n")
+                    withStyle(SpanStyle(color = Color(0xFFBACABA))) {
+                        append("\n")
+                    }
                 }
             }
         }
     } catch (_: Exception) {
-        AnnotatedString(text)
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = Color(0xFFBACABA))) {
+                append(text)
+            }
+        }
     }
 }
 
 private fun AnnotatedString.Builder.appendStyledTafsirChunk(
     text: String,
-    baseColor: Color
+    baseColor: Color,
+    baseWeight: FontWeight = FontWeight.Normal
 ) {
     if (text.isEmpty()) return
     try {
-        val tokenRegex = Regex("(\\{[^}]+}|«[^»]+»)")
+        val tokenRegex = Regex("""(\{[^}]+\}|«[^»]+»|﴿[^﴾]+﴾|\([0-9٠-٩]+\))""")
         var lastIdx = 0
-        val matches = tokenRegex.findAll(text)
+        val matches = tokenRegex.findAll(text).toList()
 
         for (match in matches) {
-            val start = match.range.first.coerceIn(0, text.length)
-            val end = (match.range.last + 1).coerceIn(0, text.length)
+            val start = match.range.first
+            val end = match.range.last + 1
 
-            if (start > lastIdx) {
-                withStyle(SpanStyle(color = baseColor)) {
-                    append(text.substring(lastIdx, start))
+            if (start > lastIdx && lastIdx < text.length) {
+                val nonToken = text.substring(lastIdx, minOf(start, text.length))
+                withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
+                    append(nonToken)
                 }
             }
 
             val token = match.value
-            if (token.startsWith("{") && token.endsWith("}")) {
-                withStyle(SpanStyle(color = Color(0xFFE5C158))) {
-                    append(token)
+            when {
+                token.startsWith("{") && token.endsWith("}") -> {
+                    withStyle(SpanStyle(color = Color(0xFFE5C158), fontWeight = FontWeight.SemiBold)) {
+                        append(token)
+                    }
                 }
-            } else if (token.startsWith("«") && token.endsWith("»")) {
-                withStyle(SpanStyle(color = AtharPrimaryLight)) {
-                    append(token)
+                token.startsWith("﴿") && token.endsWith("﴾") -> {
+                    withStyle(SpanStyle(color = Color(0xFFE5C158), fontWeight = FontWeight.SemiBold)) {
+                        append(token)
+                    }
                 }
-            } else {
-                withStyle(SpanStyle(color = baseColor)) {
-                    append(token)
+                token.startsWith("«") && token.endsWith("»") -> {
+                    withStyle(SpanStyle(color = AtharPrimaryLight, fontWeight = FontWeight.Medium)) {
+                        append(token)
+                    }
+                }
+                token.startsWith("(") && token.endsWith(")") -> {
+                    withStyle(SpanStyle(color = Color(0xFFE5C158), fontWeight = FontWeight.Bold)) {
+                        append(token)
+                    }
+                }
+                else -> {
+                    withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
+                        append(token)
+                    }
                 }
             }
-            lastIdx = end
+            lastIdx = maxOf(lastIdx, end)
         }
 
         if (lastIdx < text.length) {
-            withStyle(SpanStyle(color = baseColor)) {
+            withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
                 append(text.substring(lastIdx))
             }
         }
     } catch (_: Exception) {
-        append(text)
+        withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
+            append(text)
+        }
     }
 }
 
@@ -1425,7 +1458,7 @@ private fun TafsirErrorView(
  * In English (LTR): [<- Previous] on the left, [Next ->] on the right.
  */
 @Composable
-private fun AlMarifahBottomBar(
+private fun AlDirayahBottomBar(
     currentSurah: Int,
     currentAyah: Int,
     maxAyahs: Int,
@@ -1593,7 +1626,7 @@ private fun AlMarifahBottomBar(
  * Shown prominently in the Quran screen index with an animated flowing emerald-gold border glow.
  */
 @Composable
-fun AlMarifahGlowCard(
+fun AlDirayahGlowCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -1729,7 +1762,7 @@ fun AlMarifahGlowCard(
  * Styled like Apple Music's lyrics translate floating circular button.
  */
 @Composable
-fun AlMarifahFloatingButton(
+fun AlDirayahFloatingButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {

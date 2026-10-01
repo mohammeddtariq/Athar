@@ -511,7 +511,7 @@ fun QuranScreen(
         }
 
         if (showTafsirWithSurahIndex) {
-            AlMarifahSheet(
+            AlDirayahSheet(
                 initialSurahNumber = lastReadSurahNum ?: 1,
                 initialAyahNumber = 1,
                 startWithSurahIndex = true,
@@ -521,7 +521,7 @@ fun QuranScreen(
         } else {
             val targetAyah = tafsirTargetAyah
             if (targetAyah != null) {
-                AlMarifahSheet(
+                AlDirayahSheet(
                     initialSurahNumber = targetAyah.first,
                     initialAyahNumber = targetAyah.second,
                     startWithSurahIndex = false,
@@ -724,7 +724,7 @@ private fun SurahListScreen(
 
             // "Al-Dirayah" (الدِّرَايَة) Animated Glow Feature Bar Tab
             if (query.isBlank()) {
-                AlMarifahGlowCard(
+                AlDirayahGlowCard(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
                     onClick = onOpenTafsirIndex
                 )
@@ -3958,7 +3958,7 @@ private fun SurahReader(
                     .navigationBarsPadding()
                     .padding(bottom = 96.dp, start = 18.dp, end = 18.dp)
             ) {
-                AlMarifahFloatingButton(
+                AlDirayahFloatingButton(
                     onClick = {
                         val currentAyahTarget = activeVerseNumber ?: run {
                             when (layoutMode) {

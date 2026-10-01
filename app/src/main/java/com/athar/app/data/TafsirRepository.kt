@@ -19,6 +19,7 @@ enum class TafsirEdition(
     val authorArabic: String,
     val authorEnglish: String,
     val slug: String,
+    val englishSlug: String,
     val descriptionArabic: String,
     val descriptionEnglish: String,
     val quranComId: Int
@@ -32,6 +33,7 @@ enum class TafsirEdition(
         authorArabic = "الشيخ عبد الرحمن بن ناصر السعدي",
         authorEnglish = "Sheikh Abdur-Rahman as-Sa'di",
         slug = "ar-tafsir-as-saadi",
+        englishSlug = "en-tazkirul-quran",
         descriptionArabic = "من التفاسير المعاصرة الميسرة، ويتميز بأسلوبه السهل الواضح البعيد عن التعقيد، وهو مناسب جداً للمبتدئين.",
         descriptionEnglish = "A contemporary, accessible commentary known for its clarity and straightforward spiritual style.",
         quranComId = 91
@@ -45,6 +47,7 @@ enum class TafsirEdition(
         authorArabic = "الحافظ عماد الدين إسماعيل بن كثير",
         authorEnglish = "Hafiz Ibn Kathir",
         slug = "ar-tafsir-ibn-kathir",
+        englishSlug = "en-tafisr-ibn-kathir",
         descriptionArabic = "أشهرها وأعظمها عناية بتفسير الآيات بالقرآن، والأحاديث النبوية، وآثار السلف.",
         descriptionEnglish = "The most celebrated traditional commentary, explaining the Quran by Quran, authentic Hadiths, and Salaf narrations.",
         quranComId = 14
@@ -58,6 +61,7 @@ enum class TafsirEdition(
         authorArabic = "الإمام محمد بن جرير الطبري",
         authorEnglish = "Imam Muhammad ibn Jarir al-Tabari",
         slug = "ar-tafsir-al-tabari",
+        englishSlug = "en-tafsir-maarif-ul-quran",
         descriptionArabic = "من أقدم وأهم كتب التفسير بالمأثور، ويعتمد على نقل أقوال الصحابة والتابعين والأسانيد.",
         descriptionEnglish = "One of the earliest and most authoritative commentaries, based on Sahaba and Tabi'in narrations with full chains of transmission.",
         quranComId = 15
@@ -71,6 +75,7 @@ enum class TafsirEdition(
         authorArabic = "الإمام أبو عبد الله محمد بن أحمد القرطبي",
         authorEnglish = "Imam Al-Qurtubi",
         slug = "ar-tafseer-al-qurtubi",
+        englishSlug = "en-tafsir-maarif-ul-quran",
         descriptionArabic = "يركز بشكل أساسي على الأحكام الفقهية واستنباطها من الآيات مع العناية باللغة والإعراب.",
         descriptionEnglish = "Focuses predominantly on legal rulings (Ahkam), jurisprudence derivation, Arabic linguistics, and grammar.",
         quranComId = 90
@@ -84,6 +89,7 @@ enum class TafsirEdition(
         authorArabic = "نخبة من العلماء بإشراف مجمع الملك فهد",
         authorEnglish = "King Fahd Quran Complex",
         slug = "ar-tafsir-muyassar",
+        englishSlug = "en-al-jalalayn",
         descriptionArabic = "تفسير وجيز ميسر للآيات صادر عن مجمع الملك فهد، صِيغ بعبارات واضحة وسهلة في متناول الجميع.",
         descriptionEnglish = "A concise, accessible commentary published by the King Fahd Complex with clear, simplified phrasing.",
         quranComId = 16
@@ -147,27 +153,40 @@ object TafsirRepository {
             return normalized.toIntOrNull()
         }
 
-        // Match occurrences of {N} at line start or paragraph start
-        val markerRegex = Regex("""(?:\n|^)\s*\{([0-9٠-٩]+)\}""")
+        // Match occurrences of {N}, [N], (N), or (N. ) at line start or paragraph start
+        val markerRegex = Regex("""(?:\n|^)\s*(?:\{|\[|\()([0-9٠-٩]+)(?:\.|\}|\/|\))""")
         val allMarkers = markerRegex.findAll(rawText).toList()
-        if (allMarkers.size <= 1) return rawText
 
-        val targetIdx = allMarkers.indexOfFirst { match ->
-            parseNum(match.groupValues[1]) == ayahNumber
+        if (allMarkers.size > 1) {
+            val targetIdx = allMarkers.indexOfFirst { match ->
+                parseNum(match.groupValues[1]) == ayahNumber
+            }
+
+            if (targetIdx != -1) {
+                val targetMarker = allMarkers[targetIdx]
+                val startPos = targetMarker.range.first
+                val endPos = if (targetIdx + 1 < allMarkers.size) {
+                    allMarkers[targetIdx + 1].range.first
+                } else {
+                    rawText.length
+                }
+                val extracted = rawText.substring(startPos, endPos).trim()
+                if (extracted.isNotBlank()) return extracted
+            }
         }
 
-        if (targetIdx == -1) return rawText
-
-        val targetMarker = allMarkers[targetIdx]
-        val startPos = if (ayahNumber == 1) 0 else targetMarker.range.first
-        val endPos = if (targetIdx + 1 < allMarkers.size) {
-            allMarkers[targetIdx + 1].range.first
-        } else {
-            rawText.length
+        // For Ayah 1 in multi-section texts, check if there's a specific section header
+        if (ayahNumber == 1) {
+            val discIdx = rawText.indexOf("The Discussion of the Individual Letters")
+            if (discIdx != -1) {
+                val nextMarker = markerRegex.find(rawText, startIndex = discIdx)
+                val endPos = nextMarker?.range?.first ?: rawText.length
+                val extracted = rawText.substring(discIdx, endPos).trim()
+                if (extracted.isNotBlank()) return extracted
+            }
         }
 
-        val extracted = rawText.substring(startPos, endPos).trim()
-        return if (extracted.isNotBlank()) extracted else rawText
+        return rawText
     }
 
     /**
@@ -329,10 +348,14 @@ object TafsirRepository {
                 return@withContext Result.failure(IllegalStateException("Tafsir not found"))
             }
 
-            // Fetch English Tafsir / Commentary
-            var enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/en-tafisr-ibn-kathir/$surah/$ayah.json")
+            // Fetch English Tafsir / Commentary matching selected edition
+            val enSlug = edition.englishSlug
+            var enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/$enSlug/$surah/$ayah.json")
             if (enText.isNullOrEmpty()) {
-                enText = fetchTextFromUrl("https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/en-tafisr-ibn-kathir/$surah/$ayah.json")
+                enText = fetchTextFromUrl("https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/$enSlug/$surah/$ayah.json")
+            }
+            if (enText.isNullOrEmpty() && enSlug != "en-tafisr-ibn-kathir") {
+                enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/en-tafisr-ibn-kathir/$surah/$ayah.json")
             }
 
             // Fetch English Translation & Transliteration (Pronunciation in English letters)
