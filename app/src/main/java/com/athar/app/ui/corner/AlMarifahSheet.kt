@@ -81,11 +81,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -121,9 +125,10 @@ private sealed interface TafsirUiState {
  *
  * Features:
  * - Fluid entrance animation with semi-transparent blurred backdrop.
- * - Bilingual commentary presentation with Arabic as primary hero language.
- * - "Google Translate" style Hero Swap button to seamlessly reverse primary language.
+ * - Bilingual commentary presentation (Arabic and English).
+ * - Segmented language switcher to seamlessly toggle commentary and pronunciation.
  * - Modern 4-book Tafsir switcher (Al-Sa'di, Ibn Kathir, Al-Tabari, Al-Qurtubi).
+
  * - Fullscreen expand/collapse toggle for deep contemplation.
  * - Previous/Next Ayah steppers, copy & share actions.
  */
@@ -153,7 +158,7 @@ fun AlMarifahSheet(
     }
 
     var selectedEdition by remember { mutableStateOf(TafsirEdition.SAADI) }
-    var isEnglishHero by remember { mutableStateOf(false) }
+    var isEnglishMode by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
     var uiState by remember { mutableStateOf<TafsirUiState>(TafsirUiState.Loading) }
 
@@ -232,10 +237,10 @@ fun AlMarifahSheet(
                 // Top Drag Handle & Controls Bar (Sticky)
                 AlMarifahTopBar(
                     isExpanded = isExpanded,
-                    isEnglishHero = isEnglishHero,
+                    isEnglishMode = isEnglishMode,
                     isArabic = isArabic,
                     onToggleExpand = { isExpanded = !isExpanded },
-                    onSelectHeroLanguage = { isEnglishHero = it },
+                    onSelectLanguageMode = { isEnglishMode = it },
                     onClose = onDismiss
                 )
 
@@ -266,14 +271,17 @@ fun AlMarifahSheet(
                         .padding(horizontal = 18.dp)
                 ) {
                     // Sacred Ayah Card
+                    val activeTafsir = (uiState as? TafsirUiState.Success)?.tafsir
                     SacredAyahCard(
                         surahMeta = surahMeta,
                         ayahNumber = currentAyah,
                         verseText = currentVerseText.ifEmpty {
-                            (uiState as? TafsirUiState.Success)?.tafsir?.verseTextArabic ?: ""
+                            activeTafsir?.verseTextArabic ?: ""
                         },
-                        isArabic = isArabic,
-                        numberStyle = numberStyle
+                        englishTranslation = activeTafsir?.englishTranslation.orEmpty(),
+                        englishTransliteration = activeTafsir?.englishTransliteration.orEmpty(),
+                        isEnglishMode = isEnglishMode,
+                        isArabic = isArabic
                     )
 
                     Spacer(Modifier.height(14.dp))
@@ -303,7 +311,7 @@ fun AlMarifahSheet(
                             is TafsirUiState.Success -> {
                                 TafsirContentView(
                                     tafsir = state.tafsir,
-                                    isEnglishHero = isEnglishHero,
+                                    isEnglishMode = isEnglishMode,
                                     isArabic = isArabic
                                 )
                             }
@@ -410,10 +418,10 @@ fun AlMarifahSheet(
 @Composable
 private fun AlMarifahTopBar(
     isExpanded: Boolean,
-    isEnglishHero: Boolean,
+    isEnglishMode: Boolean,
     isArabic: Boolean,
     onToggleExpand: () -> Unit,
-    onSelectHeroLanguage: (isEnglish: Boolean) -> Unit,
+    onSelectLanguageMode: (isEnglish: Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -466,7 +474,7 @@ private fun AlMarifahTopBar(
 
             Spacer(Modifier.weight(1f))
 
-            // Segmented Hero Language Switcher (Crystal clear active state)
+            // Segmented Language Switcher (Crystal clear active state)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -475,8 +483,8 @@ private fun AlMarifahTopBar(
                     .border(1.dp, Color(0xFF283623), RoundedCornerShape(14.dp))
                     .padding(2.5.dp)
             ) {
-                val arActive = !isEnglishHero
-                val enActive = isEnglishHero
+                val arActive = !isEnglishMode
+                val enActive = isEnglishMode
 
                 // Arabic Pill
                 Box(
@@ -491,7 +499,7 @@ private fun AlMarifahTopBar(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = { onSelectHeroLanguage(false) }
+                            onClick = { onSelectLanguageMode(false) }
                         )
                         .padding(horizontal = 9.dp, vertical = 4.5.dp),
                     contentAlignment = Alignment.Center
@@ -518,7 +526,7 @@ private fun AlMarifahTopBar(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = { onSelectHeroLanguage(true) }
+                            onClick = { onSelectLanguageMode(true) }
                         )
                         .padding(horizontal = 9.dp, vertical = 4.5.dp),
                     contentAlignment = Alignment.Center
@@ -532,6 +540,7 @@ private fun AlMarifahTopBar(
                     )
                 }
             }
+
 
             Spacer(Modifier.width(8.dp))
 
@@ -590,19 +599,21 @@ private fun SacredAyahCard(
     surahMeta: SurahMeta,
     ayahNumber: Int,
     verseText: String,
-    isArabic: Boolean,
-    numberStyle: NumberStylePreference
+    englishTranslation: String = "",
+    englishTransliteration: String = "",
+    isEnglishMode: Boolean,
+    isArabic: Boolean
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF171D15))
-            .border(1.dp, Color(0xFF283424), RoundedCornerShape(20.dp))
+            .background(Color(0xFF141912))
+            .border(1.dp, Color(0xFF263322), RoundedCornerShape(20.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Reference pill: e.g. "سورة الفاتحة • الآية ١"
+        // Reference pill: e.g. "سورة الفاتحة • الآية ١" (Ayah number always in Arabic-Indic style)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -635,8 +646,8 @@ private fun SacredAyahCard(
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (isArabic) "الآية ${formatDigits(ayahNumber.toString(), numberStyle)}"
-                           else "Ayah ${formatDigits(ayahNumber.toString(), numberStyle)}",
+                    text = if (isArabic) "الآية ${formatDigits(ayahNumber.toString(), NumberStylePreference.ARABIC_INDIC)}"
+                           else "Ayah ${formatDigits(ayahNumber.toString(), NumberStylePreference.ARABIC_INDIC)}",
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
@@ -658,8 +669,82 @@ private fun SacredAyahCard(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+
+        // English Mode additions: Pronunciation (transliteration in English letters) & Translation
+        if (isEnglishMode) {
+            if (englishTransliteration.isNotBlank()) {
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
+                Spacer(Modifier.height(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFE5C158).copy(alpha = 0.14f))
+                        .border(0.6.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "Pronunciation",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.5.sp,
+                        color = Color(0xFFE5C158)
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = englishTransliteration,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.5.sp,
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFFE8EFE5),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
+                )
+            }
+
+            if (englishTranslation.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                if (englishTransliteration.isBlank()) {
+                    HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AtharPrimary.copy(alpha = 0.16f))
+                        .border(0.6.dp, AtharPrimaryLight.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "Translation",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.5.sp,
+                        color = AtharPrimaryLight
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = englishTranslation,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFFCAD7C8),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
+                )
+            }
+        }
     }
 }
+
 
 /**
  * 4-Book Tafsir switcher pills matching Athar's Duas category styling.
@@ -745,46 +830,132 @@ private fun TafsirBooksBar(
 }
 
 /**
- * Main Tafsir text view displaying Arabic and English with Hero Language styling.
+ * Formats Tafsir commentary:
+ * - Words before ':' are bold and prominent ivory tint
+ * - Words after ':' are normal weight reading sage
+ * - Ayah/verse tokens '{...}' are highlighted in warm amber gold
+ * - Hadith quotes '«...»' are styled in soft green
+ */
+private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        val lines = text.split("\n")
+        lines.forEachIndexed { index, rawLine ->
+            val line = rawLine.trim()
+            if (line.isNotEmpty()) {
+                val colonIdx = line.indexOf(':')
+                if (colonIdx != -1 && colonIdx < line.length - 1) {
+                    val prefix = line.substring(0, colonIdx + 1)
+                    val suffix = line.substring(colonIdx + 1)
+
+                    appendStyledTafsirChunk(
+                        text = prefix,
+                        baseWeight = FontWeight.Bold,
+                        baseColor = Color(0xFFF2F7F0)
+                    )
+                    appendStyledTafsirChunk(
+                        text = suffix,
+                        baseWeight = FontWeight.Normal,
+                        baseColor = Color(0xFFBACABA)
+                    )
+                } else if (colonIdx != -1 && colonIdx == line.length - 1) {
+                    appendStyledTafsirChunk(
+                        text = line,
+                        baseWeight = FontWeight.Bold,
+                        baseColor = Color(0xFFF2F7F0)
+                    )
+                } else {
+                    val isHeading = line.startsWith("وهي مكية") || line.startsWith("وهي مدنية") ||
+                                    line.startsWith("سورة ") || line.startsWith("تفسير سورة")
+                    appendStyledTafsirChunk(
+                        text = line,
+                        baseWeight = if (isHeading) FontWeight.Bold else FontWeight.Normal,
+                        baseColor = if (isHeading) Color(0xFFE2EEE0) else Color(0xFFBACABA)
+                    )
+                }
+            }
+            if (index < lines.size - 1) {
+                append("\n")
+            }
+        }
+    }
+}
+
+private fun AnnotatedString.Builder.appendStyledTafsirChunk(
+    text: String,
+    baseWeight: FontWeight,
+    baseColor: Color
+) {
+    val tokenRegex = Regex("(\\{[^}]+}|«[^»]+»)")
+    var lastIdx = 0
+    val matches = tokenRegex.findAll(text)
+
+    for (match in matches) {
+        val start = match.range.first
+        val end = match.range.last + 1
+
+        if (start > lastIdx) {
+            withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
+                append(text.substring(lastIdx, start))
+            }
+        }
+
+        val token = match.value
+        if (token.startsWith("{") && token.endsWith("}")) {
+            withStyle(SpanStyle(color = Color(0xFFE5C158), fontWeight = FontWeight.Bold)) {
+                append(token)
+            }
+        } else if (token.startsWith("«") && token.endsWith("»")) {
+            withStyle(SpanStyle(color = AtharPrimaryLight, fontWeight = FontWeight.SemiBold)) {
+                append(token)
+            }
+        } else {
+            withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
+                append(token)
+            }
+        }
+        lastIdx = end
+    }
+
+    if (lastIdx < text.length) {
+        withStyle(SpanStyle(color = baseColor, fontWeight = baseWeight)) {
+            append(text.substring(lastIdx))
+        }
+    }
+}
+
+/**
+ * Main Tafsir text view displaying commentary with dimmed card styling and clean headers.
  */
 @Composable
 private fun TafsirContentView(
     tafsir: AyahTafsir,
-    isEnglishHero: Boolean,
+    isEnglishMode: Boolean,
     isArabic: Boolean
 ) {
-    val heroBorderBrush = Brush.linearGradient(
-        colors = listOf(
-            AtharPrimaryLight.copy(alpha = 0.50f),
-            Color(0xFFE5C158).copy(alpha = 0.35f),
-            Color(0xFF283623)
-        )
-    )
-
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        if (!isEnglishHero) {
+        if (!isEnglishMode) {
             // ══════════════════════════════════════════════════════════
-            // ─── CARD 1: ARABIC HERO COMMENTARY ───
+            // ─── CARD 1: ARABIC COMMENTARY ───
             // ══════════════════════════════════════════════════════════
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF131911))
-                    .border(1.2.dp, heroBorderBrush, RoundedCornerShape(20.dp))
+                    .background(Color(0xFF141912))
+                    .border(1.dp, Color(0xFF263322), RoundedCornerShape(20.dp))
                     .padding(18.dp)
             ) {
-                // Header: Edition & Author with Hero Badge
+                // Header: Edition & Author (Full width, zero overlap)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(34.dp)
                             .clip(CircleShape)
                             .background(AtharPrimary.copy(alpha = 0.20f))
                             .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.50f), CircleShape),
@@ -794,42 +965,27 @@ private fun TafsirContentView(
                             imageVector = Icons.AutoMirrored.Rounded.MenuBook,
                             contentDescription = null,
                             tint = AtharPrimaryLight,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                     }
 
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = tafsir.edition.bookTitleArabic,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
-                            fontSize = 13.5.sp,
-                            color = Color.White
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            color = Color(0xFFF4F7F2)
                         )
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = tafsir.edition.authorArabic,
                             fontFamily = ThmanyahSans,
-                            fontSize = 11.5.sp,
-                            color = AtharPrimaryLight
-                        )
-                    }
-
-                    // Hero Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFE5C158).copy(alpha = 0.15f))
-                            .border(0.8.dp, Color(0xFFE5C158).copy(alpha = 0.40f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = if (isArabic) "التفسير الرئيسي" else "Hero Commentary",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.5.sp,
-                            color = Color(0xFFE5C158)
+                            fontSize = 12.sp,
+                            color = AtharPrimaryLight.copy(alpha = 0.90f)
                         )
                     }
                 }
@@ -838,16 +994,17 @@ private fun TafsirContentView(
                 HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF243020))
                 Spacer(Modifier.height(14.dp))
 
-                // Arabic Commentary Text (Strictly RTL)
+                // Arabic Commentary Text (Strictly RTL) with styled text before/after ':'
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     SelectionContainer {
+                        val styledText = remember(tafsir.arabicTafsir) {
+                            buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
+                        }
                         Text(
-                            text = tafsir.arabicTafsir,
+                            text = styledText,
                             fontFamily = ThmanyahSerifText,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 19.sp,
-                            lineHeight = 36.sp,
-                            color = Color(0xFFF4F7F2),
+                            fontSize = 18.5.sp,
+                            lineHeight = 35.sp,
                             style = TextStyle(
                                 textAlign = TextAlign.Start,
                                 textDirection = TextDirection.Rtl
@@ -859,14 +1016,14 @@ private fun TafsirContentView(
             }
 
             // ══════════════════════════════════════════════════════════
-            // ─── CARD 2: ENGLISH MEANING & TRANSLATION (Secondary) ───
+            // ─── CARD 2: ENGLISH COMMENTARY (Secondary) ───
             // ══════════════════════════════════════════════════════════
-            if (tafsir.englishTafsir.isNotBlank()) {
+            if (tafsir.englishTafsir.isNotBlank() && tafsir.englishTafsir != tafsir.englishTranslation) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFF0F140D))
+                        .background(Color(0xFF10150E))
                         .border(1.dp, Color(0xFF222B1E), RoundedCornerShape(18.dp))
                         .padding(16.dp)
                 ) {
@@ -882,40 +1039,26 @@ private fun TafsirContentView(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "English Meaning & Commentary",
+                            text = "English Commentary",
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
                             color = AtharTextSecondary
                         )
-                        Spacer(Modifier.weight(1f))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Meaning",
-                                fontFamily = ThmanyahSans,
-                                fontSize = 10.sp,
-                                color = AtharTextSecondary.copy(alpha = 0.85f)
-                            )
-                        }
                     }
 
                     Spacer(Modifier.height(10.dp))
 
-                    // English Commentary Text (Strictly LTR)
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         SelectionContainer {
+                            val styledEnText = remember(tafsir.englishTafsir) {
+                                buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
+                            }
                             Text(
-                                text = tafsir.englishTafsir,
+                                text = styledEnText,
                                 fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Normal,
                                 fontSize = 14.5.sp,
                                 lineHeight = 23.sp,
-                                color = Color(0xFFB8C8B5),
                                 style = TextStyle(
                                     textAlign = TextAlign.Start,
                                     textDirection = TextDirection.Ltr
@@ -928,24 +1071,24 @@ private fun TafsirContentView(
             }
         } else {
             // ══════════════════════════════════════════════════════════
-            // ─── CARD 1: ENGLISH HERO COMMENTARY ───
+            // ─── CARD 1: ENGLISH COMMENTARY ───
             // ══════════════════════════════════════════════════════════
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF131911))
-                    .border(1.2.dp, heroBorderBrush, RoundedCornerShape(20.dp))
+                    .background(Color(0xFF141912))
+                    .border(1.dp, Color(0xFF263322), RoundedCornerShape(20.dp))
                     .padding(18.dp)
             ) {
-                // Header: Edition & Author with Hero Badge
+                // Header: Edition & Author (Full width, zero overlap)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(34.dp)
                             .clip(CircleShape)
                             .background(AtharPrimary.copy(alpha = 0.20f))
                             .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.50f), CircleShape),
@@ -955,42 +1098,27 @@ private fun TafsirContentView(
                             imageVector = Icons.AutoMirrored.Rounded.MenuBook,
                             contentDescription = null,
                             tint = AtharPrimaryLight,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                     }
 
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = tafsir.edition.englishName,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
-                            fontSize = 13.5.sp,
-                            color = Color.White
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            color = Color(0xFFF4F7F2)
                         )
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = tafsir.edition.authorEnglish,
                             fontFamily = ThmanyahSans,
-                            fontSize = 11.5.sp,
-                            color = AtharPrimaryLight
-                        )
-                    }
-
-                    // Hero Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFE5C158).copy(alpha = 0.15f))
-                            .border(0.8.dp, Color(0xFFE5C158).copy(alpha = 0.40f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "Hero Commentary",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.5.sp,
-                            color = Color(0xFFE5C158)
+                            fontSize = 12.sp,
+                            color = AtharPrimaryLight.copy(alpha = 0.90f)
                         )
                     }
                 }
@@ -1002,13 +1130,14 @@ private fun TafsirContentView(
                 // English Commentary Text (Strictly LTR)
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     SelectionContainer {
+                        val styledEnText = remember(tafsir.englishTafsir) {
+                            buildStyledTafsirAnnotatedString(tafsir.englishTafsir)
+                        }
                         Text(
-                            text = tafsir.englishTafsir,
+                            text = styledEnText,
                             fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 16.sp,
-                            lineHeight = 26.sp,
-                            color = Color(0xFFF4F7F2),
+                            fontSize = 15.sp,
+                            lineHeight = 24.sp,
                             style = TextStyle(
                                 textAlign = TextAlign.Start,
                                 textDirection = TextDirection.Ltr
@@ -1027,7 +1156,7 @@ private fun TafsirContentView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFF0F140D))
+                        .background(Color(0xFF10150E))
                         .border(1.dp, Color(0xFF222B1E), RoundedCornerShape(18.dp))
                         .padding(16.dp)
                 ) {
@@ -1049,20 +1178,6 @@ private fun TafsirContentView(
                             fontSize = 12.sp,
                             color = AtharTextSecondary
                         )
-                        Spacer(Modifier.weight(1f))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "العربية",
-                                fontFamily = ThmanyahSans,
-                                fontSize = 10.sp,
-                                color = AtharTextSecondary.copy(alpha = 0.85f)
-                            )
-                        }
                     }
 
                     Spacer(Modifier.height(10.dp))
@@ -1070,13 +1185,14 @@ private fun TafsirContentView(
                     // Arabic Commentary Text (Strictly RTL)
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                         SelectionContainer {
+                            val styledArText = remember(tafsir.arabicTafsir) {
+                                buildStyledTafsirAnnotatedString(tafsir.arabicTafsir)
+                            }
                             Text(
-                                text = tafsir.arabicTafsir,
+                                text = styledArText,
                                 fontFamily = ThmanyahSerifText,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 16.sp,
+                                fontSize = 16.5.sp,
                                 lineHeight = 31.sp,
-                                color = Color(0xFFB8C8B5),
                                 style = TextStyle(
                                     textAlign = TextAlign.Start,
                                     textDirection = TextDirection.Rtl
@@ -1090,6 +1206,7 @@ private fun TafsirContentView(
         }
     }
 }
+
 
 /**
  * Serene loading state with soft pulsing glow indicator.
@@ -1252,14 +1369,15 @@ private fun AlMarifahBottomBar(
 
         Spacer(Modifier.weight(1f))
 
-        // Ayah stepper counter indicator
+        // Ayah stepper counter indicator: Always in Arabic-Indic numerals
         Text(
-            text = "${formatDigits(currentAyah.toString(), numberStyle)} / ${formatDigits(maxAyahs.toString(), numberStyle)}",
+            text = "${formatDigits(currentAyah.toString(), NumberStylePreference.ARABIC_INDIC)} / ${formatDigits(maxAyahs.toString(), NumberStylePreference.ARABIC_INDIC)}",
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Black,
             fontSize = 13.sp,
             color = AtharPrimaryLight
         )
+
 
         Spacer(Modifier.weight(1f))
 

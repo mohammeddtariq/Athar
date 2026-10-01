@@ -86,8 +86,10 @@ data class AyahTafsir(
     val arabicTafsir: String,
     val englishTafsir: String,
     val englishTranslation: String,
+    val englishTransliteration: String = "",
     val edition: TafsirEdition
 )
+
 
 object TafsirRepository {
 
@@ -177,6 +179,7 @@ object TafsirRepository {
                     val edList = seed.optJSONArray(editionKey)
                     val enList = seed.optJSONArray("en_ibn_kathir")
                     val transObj = seed.optJSONObject("en_translation")
+                    val translitObj = seed.optJSONObject("en_transliteration")
 
                     var arTafsirText: String? = null
                     if (edList != null) {
@@ -201,6 +204,7 @@ object TafsirRepository {
                     }
 
                     val enTranslation = transObj?.optString(ayah.toString(), "") ?: ""
+                    val enTransliteration = translitObj?.optString(ayah.toString(), "") ?: ""
 
                     if (!arTafsirText.isNullOrEmpty()) {
                         val result = AyahTafsir(
@@ -212,6 +216,7 @@ object TafsirRepository {
                             arabicTafsir = cleanTafsirText(arTafsirText),
                             englishTafsir = cleanTafsirText(enTafsirText ?: enTranslation),
                             englishTranslation = cleanTafsirText(enTranslation),
+                            englishTransliteration = enTransliteration,
                             edition = edition
                         )
                         memoryCache[cacheKey] = result
@@ -235,6 +240,7 @@ object TafsirRepository {
                     arabicTafsir = json.getString("ar_tafsir"),
                     englishTafsir = json.optString("en_tafsir", ""),
                     englishTranslation = json.optString("en_trans", ""),
+                    englishTransliteration = json.optString("en_transliteration", ""),
                     edition = edition
                 )
                 memoryCache[cacheKey] = result
@@ -269,20 +275,25 @@ object TafsirRepository {
                 return@withContext Result.failure(IllegalStateException("Tafsir not found"))
             }
 
-            // Fetch English Tafsir / Translation
+            // Fetch English Tafsir / Commentary
             var enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/en-tafisr-ibn-kathir/$surah/$ayah.json")
             if (enText.isNullOrEmpty()) {
                 enText = fetchTextFromUrl("https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/en-tafisr-ibn-kathir/$surah/$ayah.json")
             }
 
-            // Fetch English Translation (M.A.S. Abdel Haleem)
-            val enTrans = fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=85")
-                ?: fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=131")
-                ?: ""
+            // Fetch English Translation & Transliteration (Pronunciation in English letters)
+            var verseDetails = fetchQuranComVerseDetails(surah, ayah)
+            var enTrans = verseDetails.translation
+            if (enTrans.isBlank()) {
+                enTrans = fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=85")
+                    ?: fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=131")
+                    ?: ""
+            }
 
             val cleanedAr = cleanTafsirText(arText)
             val cleanedEn = cleanTafsirText(enText ?: enTrans)
             val cleanedTrans = cleanTafsirText(enTrans)
+            val translit = verseDetails.transliteration
 
             val tafsirObj = AyahTafsir(
                 surahNumber = surah,
@@ -293,6 +304,7 @@ object TafsirRepository {
                 arabicTafsir = cleanedAr,
                 englishTafsir = if (cleanedEn.isNotBlank()) cleanedEn else cleanedTrans,
                 englishTranslation = cleanedTrans,
+                englishTransliteration = translit,
                 edition = edition
             )
 
@@ -307,6 +319,7 @@ object TafsirRepository {
                     put("ar_tafsir", cleanedAr)
                     put("en_tafsir", cleanedEn)
                     put("en_trans", cleanedTrans)
+                    put("en_transliteration", translit)
                     put("edition", edition.id)
                 }
                 diskFile.writeText(outJson.toString())
@@ -356,6 +369,53 @@ object TafsirRepository {
         }
     }
 
+    private data class QuranVerseDetails(
+        val translation: String,
+        val transliteration: String
+    )
+
+    private fun fetchQuranComVerseDetails(surah: Int, ayah: Int): QuranVerseDetails {
+        val urlString = "https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?words=true&translations=85"
+        return try {
+            val conn = URI.create(urlString).toURL().openConnection() as HttpURLConnection
+            conn.apply {
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", "Athar-Android")
+                connectTimeout = 7000
+                readTimeout = 7000
+            }
+            if (conn.responseCode != HttpURLConnection.HTTP_OK) return QuranVerseDetails("", "")
+            val content = conn.inputStream.bufferedReader().use { it.readText() }
+            val json = JSONObject(content)
+            val verse = json.optJSONObject("verse")
+
+            // Translation (M.A.S. Abdel Haleem, id 85)
+            val transArray = verse?.optJSONArray("translations")
+            val translation = transArray?.optJSONObject(0)?.optString("text")?.ifBlank { "" } ?: ""
+
+            // Transliteration word-by-word
+            val words = verse?.optJSONArray("words")
+            val transliterationWords = mutableListOf<String>()
+            if (words != null) {
+                for (i in 0 until words.length()) {
+                    val wordObj = words.optJSONObject(i) ?: continue
+                    val charType = wordObj.optString("char_type_name")
+                    if (charType == "word") {
+                        val transObj = wordObj.optJSONObject("transliteration")
+                        val text = transObj?.optString("text")?.trim().orEmpty()
+                        if (text.isNotEmpty()) {
+                            transliterationWords.add(text)
+                        }
+                    }
+                }
+            }
+            val transliteration = transliterationWords.joinToString(" ")
+            QuranVerseDetails(translation, transliteration)
+        } catch (_: Exception) {
+            QuranVerseDetails("", "")
+        }
+    }
+
     private fun fetchQuranComTranslation(urlString: String): String? {
         return try {
             val conn = URI.create(urlString).toURL().openConnection() as HttpURLConnection
@@ -376,3 +436,4 @@ object TafsirRepository {
         }
     }
 }
+

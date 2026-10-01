@@ -81,9 +81,9 @@ object AtharWidgetUpdater {
             renderPrayersWideWidget(appContext, appWidgetManager, widgetId, snapshot, day, next)
         }
 
-        val requiresMinuteTick = (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC)
-        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick)
+        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick = false)
     }
+
 
     fun updateAllWidgets(context: Context, overrideSnapshot: AppPrefsSnapshot? = null) {
         val appContext = context.applicationContext
@@ -406,37 +406,19 @@ object AtharWidgetUpdater {
         val targetDate = prayerDateToday(targetTime, isTomorrow)
         val diffMillis = targetDate.time - System.currentTimeMillis()
 
-        if (numberStyle == NumberStylePreference.ARABIC_INDIC) {
-            views.setViewVisibility(chronoId, View.GONE)
-            views.setViewVisibility(textId, View.VISIBLE)
-            if (diffMillis > 0) {
-                val diffSecs = diffMillis / 1000
-                val hours = diffSecs / 3600
-                val minutes = (diffSecs % 3600) / 60
-                val seconds = diffSecs % 60
-                val timeStr = if (hours > 0) {
-                    String.format(Locale.ROOT, "%02d:%02d", hours, minutes)
-                } else {
-                    String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
-                }
-                views.setTextViewText(textId, formatDigits(timeStr, numberStyle))
-            } else {
-                views.setTextViewText(textId, formatDigits("00:00", numberStyle))
-            }
-        } else {
-            views.setViewVisibility(textId, View.GONE)
-            views.setViewVisibility(chronoId, View.VISIBLE)
+        views.setViewVisibility(textId, View.GONE)
+        views.setViewVisibility(chronoId, View.VISIBLE)
 
-            if (diffMillis > 0) {
-                val base = SystemClock.elapsedRealtime() + diffMillis
-                views.setChronometerCountDown(chronoId, true)
-                views.setChronometer(chronoId, base, null, true)
-            } else {
-                views.setChronometerCountDown(chronoId, false)
-                views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
-            }
+        if (diffMillis > 0) {
+            val base = SystemClock.elapsedRealtime() + diffMillis
+            views.setChronometerCountDown(chronoId, true)
+            views.setChronometer(chronoId, base, null, true)
+        } else {
+            views.setChronometerCountDown(chronoId, false)
+            views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
         }
     }
+
 
     private fun setupClickIntent(context: Context, views: RemoteViews) {
         val intent = Intent(context, MainActivity::class.java).apply {
