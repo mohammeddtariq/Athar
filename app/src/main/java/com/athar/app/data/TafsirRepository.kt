@@ -23,7 +23,8 @@ enum class TafsirEdition(
     val descriptionArabic: String,
     val descriptionEnglish: String,
     val quranComId: Int,
-    val quranComEnId: Int?
+    val quranComEnId: Int?,
+    val tafsirAppSlug: String
 ) {
     SAADI(
         id = "saadi",
@@ -38,7 +39,8 @@ enum class TafsirEdition(
         descriptionArabic = "من التفاسير المعاصرة الميسرة، ويتميز بأسلوبه السهل الواضح البعيد عن التعقيد، وهو مناسب جداً للمبتدئين.",
         descriptionEnglish = "A contemporary, accessible commentary known for its clarity and straightforward spiritual style.",
         quranComId = 91,
-        quranComEnId = 817
+        quranComEnId = 817,
+        tafsirAppSlug = "saadi"
     ),
     IBN_KATHIR(
         id = "ibn_kathir",
@@ -53,7 +55,8 @@ enum class TafsirEdition(
         descriptionArabic = "أشهرها وأعظمها عناية بتفسير الآيات بالقرآن، والأحاديث النبوية، وآثار السلف.",
         descriptionEnglish = "The most celebrated traditional commentary, explaining the Quran by Quran, authentic Hadiths, and Salaf narrations.",
         quranComId = 14,
-        quranComEnId = 169
+        quranComEnId = 169,
+        tafsirAppSlug = "ibn-katheer"
     ),
     TABARI(
         id = "tabari",
@@ -68,7 +71,8 @@ enum class TafsirEdition(
         descriptionArabic = "من أقدم وأهم كتب التفسير بالمأثور، ويعتمد على نقل أقوال الصحابة والتابعين والأسانيد.",
         descriptionEnglish = "One of the earliest and most authoritative commentaries, based on Sahaba and Tabi'in narrations with full chains of transmission.",
         quranComId = 15,
-        quranComEnId = 168
+        quranComEnId = 168,
+        tafsirAppSlug = "tabari"
     ),
     QURTUBI(
         id = "qurtubi",
@@ -83,7 +87,8 @@ enum class TafsirEdition(
         descriptionArabic = "يركز بشكل أساسي على الأحكام الفقهية واستنباطها من الآيات مع العناية باللغة والإعراب.",
         descriptionEnglish = "Focuses predominantly on legal rulings (Ahkam), jurisprudence derivation, Arabic linguistics, and grammar.",
         quranComId = 90,
-        quranComEnId = 168
+        quranComEnId = 168,
+        tafsirAppSlug = "qurtubi"
     ),
     MUYASSAR(
         id = "muyassar",
@@ -98,7 +103,8 @@ enum class TafsirEdition(
         descriptionArabic = "تفسير وجيز ميسر للآيات صادر عن مجمع الملك فهد، صِيغ بعبارات واضحة وسهلة في متناول الجميع.",
         descriptionEnglish = "A concise, accessible commentary published by the King Fahd Complex with clear, simplified phrasing.",
         quranComId = 16,
-        quranComEnId = null
+        quranComEnId = null,
+        tafsirAppSlug = "muyassar"
     )
 }
 
@@ -126,6 +132,8 @@ object TafsirRepository {
      */
     fun cleanTafsirText(text: String): String {
         return text
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
             .replace(Regex("(?i)<br\\s*/?>"), "\n")
             .replace(Regex("(?i)</p>"), "\n\n")
             .replace(Regex("(?i)</div>"), "\n")
@@ -139,8 +147,8 @@ object TafsirRepository {
             .replace("&#39;", "'")
             .replace("&#x27;", "'")
             .replace("&nbsp;", " ")
-            .replace("[[", "«")
-            .replace("]]", "»")
+            .replace("[[", "[")
+            .replace("]]", "]")
             .replace(Regex("\\*\\s*\\*\\s*\\*?"), "")
             .replace(Regex("#{1,6}\\s*"), "")
             .replace(Regex("\n{3,}"), "\n\n")
@@ -163,12 +171,16 @@ object TafsirRepository {
                 "ذِكْرُ مَا وَرَدَ فِي فَضْلِهَا",
                 "ذكر ما ورد في فضلها",
                 "وَهِيَ مَكِّيَّةٌ فِي قَوْلِ جَمِيعِ الْمُفَسِّرِينَ",
-                "وهي مكية في قول جميع المفسرين"
+                "وهي مكية في قول جميع المفسرين",
+                "تَفْسِيرُ سُورَةِ",
+                "تفسير سورة",
+                "* تسمية السورة",
+                "* من مقاصد السورة"
             )
             for (ptr in introPointers) {
                 val idx = cleaned.indexOf(ptr)
                 if (idx != -1) {
-                    val nextHeading = Regex("""(?:\n|^)\s*(?:[A-Z][a-zA-Z\s]{4,}:|\([0-9٠-٩]+\)|\{[0-9٠-٩]+\}|القول في تأويل|وقوله|\(\d+\.|\(\d+\))""")
+                    val nextHeading = Regex("""(?:\n|^)\s*(?:[A-Z][a-zA-Z\s]{4,}:|\([0-9٠-٩]+\)|\{[0-9٠-٩]+\}|القول في تأويل|وقوله|\(\d+\.|\(\d+\)|﴿|\*\s*\*\s*\*|\* \[التفسير\])""")
                     val match = nextHeading.find(cleaned, startIndex = idx + ptr.length)
                     if (match != null) {
                         cleaned = cleaned.substring(match.range.first).trim()
@@ -188,8 +200,8 @@ object TafsirRepository {
             return normalized.toIntOrNull()
         }
 
-        // Match occurrences of {N}, [N], (N), or (N. ) at line start or paragraph start
-        val markerRegex = Regex("""(?:\n|^)\s*(?:\{|\[|\()([0-9٠-٩]+)(?:\.|\}|\/|\))""")
+        // Match occurrences of {N}, [N], (N), or (N. ) at line start or paragraph start, avoiding citations like (1/112)
+        val markerRegex = Regex("""(?:\n|^)\s*(?:\{|\[|\()([0-9٠-٩]+)(?:\.|\}|\))(?!/)""")
         val allMarkers = markerRegex.findAll(cleaned).toList()
 
         if (allMarkers.size > 1) {
@@ -239,25 +251,101 @@ object TafsirRepository {
     }
 
     private fun cacheDir(context: Context): File {
-        // Automatically cleanup legacy corrupted v1 cache
+        // Automatically cleanup legacy caches so fresh tafsir.app content is used
         runCatching {
-            val legacy = File(context.filesDir, "tafsir_cache")
-            if (legacy.exists()) legacy.deleteRecursively()
+            val legacy1 = File(context.filesDir, "tafsir_cache")
+            if (legacy1.exists()) legacy1.deleteRecursively()
+            val legacy2 = File(context.filesDir, "tafsir_cache_v2")
+            if (legacy2.exists()) legacy2.deleteRecursively()
+            val legacy3 = File(context.filesDir, "tafsir_cache_v3")
+            if (legacy3.exists()) legacy3.deleteRecursively()
         }
-        return File(context.filesDir, "tafsir_cache_v3").apply { mkdirs() }
+        return File(context.filesDir, "tafsir_cache_v4").apply { mkdirs() }
     }
 
     private fun cacheFile(context: Context, edition: TafsirEdition, surah: Int, ayah: Int): File {
         return File(cacheDir(context), "${edition.id}_${surah}_${ayah}.json")
     }
 
+    private fun getSeedFatihahFallback(
+        context: Context,
+        surah: Int,
+        ayah: Int,
+        edition: TafsirEdition,
+        surahAr: String,
+        surahEn: String,
+        verseText: String
+    ): AyahTafsir? {
+        if (surah != 1) return null
+        val seed = getSeedFatihah(context) ?: return null
+        return try {
+            val editionKey = when (edition) {
+                TafsirEdition.SAADI -> "saadi"
+                TafsirEdition.IBN_KATHIR -> "ibn_kathir"
+                TafsirEdition.TABARI -> "tabari"
+                TafsirEdition.QURTUBI -> "qurtubi"
+                TafsirEdition.MUYASSAR -> "saadi"
+            }
+            val edList = seed.optJSONArray(editionKey)
+            val enList = seed.optJSONArray("en_ibn_kathir")
+            val transObj = seed.optJSONObject("en_translation")
+            val translitObj = seed.optJSONObject("en_transliteration")
+
+            var arTafsirText: String? = null
+            if (edList != null) {
+                for (i in 0 until edList.length()) {
+                    val item = edList.getJSONObject(i)
+                    if (item.optInt("ayah") == ayah) {
+                        arTafsirText = item.optString("text")
+                        break
+                    }
+                }
+            }
+
+            var enTafsirText: String? = null
+            if (enList != null) {
+                for (i in 0 until enList.length()) {
+                    val item = enList.getJSONObject(i)
+                    if (item.optInt("ayah") == ayah) {
+                        enTafsirText = item.optString("text")
+                        break
+                    }
+                }
+            }
+
+            val enTranslation = transObj?.optString(ayah.toString(), "") ?: ""
+            val enTransliteration = translitObj?.optString(ayah.toString(), "") ?: ""
+
+            if (!arTafsirText.isNullOrEmpty()) {
+                AyahTafsir(
+                    surahNumber = surah,
+                    ayahNumber = ayah,
+                    surahNameArabic = surahAr,
+                    surahNameEnglish = surahEn,
+                    verseTextArabic = verseText,
+                    arabicTafsir = extractSingleAyahTafsir(cleanTafsirText(arTafsirText), ayah),
+                    englishTafsir = extractSingleAyahTafsir(cleanTafsirText(enTafsirText ?: enTranslation), ayah),
+                    englishTranslation = cleanTafsirText(enTranslation),
+                    englishTransliteration = enTransliteration,
+                    edition = edition
+                )
+            } else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     /**
      * Retrieves the Tafsir commentary and translation for a specific [surah] and [ayah].
      * Order of resolution:
      * 1. In-memory cache
-     * 2. Bundled offline seed data (for Surah 1)
-     * 3. On-disk persistent cache
-     * 4. Multi-tier network fetch (CDN -> Raw Git -> Quran.com API)
+     * 2. On-disk persistent cache (tafsir_cache_v4)
+     * 3. Multi-tier network fetch:
+     *    Tier 1 (Primary): tafsir.app (Scholar-curated, authoritative, pure typography)
+     *    Tier 2: Quran.com API
+     *    Tier 3: jsDelivr CDN
+     *    Tier 4: GitHub Raw
+     * 4. Bundled offline seed data (Fallback for Surah Al-Fatihah when network is unavailable)
      */
     suspend fun getAyahTafsir(
         context: Context,
@@ -277,69 +365,7 @@ object TafsirRepository {
         val surahAr = surahMeta?.arabicName ?: "الفاتحة"
         val surahEn = surahMeta?.englishName ?: "Al-Fatihah"
 
-        // 2. Bundled offline seed for Surah Al-Fatihah (Surah 1)
-        if (surah == 1) {
-            val seed = getSeedFatihah(context)
-            if (seed != null) {
-                try {
-                    val editionKey = when (edition) {
-                        TafsirEdition.SAADI -> "saadi"
-                        TafsirEdition.IBN_KATHIR -> "ibn_kathir"
-                        TafsirEdition.TABARI -> "tabari"
-                        TafsirEdition.QURTUBI -> "qurtubi"
-                        TafsirEdition.MUYASSAR -> "saadi"
-                    }
-                    val edList = seed.optJSONArray(editionKey)
-                    val enList = seed.optJSONArray("en_ibn_kathir")
-                    val transObj = seed.optJSONObject("en_translation")
-                    val translitObj = seed.optJSONObject("en_transliteration")
-
-                    var arTafsirText: String? = null
-                    if (edList != null) {
-                        for (i in 0 until edList.length()) {
-                            val item = edList.getJSONObject(i)
-                            if (item.optInt("ayah") == ayah) {
-                                arTafsirText = item.optString("text")
-                                break
-                            }
-                        }
-                    }
-
-                    var enTafsirText: String? = null
-                    if (enList != null) {
-                        for (i in 0 until enList.length()) {
-                            val item = enList.getJSONObject(i)
-                            if (item.optInt("ayah") == ayah) {
-                                enTafsirText = item.optString("text")
-                                break
-                            }
-                        }
-                    }
-
-                    val enTranslation = transObj?.optString(ayah.toString(), "") ?: ""
-                    val enTransliteration = translitObj?.optString(ayah.toString(), "") ?: ""
-
-                    if (!arTafsirText.isNullOrEmpty()) {
-                        val result = AyahTafsir(
-                            surahNumber = surah,
-                            ayahNumber = ayah,
-                            surahNameArabic = surahAr,
-                            surahNameEnglish = surahEn,
-                            verseTextArabic = verseText,
-                            arabicTafsir = cleanTafsirText(arTafsirText),
-                            englishTafsir = cleanTafsirText(enTafsirText ?: enTranslation),
-                            englishTranslation = cleanTafsirText(enTranslation),
-                            englishTransliteration = enTransliteration,
-                            edition = edition
-                        )
-                        memoryCache[cacheKey] = result
-                        return@withContext Result.success(result)
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-
-        // 3. On-disk persistent cache
+        // 2. On-disk persistent cache (tafsir_cache_v4)
         val diskFile = cacheFile(context, edition, surah, ayah)
         if (diskFile.exists() && diskFile.length() > 0) {
             try {
@@ -363,26 +389,36 @@ object TafsirRepository {
             }
         }
 
-        // 4. Multi-tier network fetch
+        // 3. Multi-tier network fetch
         try {
-            // 1. Fetch Arabic Tafsir: Primary is Quran.com API (curated, clean per-ayah!)
-            var arText: String? = null
-            val quranComUrl = "https://api.quran.com/api/v4/tafsirs/${edition.quranComId}/by_ayah/$surah:$ayah"
-            arText = fetchQuranComTafsir(quranComUrl)
+            // Tier 1: Primary source is tafsir.app (Clean scholarly exegesis, 0 HTML, authentic brackets)
+            var arText: String? = fetchTafsirApp(edition.tafsirAppSlug, surah, ayah)
 
-            // Tier B: jsDelivr CDN fallback
+            // Tier 2: Quran.com API fallback
+            if (arText.isNullOrEmpty()) {
+                val quranComUrl = "https://api.quran.com/api/v4/tafsirs/${edition.quranComId}/by_ayah/$surah:$ayah"
+                arText = fetchQuranComTafsir(quranComUrl)
+            }
+
+            // Tier 3: jsDelivr CDN fallback
             if (arText.isNullOrEmpty()) {
                 val cdnUrl = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/${edition.slug}/$surah/$ayah.json"
                 arText = fetchTextFromUrl(cdnUrl)
             }
 
-            // Tier C: GitHub Raw fallback
+            // Tier 4: GitHub Raw fallback
             if (arText.isNullOrEmpty()) {
                 val gitUrl = "https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/${edition.slug}/$surah/$ayah.json"
                 arText = fetchTextFromUrl(gitUrl)
             }
 
+            // Fallback to seed for Surah 1 if network fails
             if (arText.isNullOrEmpty()) {
+                val seedFallback = getSeedFatihahFallback(context, surah, ayah, edition, surahAr, surahEn, verseText)
+                if (seedFallback != null) {
+                    memoryCache[cacheKey] = seedFallback
+                    return@withContext Result.success(seedFallback)
+                }
                 return@withContext Result.failure(IllegalStateException("Tafsir not found"))
             }
 
@@ -402,7 +438,7 @@ object TafsirRepository {
             }
 
             // Fetch English Translation & Transliteration (Pronunciation in English letters)
-            var verseDetails = fetchQuranComVerseDetails(surah, ayah)
+            val verseDetails = fetchQuranComVerseDetails(surah, ayah)
             var enTrans = verseDetails.translation
             if (enTrans.isBlank()) {
                 enTrans = fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=85")
@@ -448,7 +484,33 @@ object TafsirRepository {
             memoryCache[cacheKey] = tafsirObj
             Result.success(tafsirObj)
         } catch (e: Exception) {
-            Result.failure(e)
+            val seedFallback = getSeedFatihahFallback(context, surah, ayah, edition, surahAr, surahEn, verseText)
+            if (seedFallback != null) {
+                memoryCache[cacheKey] = seedFallback
+                Result.success(seedFallback)
+            } else {
+                Result.failure(e)
+            }
+        }
+    }
+
+    private fun fetchTafsirApp(src: String, surah: Int, ayah: Int): String? {
+        val urlString = "https://tafsir.app/get.php?src=$src&s=$surah&a=$ayah&ver=1"
+        return try {
+            val conn = URI.create(urlString).toURL().openConnection() as HttpURLConnection
+            conn.apply {
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+                setRequestProperty("Accept", "application/json, text/plain, */*")
+                connectTimeout = 8000
+                readTimeout = 8000
+            }
+            if (conn.responseCode != HttpURLConnection.HTTP_OK) return null
+            val content = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val json = JSONObject(content)
+            json.optString("data").ifBlank { null }
+        } catch (_: Exception) {
+            null
         }
     }
 
