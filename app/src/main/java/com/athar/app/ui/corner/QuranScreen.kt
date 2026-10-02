@@ -2090,7 +2090,7 @@ private fun SurahReader(
         mediaPlayer = player
 
         try {
-            val primaryUrl = reciter.getPrimaryAudioUrl(surah.number)
+            val primaryUrl = chapterTiming?.audioUrl?.ifBlank { null } ?: reciter.getPrimaryAudioUrl(surah.number)
             player.setDataSource(primaryUrl)
             player.prepareAsync()
         } catch (_: Exception) {

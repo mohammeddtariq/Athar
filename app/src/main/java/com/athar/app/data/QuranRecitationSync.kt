@@ -26,7 +26,8 @@ data class VerseTiming(
 data class ChapterRecitationTiming(
     val chapterId: Int,
     val reciterId: Int,
-    val verses: List<VerseTiming>
+    val verses: List<VerseTiming>,
+    val audioUrl: String? = null
 ) {
     /**
      * Finds the verse currently active at [positionMs].
@@ -49,7 +50,6 @@ data class ChapterRecitationTiming(
         if (positionMs < firstSeg.startMs) return null
 
         // 1. Direct hit inside word segment [startMs .. endMs)
-        // Using semi-open interval gives snappy, instantaneous transition to subsequent word
         val direct = verse.segments.firstOrNull { positionMs >= it.startMs && positionMs < it.endMs }
         if (direct != null) return direct.wordIndex
 
@@ -57,24 +57,19 @@ data class ChapterRecitationTiming(
         val lastSeg = verse.segments.last()
         if (positionMs in lastSeg.startMs..lastSeg.endMs) return lastSeg.wordIndex
 
-        // 2. If position is after the very last word of this verse by >80ms (verse end silence/breath)
-        if (positionMs > lastSeg.endMs + 80L) {
+        // 2. If position is after the very last word of this verse by >150ms (verse end breath/pause)
+        if (positionMs > lastSeg.endMs + 150L) {
             return null
         }
 
-        // 3. In between word N and word N+1 (small gap/pause):
+        // 3. In between word N and word N+1 (inter-word gap/pause):
+        // Carry the highlight on the finished word until the next word begins.
+        // This eliminates highlight flicker and perceived delay between words.
         val lastFinished = verse.segments.lastOrNull { positionMs >= it.endMs }
         if (lastFinished != null) {
             val nextSeg = verse.segments.firstOrNull { it.startMs > lastFinished.endMs }
-            if (nextSeg != null) {
-                if (positionMs < nextSeg.startMs) {
-                    if (positionMs - lastFinished.endMs > 80L) {
-                        return null
-                    }
-                    return lastFinished.wordIndex
-                }
-            } else {
-                return null
+            if (nextSeg != null && positionMs < nextSeg.startMs) {
+                return lastFinished.wordIndex
             }
         }
 
@@ -201,6 +196,7 @@ object QuranRecitationSyncRepository {
         return runCatching {
             val root = JSONObject(jsonStr)
             val audioFile = root.optJSONObject("audio_file") ?: return null
+            val audioUrl = audioFile.optString("audio_url").ifBlank { null }
             val timestamps = audioFile.optJSONArray("timestamps") ?: return null
 
             val verses = ArrayList<VerseTiming>(timestamps.length())
@@ -237,7 +233,7 @@ object QuranRecitationSyncRepository {
                 )
             }
 
-            ChapterRecitationTiming(chapter, reciterId, verses)
+            ChapterRecitationTiming(chapter, reciterId, verses, audioUrl)
         }.getOrNull()
     }
 }

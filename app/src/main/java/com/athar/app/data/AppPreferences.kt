@@ -466,7 +466,7 @@ enum class QuranReciter(
     val baseUrl: String,
     val quranComId: Int,
     val qdcSubpath: String,
-    val syncLeadMs: Long = 40L
+    val syncLeadMs: Long = 120L
 ) {
     MINSHAWI(
         id = "minshawi",
@@ -475,7 +475,7 @@ enum class QuranReciter(
         baseUrl = "https://server10.mp3quran.net/minsh",
         quranComId = 9,
         qdcSubpath = "siddiq_minshawi",
-        syncLeadMs = 50L
+        syncLeadMs = 120L
     ),
     ABDUL_BASIT(
         id = "abdul_basit",
@@ -484,7 +484,7 @@ enum class QuranReciter(
         baseUrl = "https://server7.mp3quran.net/basit",
         quranComId = 2,
         qdcSubpath = "abdul_baset",
-        syncLeadMs = 85L
+        syncLeadMs = 180L
     ),
     ALAFASY(
         id = "alafasy",
@@ -493,7 +493,7 @@ enum class QuranReciter(
         baseUrl = "https://server8.mp3quran.net/afs",
         quranComId = 7,
         qdcSubpath = "mishari_al_afasy",
-        syncLeadMs = 40L
+        syncLeadMs = 110L
     );
 
     fun getPrimaryAudioUrl(chapterNumber: Int): String =

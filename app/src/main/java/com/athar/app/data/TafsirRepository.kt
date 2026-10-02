@@ -22,7 +22,8 @@ enum class TafsirEdition(
     val englishSlug: String,
     val descriptionArabic: String,
     val descriptionEnglish: String,
-    val quranComId: Int
+    val quranComId: Int,
+    val quranComEnId: Int?
 ) {
     SAADI(
         id = "saadi",
@@ -36,7 +37,8 @@ enum class TafsirEdition(
         englishSlug = "en-tazkirul-quran",
         descriptionArabic = "من التفاسير المعاصرة الميسرة، ويتميز بأسلوبه السهل الواضح البعيد عن التعقيد، وهو مناسب جداً للمبتدئين.",
         descriptionEnglish = "A contemporary, accessible commentary known for its clarity and straightforward spiritual style.",
-        quranComId = 91
+        quranComId = 91,
+        quranComEnId = 817
     ),
     IBN_KATHIR(
         id = "ibn_kathir",
@@ -50,7 +52,8 @@ enum class TafsirEdition(
         englishSlug = "en-tafisr-ibn-kathir",
         descriptionArabic = "أشهرها وأعظمها عناية بتفسير الآيات بالقرآن، والأحاديث النبوية، وآثار السلف.",
         descriptionEnglish = "The most celebrated traditional commentary, explaining the Quran by Quran, authentic Hadiths, and Salaf narrations.",
-        quranComId = 14
+        quranComId = 14,
+        quranComEnId = 169
     ),
     TABARI(
         id = "tabari",
@@ -64,7 +67,8 @@ enum class TafsirEdition(
         englishSlug = "en-tafsir-maarif-ul-quran",
         descriptionArabic = "من أقدم وأهم كتب التفسير بالمأثور، ويعتمد على نقل أقوال الصحابة والتابعين والأسانيد.",
         descriptionEnglish = "One of the earliest and most authoritative commentaries, based on Sahaba and Tabi'in narrations with full chains of transmission.",
-        quranComId = 15
+        quranComId = 15,
+        quranComEnId = 168
     ),
     QURTUBI(
         id = "qurtubi",
@@ -78,7 +82,8 @@ enum class TafsirEdition(
         englishSlug = "en-tafsir-maarif-ul-quran",
         descriptionArabic = "يركز بشكل أساسي على الأحكام الفقهية واستنباطها من الآيات مع العناية باللغة والإعراب.",
         descriptionEnglish = "Focuses predominantly on legal rulings (Ahkam), jurisprudence derivation, Arabic linguistics, and grammar.",
-        quranComId = 90
+        quranComId = 90,
+        quranComEnId = 168
     ),
     MUYASSAR(
         id = "muyassar",
@@ -92,7 +97,8 @@ enum class TafsirEdition(
         englishSlug = "en-al-jalalayn",
         descriptionArabic = "تفسير وجيز ميسر للآيات صادر عن مجمع الملك فهد، صِيغ بعبارات واضحة وسهلة في متناول الجميع.",
         descriptionEnglish = "A concise, accessible commentary published by the King Fahd Complex with clear, simplified phrasing.",
-        quranComId = 16
+        quranComId = 16,
+        quranComEnId = null
     )
 }
 
@@ -120,6 +126,10 @@ object TafsirRepository {
      */
     fun cleanTafsirText(text: String): String {
         return text
+            .replace(Regex("(?i)<br\\s*/?>"), "\n")
+            .replace(Regex("(?i)</p>"), "\n\n")
+            .replace(Regex("(?i)</div>"), "\n")
+            .replace(Regex("(?i)</h[1-6]>"), "\n\n")
             .replace(Regex("<[^>]*>"), "")
             .replace("&quot;", "\"")
             .replace("&apos;", "'")
@@ -127,6 +137,7 @@ object TafsirRepository {
             .replace("&lt;", "<")
             .replace("&gt;", ">")
             .replace("&#39;", "'")
+            .replace("&#x27;", "'")
             .replace("&nbsp;", " ")
             .replace("[[", "«")
             .replace("]]", "»")
@@ -142,6 +153,30 @@ object TafsirRepository {
     fun extractSingleAyahTafsir(rawText: String, ayahNumber: Int): String {
         if (rawText.isBlank()) return rawText
 
+        var cleaned = rawText
+        // If ayah > 1, strip general Surah virtue headers and intros that shouldn't appear on subsequent ayahs
+        if (ayahNumber > 1) {
+            val introPointers = listOf(
+                "What has been mentioned about the Virtues of this Surah",
+                "The Virtues of Surat",
+                "Which was revealed in",
+                "ذِكْرُ مَا وَرَدَ فِي فَضْلِهَا",
+                "ذكر ما ورد في فضلها",
+                "وَهِيَ مَكِّيَّةٌ فِي قَوْلِ جَمِيعِ الْمُفَسِّرِينَ",
+                "وهي مكية في قول جميع المفسرين"
+            )
+            for (ptr in introPointers) {
+                val idx = cleaned.indexOf(ptr)
+                if (idx != -1) {
+                    val nextHeading = Regex("""(?:\n|^)\s*(?:[A-Z][a-zA-Z\s]{4,}:|\([0-9٠-٩]+\)|\{[0-9٠-٩]+\}|القول في تأويل|وقوله|\(\d+\.|\(\d+\))""")
+                    val match = nextHeading.find(cleaned, startIndex = idx + ptr.length)
+                    if (match != null) {
+                        cleaned = cleaned.substring(match.range.first).trim()
+                    }
+                }
+            }
+        }
+
         fun normalizeDigit(ch: Char): Char = when (ch) {
             '٠' -> '0'; '١' -> '1'; '٢' -> '2'; '٣' -> '3'; '٤' -> '4'
             '٥' -> '5'; '٦' -> '6'; '٧' -> '7'; '٨' -> '8'; '٩' -> '9'
@@ -155,7 +190,7 @@ object TafsirRepository {
 
         // Match occurrences of {N}, [N], (N), or (N. ) at line start or paragraph start
         val markerRegex = Regex("""(?:\n|^)\s*(?:\{|\[|\()([0-9٠-٩]+)(?:\.|\}|\/|\))""")
-        val allMarkers = markerRegex.findAll(rawText).toList()
+        val allMarkers = markerRegex.findAll(cleaned).toList()
 
         if (allMarkers.size > 1) {
             val targetIdx = allMarkers.indexOfFirst { match ->
@@ -168,25 +203,25 @@ object TafsirRepository {
                 val endPos = if (targetIdx + 1 < allMarkers.size) {
                     allMarkers[targetIdx + 1].range.first
                 } else {
-                    rawText.length
+                    cleaned.length
                 }
-                val extracted = rawText.substring(startPos, endPos).trim()
+                val extracted = cleaned.substring(startPos, endPos).trim()
                 if (extracted.isNotBlank()) return extracted
             }
         }
 
         // For Ayah 1 in multi-section texts, check if there's a specific section header
         if (ayahNumber == 1) {
-            val discIdx = rawText.indexOf("The Discussion of the Individual Letters")
+            val discIdx = cleaned.indexOf("The Discussion of the Individual Letters")
             if (discIdx != -1) {
-                val nextMarker = markerRegex.find(rawText, startIndex = discIdx)
-                val endPos = nextMarker?.range?.first ?: rawText.length
-                val extracted = rawText.substring(discIdx, endPos).trim()
+                val nextMarker = markerRegex.find(cleaned, startIndex = discIdx)
+                val endPos = nextMarker?.range?.first ?: cleaned.length
+                val extracted = cleaned.substring(discIdx, endPos).trim()
                 if (extracted.isNotBlank()) return extracted
             }
         }
 
-        return rawText
+        return cleaned
     }
 
     /**
@@ -204,7 +239,12 @@ object TafsirRepository {
     }
 
     private fun cacheDir(context: Context): File {
-        return File(context.filesDir, "tafsir_cache").apply { mkdirs() }
+        // Automatically cleanup legacy corrupted v1 cache
+        runCatching {
+            val legacy = File(context.filesDir, "tafsir_cache")
+            if (legacy.exists()) legacy.deleteRecursively()
+        }
+        return File(context.filesDir, "tafsir_cache_v3").apply { mkdirs() }
     }
 
     private fun cacheFile(context: Context, edition: TafsirEdition, surah: Int, ayah: Int): File {
@@ -325,37 +365,40 @@ object TafsirRepository {
 
         // 4. Multi-tier network fetch
         try {
-            // Fetch Arabic Tafsir
+            // 1. Fetch Arabic Tafsir: Primary is Quran.com API (curated, clean per-ayah!)
             var arText: String? = null
+            val quranComUrl = "https://api.quran.com/api/v4/tafsirs/${edition.quranComId}/by_ayah/$surah:$ayah"
+            arText = fetchQuranComTafsir(quranComUrl)
 
-            // Tier A: jsDelivr CDN
-            val cdnUrl = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/${edition.slug}/$surah/$ayah.json"
-            arText = fetchTextFromUrl(cdnUrl)
+            // Tier B: jsDelivr CDN fallback
+            if (arText.isNullOrEmpty()) {
+                val cdnUrl = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/${edition.slug}/$surah/$ayah.json"
+                arText = fetchTextFromUrl(cdnUrl)
+            }
 
-            // Tier B: GitHub Raw fallback
+            // Tier C: GitHub Raw fallback
             if (arText.isNullOrEmpty()) {
                 val gitUrl = "https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/${edition.slug}/$surah/$ayah.json"
                 arText = fetchTextFromUrl(gitUrl)
-            }
-
-            // Tier C: Quran.com API fallback
-            if (arText.isNullOrEmpty()) {
-                val quranComUrl = "https://api.quran.com/api/v4/tafsirs/${edition.quranComId}/by_ayah/$surah:$ayah"
-                arText = fetchQuranComTafsir(quranComUrl)
             }
 
             if (arText.isNullOrEmpty()) {
                 return@withContext Result.failure(IllegalStateException("Tafsir not found"))
             }
 
-            // Fetch English Tafsir / Commentary matching selected edition
-            val enSlug = edition.englishSlug
-            var enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/$enSlug/$surah/$ayah.json")
-            if (enText.isNullOrEmpty()) {
-                enText = fetchTextFromUrl("https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/$enSlug/$surah/$ayah.json")
+            // 2. Fetch English Tafsir matching selected edition
+            var enText: String? = null
+            if (edition.quranComEnId != null) {
+                val quranComEnUrl = "https://api.quran.com/api/v4/tafsirs/${edition.quranComEnId}/by_ayah/$surah:$ayah"
+                enText = fetchQuranComTafsir(quranComEnUrl)
             }
-            if (enText.isNullOrEmpty() && enSlug != "en-tafisr-ibn-kathir") {
-                enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/en-tafisr-ibn-kathir/$surah/$ayah.json")
+            if (enText.isNullOrEmpty()) {
+                val enSlug = edition.englishSlug
+                enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/$enSlug/$surah/$ayah.json")
+                    ?: fetchTextFromUrl("https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/$enSlug/$surah/$ayah.json")
+            }
+            if (enText.isNullOrEmpty()) {
+                enText = fetchTextFromUrl("https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/en-al-jalalayn/$surah/$ayah.json")
             }
 
             // Fetch English Translation & Transliteration (Pronunciation in English letters)
