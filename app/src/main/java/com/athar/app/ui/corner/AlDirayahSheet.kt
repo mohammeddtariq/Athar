@@ -198,7 +198,14 @@ fun AlDirayahSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.65f))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF070B06).copy(alpha = 0.50f),
+                        Color(0xFF020402).copy(alpha = 0.70f)
+                    )
+                )
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -217,13 +224,21 @@ fun AlDirayahSheet(
                     onClick = {} // Prevent taps inside sheet from dismissing
                 )
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color(0xFF111510))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF131A12).copy(alpha = 0.96f),
+                            Color(0xFF0C110C).copy(alpha = 0.98f)
+                        )
+                    )
+                )
                 .border(
                     width = 1.dp,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            AtharPrimaryLight.copy(alpha = 0.40f),
-                            AtharCardBorder.copy(alpha = 0.20f)
+                            Color.White.copy(alpha = 0.25f),
+                            AtharPrimaryLight.copy(alpha = 0.45f),
+                            Color(0xFF222B1E).copy(alpha = 0.35f)
                         )
                     ),
                     shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
@@ -1007,7 +1022,7 @@ private fun SacredAyahCard(
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "Translation",
+                        text = "Translation (Saheeh Int.)",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.5.sp,
@@ -1231,8 +1246,23 @@ private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
             lines.forEachIndexed { index, rawLine ->
                 val line = rawLine.trim()
                 if (line.isNotEmpty()) {
-                    val colonIdx = line.indexOf(':')
-                    if (colonIdx != -1 && colonIdx < line.length - 1) {
+                    val isFootnoteHeader = line.startsWith("───────────────") || line.startsWith("الهوامش والتخريج:")
+                    val isHeading = line.startsWith("وهي مكية") || line.startsWith("وهي مدنية") ||
+                                    line.startsWith("سورة ") || line.startsWith("تفسير سورة") ||
+                                    line.startsWith("القول في") || line.startsWith("*") ||
+                                    line.startsWith("The Discussion of") || line.startsWith("The Virtues of")
+
+                    val hasBracketColon = line.contains("[") && line.contains("]") &&
+                            line.indexOf(':') > line.indexOf('[') && line.indexOf(':') < line.indexOf(']')
+                    val colonIdx = if (hasBracketColon) -1 else line.indexOf(':')
+
+                    if (isFootnoteHeader) {
+                        appendStyledTafsirChunk(
+                            text = line,
+                            baseColor = AtharPrimaryLight,
+                            baseWeight = FontWeight.Bold
+                        )
+                    } else if (colonIdx in 1..44 && colonIdx < line.length - 1) {
                         val prefix = line.substring(0, colonIdx + 1)
                         val suffix = line.substring(colonIdx + 1)
 
@@ -1246,16 +1276,13 @@ private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
                             baseColor = Color(0xFFBACABA),
                             baseWeight = FontWeight.Normal
                         )
-                    } else if (colonIdx != -1 && colonIdx == line.length - 1) {
+                    } else if (colonIdx in 1..44 && colonIdx == line.length - 1) {
                         appendStyledTafsirChunk(
                             text = line,
                             baseColor = Color(0xFFFFFFFF),
                             baseWeight = FontWeight.Bold
                         )
                     } else {
-                        val isHeading = line.startsWith("وهي مكية") || line.startsWith("وهي مدنية") ||
-                                        line.startsWith("سورة ") || line.startsWith("تفسير سورة") ||
-                                        line.startsWith("The Discussion of") || line.startsWith("The Virtues of")
                         appendStyledTafsirChunk(
                             text = line,
                             baseColor = if (isHeading) Color(0xFFFFFFFF) else Color(0xFFBACABA),
@@ -1286,7 +1313,7 @@ private fun AnnotatedString.Builder.appendStyledTafsirChunk(
 ) {
     if (text.isEmpty()) return
     try {
-        val tokenRegex = Regex("""(\{[^}]+\}|«[^»]+»|﴿[^﴾]+﴾|\([0-9٠-٩]+\))""")
+        val tokenRegex = Regex("""(\{[^}]+\}|«[^»]+»|﴿[^﴾]+﴾|\([0-9٠-٩]+\)|\[[0-9٠-٩]+\])""")
         var lastIdx = 0
         val matches = tokenRegex.findAll(text).toList()
 
@@ -1320,6 +1347,11 @@ private fun AnnotatedString.Builder.appendStyledTafsirChunk(
                 }
                 token.startsWith("(") && token.endsWith(")") -> {
                     withStyle(SpanStyle(color = Color(0xFFE5C158), fontWeight = FontWeight.Bold)) {
+                        append(token)
+                    }
+                }
+                token.startsWith("[") && token.endsWith("]") -> {
+                    withStyle(SpanStyle(color = AtharPrimaryLight, fontWeight = FontWeight.SemiBold)) {
                         append(token)
                     }
                 }

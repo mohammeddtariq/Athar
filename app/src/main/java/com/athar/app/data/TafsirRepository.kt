@@ -156,6 +156,50 @@ object TafsirRepository {
     }
 
     /**
+     * Cleans commentary fetched from tafsir.app preserving 100% of the scholarly exegesis.
+     * - Strips manuscript pagination tokens: (p-...)
+     * - Formats inline footnotes [[...]] into indexed references [١], [٢] and appends footnotes section
+     * - Formats poetic hemistichs (؎) cleanly
+     * - Normalizes newlines and whitespace
+     */
+    fun cleanTafsirAppText(rawText: String): String {
+        if (rawText.isBlank()) return ""
+        var text = rawText
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .replace(Regex("""\(p-[\d٠-٩]+\)"""), "")
+
+        // Process double brackets [[...]] footnotes matching tafsir.app's build_fnotes()
+        if (text.contains("[[")) {
+            val footnotes = mutableListOf<String>()
+            var fnCounter = 0
+            val fnRegex = Regex("""\s*\[\[([\s\S]*?)\]\]""")
+            text = fnRegex.replace(text) { matchResult ->
+                fnCounter++
+                val arNum = formatArabicIndicDigits(fnCounter)
+                val fnContent = matchResult.groupValues[1].trim()
+                footnotes.add("[$arNum] $fnContent")
+                " [$arNum]"
+            }
+            if (footnotes.isNotEmpty()) {
+                text = text.trim() + "\n\n───────────────\nالهوامش والتخريج:\n" + footnotes.joinToString("\n")
+            }
+        }
+
+        // Format poetic hemistichs cleanly
+        text = text.replace(Regex("""؎\s*"""), "\n؎ ")
+        text = text.replace(Regex("""\n{3,}"""), "\n\n")
+        return text.trim()
+    }
+
+    private fun formatArabicIndicDigits(number: Int): String {
+        val arabicDigits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
+        return number.toString().map { ch ->
+            if (ch in '0'..'9') arabicDigits[ch - '0'] else ch
+        }.joinToString("")
+    }
+
+    /**
      * Isolates the commentary specifically for [ayahNumber] from multi-verse commentaries (e.g. {1} ... {2} ...).
      */
     fun extractSingleAyahTafsir(rawText: String, ayahNumber: Int): String {
@@ -253,14 +297,13 @@ object TafsirRepository {
     private fun cacheDir(context: Context): File {
         // Automatically cleanup legacy caches so fresh tafsir.app content is used
         runCatching {
-            val legacy1 = File(context.filesDir, "tafsir_cache")
-            if (legacy1.exists()) legacy1.deleteRecursively()
-            val legacy2 = File(context.filesDir, "tafsir_cache_v2")
-            if (legacy2.exists()) legacy2.deleteRecursively()
-            val legacy3 = File(context.filesDir, "tafsir_cache_v3")
-            if (legacy3.exists()) legacy3.deleteRecursively()
+            val legacyDirs = listOf("tafsir_cache", "tafsir_cache_v2", "tafsir_cache_v3", "tafsir_cache_v4")
+            for (dirName in legacyDirs) {
+                val dir = File(context.filesDir, dirName)
+                if (dir.exists()) dir.deleteRecursively()
+            }
         }
-        return File(context.filesDir, "tafsir_cache_v4").apply { mkdirs() }
+        return File(context.filesDir, "tafsir_cache_v5").apply { mkdirs() }
     }
 
     private fun cacheFile(context: Context, edition: TafsirEdition, surah: Int, ayah: Int): File {
@@ -365,7 +408,7 @@ object TafsirRepository {
         val surahAr = surahMeta?.arabicName ?: "الفاتحة"
         val surahEn = surahMeta?.englishName ?: "Al-Fatihah"
 
-        // 2. On-disk persistent cache (tafsir_cache_v4)
+        // 2. On-disk persistent cache (tafsir_cache_v5)
         val diskFile = cacheFile(context, edition, surah, ayah)
         if (diskFile.exists() && diskFile.length() > 0) {
             try {
@@ -376,8 +419,8 @@ object TafsirRepository {
                     surahNameArabic = json.optString("surah_ar", surahAr),
                     surahNameEnglish = json.optString("surah_en", surahEn),
                     verseTextArabic = json.optString("verse_text", verseText),
-                    arabicTafsir = extractSingleAyahTafsir(json.getString("ar_tafsir"), ayah),
-                    englishTafsir = extractSingleAyahTafsir(json.optString("en_tafsir", ""), ayah),
+                    arabicTafsir = json.getString("ar_tafsir"),
+                    englishTafsir = json.optString("en_tafsir", ""),
                     englishTranslation = json.optString("en_trans", ""),
                     englishTransliteration = json.optString("en_transliteration", ""),
                     edition = edition
@@ -391,8 +434,12 @@ object TafsirRepository {
 
         // 3. Multi-tier network fetch
         try {
-            // Tier 1: Primary source is tafsir.app (Clean scholarly exegesis, 0 HTML, authentic brackets)
+            var isFromTafsirApp = false
+            // Tier 1: Primary source is tafsir.app (Scholar-curated, authoritative, pure typography)
             var arText: String? = fetchTafsirApp(edition.tafsirAppSlug, surah, ayah)
+            if (!arText.isNullOrEmpty()) {
+                isFromTafsirApp = true
+            }
 
             // Tier 2: Quran.com API fallback
             if (arText.isNullOrEmpty()) {
@@ -441,13 +488,23 @@ object TafsirRepository {
             val verseDetails = fetchQuranComVerseDetails(surah, ayah)
             var enTrans = verseDetails.translation
             if (enTrans.isBlank()) {
-                enTrans = fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=85")
-                    ?: fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=131")
+                enTrans = fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=20")
+                    ?: fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=84")
+                    ?: fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=203")
+                    ?: fetchQuranComTranslation("https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?translations=85")
                     ?: ""
             }
 
-            val cleanedAr = extractSingleAyahTafsir(cleanTafsirText(arText), ayah)
-            val cleanedEn = extractSingleAyahTafsir(cleanTafsirText(enText ?: enTrans), ayah)
+            val cleanedAr = if (isFromTafsirApp) {
+                cleanTafsirAppText(arText)
+            } else {
+                extractSingleAyahTafsir(cleanTafsirText(arText), ayah)
+            }
+            val cleanedEn = if (!enText.isNullOrBlank()) {
+                extractSingleAyahTafsir(cleanTafsirText(enText), ayah)
+            } else {
+                ""
+            }
             val cleanedTrans = cleanTafsirText(enTrans)
             val translit = verseDetails.transliteration
 
@@ -557,7 +614,7 @@ object TafsirRepository {
     )
 
     private fun fetchQuranComVerseDetails(surah: Int, ayah: Int): QuranVerseDetails {
-        val urlString = "https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?words=true&translations=85"
+        val urlString = "https://api.quran.com/api/v4/verses/by_key/$surah:$ayah?words=true&translations=20,84,203,85"
         return try {
             val conn = URI.create(urlString).toURL().openConnection() as HttpURLConnection
             conn.apply {
@@ -571,9 +628,28 @@ object TafsirRepository {
             val json = JSONObject(content)
             val verse = json.optJSONObject("verse")
 
-            // Translation (M.A.S. Abdel Haleem, id 85)
+            // Prioritize Saheeh International (id 20), followed by Taqi Usmani (84), Hilali & Khan (203), Abdel Haleem (85)
             val transArray = verse?.optJSONArray("translations")
-            val translation = transArray?.optJSONObject(0)?.optString("text")?.ifBlank { "" } ?: ""
+            var translation = ""
+            if (transArray != null) {
+                val prioritizedIds = listOf(20, 84, 203, 85)
+                for (desiredId in prioritizedIds) {
+                    for (i in 0 until transArray.length()) {
+                        val transObj = transArray.optJSONObject(i) ?: continue
+                        if (transObj.optInt("resource_id") == desiredId) {
+                            val rawText = transObj.optString("text")
+                            if (rawText.isNotBlank()) {
+                                translation = cleanTafsirText(rawText)
+                                break
+                            }
+                        }
+                    }
+                    if (translation.isNotBlank()) break
+                }
+                if (translation.isBlank() && transArray.length() > 0) {
+                    translation = cleanTafsirText(transArray.optJSONObject(0)?.optString("text").orEmpty())
+                }
+            }
 
             // Transliteration word-by-word
             val words = verse?.optJSONArray("words")
@@ -612,7 +688,8 @@ object TafsirRepository {
             val json = JSONObject(content)
             val verse = json.optJSONObject("verse")
             val transArray = verse?.optJSONArray("translations")
-            transArray?.optJSONObject(0)?.optString("text")?.ifBlank { null }
+            val raw = transArray?.optJSONObject(0)?.optString("text")?.ifBlank { null }
+            raw?.let { cleanTafsirText(it) }
         } catch (_: Exception) {
             null
         }

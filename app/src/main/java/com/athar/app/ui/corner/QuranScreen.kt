@@ -16,6 +16,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -104,6 +105,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
@@ -384,10 +386,21 @@ fun QuranScreen(
 
     val colors = remember(themeMode) { getQuranColors(themeMode) }
 
+    val isTafsirOpen = showTafsirWithSurahIndex || tafsirTargetAyah != null
+    val backgroundBlurRadius by animateDpAsState(
+        targetValue = if (isTafsirOpen) 18.dp else 0.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "tafsirBgBlur"
+    )
+
     val currentSurah = openSurah
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (currentSurah != null) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (backgroundBlurRadius > 0.dp) Modifier.blur(backgroundBlurRadius) else Modifier)
+            ) {
                 SurahReader(
                     surah = currentSurah,
                     themeMode = themeMode,
@@ -461,7 +474,11 @@ fun QuranScreen(
             }
         } else {
             // Surah & Juz Index Screen with centered floating Last Read card above nav bar
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (backgroundBlurRadius > 0.dp) Modifier.blur(backgroundBlurRadius) else Modifier)
+            ) {
                 SurahListScreen(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
