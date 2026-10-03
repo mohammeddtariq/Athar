@@ -52,7 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
@@ -120,7 +121,7 @@ fun AppAnnouncementDialog(
                     .wrapContentHeight()
                     .padding(horizontal = 22.dp, vertical = 24.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(Color(0xFF111510))
+                    .background(AtharBackground)
                     .border(
                         width = 1.3.dp,
                         brush = glowBrush,
@@ -133,13 +134,6 @@ fun AppAnnouncementDialog(
                         ambientColor = Color.Black
                     )
             ) {
-                // Islamic geometric watermark pattern strictly inside this announcement card
-                IslamicPatternBackground(
-                    modifier = Modifier.matchParentSize(),
-                    alpha = 0.07f,
-                    animated = false
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -289,7 +283,7 @@ fun AppAnnouncementDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF1A2218))
+                            .background(AtharCardSurface)
                             .border(0.8.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center
@@ -344,7 +338,7 @@ fun AppAnnouncementDialog(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF1C241A))
+                                    .background(AtharCardSurface)
                                     .border(0.6.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {

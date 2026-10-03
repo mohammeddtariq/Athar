@@ -104,7 +104,9 @@ import com.athar.app.data.QuranRepository
 import com.athar.app.data.TafsirEdition
 import com.athar.app.data.TafsirRepository
 import com.athar.app.data.formatDigits
+import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -247,10 +249,10 @@ fun AlDirayahSheet(
                     onClick = {} // Prevent taps inside sheet from dismissing
                 )
                 .clip(RoundedCornerShape(cardCornerRadius))
-                .background(Color(0xFF111510))
+                .background(AtharBackground)
                 .border(
                     width = 1.dp,
-                    color = Color(0xFF263223),
+                    color = AtharCardBorder,
                     shape = RoundedCornerShape(cardCornerRadius)
                 )
                 .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
@@ -559,8 +561,8 @@ private fun SurahPickerView(
                 .padding(horizontal = 18.dp, vertical = 8.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF161E14))
-                .border(1.dp, Color(0xFF283623), RoundedCornerShape(16.dp))
+                .background(AtharCardSurface)
+                .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -630,8 +632,8 @@ private fun SurahPickerView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF141912))
-                        .border(1.dp, Color(0xFF243021), RoundedCornerShape(16.dp))
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -905,8 +907,8 @@ private fun SacredAyahCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF151C13))
-            .border(1.dp, Color(0xFF263223), RoundedCornerShape(20.dp))
+            .background(AtharCardSurface)
+            .border(1.dp, AtharCardBorder, RoundedCornerShape(20.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1096,12 +1098,12 @@ private fun TafsirBooksBar(
             TafsirEdition.entries.forEach { edition ->
                 val isSelected = edition == selectedEdition
                 val animatedBg by animateColorAsState(
-                    targetValue = if (isSelected) AtharPrimary.copy(alpha = 0.30f) else Color(0xFF171D15),
+                    targetValue = if (isSelected) AtharPrimary.copy(alpha = 0.30f) else AtharCardSurface,
                     animationSpec = tween(180),
                     label = "chipBg"
                 )
                 val animatedBorder by animateColorAsState(
-                    targetValue = if (isSelected) AtharPrimaryLight else Color(0xFF283424),
+                    targetValue = if (isSelected) AtharPrimaryLight else AtharCardBorder,
                     animationSpec = tween(180),
                     label = "chipBorder"
                 )
@@ -1185,8 +1187,8 @@ private fun TafsirContentView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(containerShape)
-                .background(Color(0xFF141A12))
-                .border(1.dp, Color(0xFF263322), containerShape)
+                .background(AtharCardSurface)
+                .border(1.dp, AtharCardBorder, containerShape)
                 .padding(18.dp)
         ) {
             // Card Header
@@ -1554,8 +1556,8 @@ private fun AlDirayahBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF111510))
-                .border(width = 0.8.dp, color = Color(0xFF222B1E))
+                .background(AtharBackground)
+                .border(width = 0.8.dp, color = AtharCardBorder)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1737,7 +1739,7 @@ fun AlDirayahGlowCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF141A12))
+            .background(AtharCardSurface)
             .border(
                 width = 1.2.dp,
                 brush = glowBrush,
