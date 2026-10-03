@@ -52,6 +52,7 @@ class AppPreferences(private val context: Context) {
         private val QURAN_FONT_SCALE_KEY = doublePreferencesKey("quran_font_scale")
         private val QURAN_RECITER_KEY = stringPreferencesKey("quran_reciter")
         private val QURAN_LAYOUT_MODE_KEY = stringPreferencesKey("quran_layout_mode")
+        private val QURAN_SHOW_PAGE_FRAME_KEY = booleanPreferencesKey("quran_show_page_frame")
 
         // Quran Last Read Position
         private val LAST_READ_SURAH_NUMBER_KEY = intPreferencesKey("last_read_surah_number")
@@ -117,6 +118,9 @@ class AppPreferences(private val context: Context) {
     }
     val quranLayoutMode: Flow<QuranLayoutMode> = context.dataStore.data.map {
         QuranLayoutMode.fromId(it[QURAN_LAYOUT_MODE_KEY] ?: "TEXT")
+    }
+    val quranShowPageFrame: Flow<Boolean> = context.dataStore.data.map {
+        it[QURAN_SHOW_PAGE_FRAME_KEY] ?: false
     }
 
     val lastReadSurahNumber: Flow<Int?> = context.dataStore.data.map { it[LAST_READ_SURAH_NUMBER_KEY] }
@@ -327,6 +331,10 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setQuranLayoutMode(mode: QuranLayoutMode) {
         context.dataStore.edit { it[QURAN_LAYOUT_MODE_KEY] = mode.id }
+    }
+
+    suspend fun setQuranShowPageFrame(show: Boolean) {
+        context.dataStore.edit { it[QURAN_SHOW_PAGE_FRAME_KEY] = show }
     }
 
     suspend fun setHasSeenAppAnnouncement(seen: Boolean) {

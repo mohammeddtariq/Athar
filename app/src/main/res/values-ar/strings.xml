@@ -219,6 +219,8 @@
     <string name="quran_layout_medina_badge">المدينة</string>
     <string name="quran_layout_beta">تجريبي</string>
     <string name="quran_layout_default">افتراضي</string>
+    <string name="quran_page_frame">إطار الصفحة</string>
+    <string name="quran_page_frame_desc">عرض صفحات المصحف داخل إطار محدد</string>
     <string name="quran_audio_requires_internet">تتطلب التلاوة اتصالاً بالإنترنت للاستماع لصوت القارئ</string>
     <string name="quran_audio_network_error">تعذر تشغيل التلاوة. يرجى التحقق من اتصالك بالإنترنت</string>
 
