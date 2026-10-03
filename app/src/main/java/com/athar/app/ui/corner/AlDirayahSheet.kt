@@ -78,6 +78,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -110,6 +111,7 @@ import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimarySubtle
+import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.QuranUthmanicHafs
 import com.athar.app.ui.theme.ThmanyahSans
@@ -251,10 +253,16 @@ fun AlDirayahSheet(
                 )
                 .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
                 .clip(RoundedCornerShape(cardCornerRadius))
-                .background(AtharCardSurface)
+                .background(AtharBackground)
                 .border(
-                    width = 1.dp,
-                    color = AtharCardBorder,
+                    width = 1.2.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            AtharPrimaryLight.copy(alpha = 0.50f),
+                            Color(0xFF33422C),
+                            AtharCardBorder
+                        )
+                    ),
                     shape = RoundedCornerShape(cardCornerRadius)
                 )
         ) {
@@ -308,9 +316,9 @@ fun AlDirayahSheet(
                         }
 
                         HorizontalDivider(
-                            thickness = 0.8.dp,
-                            color = AtharCardBorder.copy(alpha = 0.5f),
-                            modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                            thickness = 1.dp,
+                            color = Color(0xFF2C3B26),
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
                         )
 
                         // Scrollable Content
@@ -335,11 +343,31 @@ fun AlDirayahSheet(
                                 onOpenSurahPicker = { showSurahPicker = true }
                             )
 
-                            HorizontalDivider(
-                                thickness = 0.8.dp,
-                                color = AtharCardBorder.copy(alpha = 0.5f),
-                                modifier = Modifier.padding(vertical = 10.dp)
-                            )
+                            // Classical Ornamental Islamic Divider
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f),
+                                    thickness = 1.dp,
+                                    color = Color(0xFF2C3B26)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp)
+                                        .size(6.5.dp)
+                                        .rotate(45f)
+                                        .background(AtharPrimaryLight.copy(alpha = 0.70f))
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f),
+                                    thickness = 1.dp,
+                                    color = Color(0xFF2C3B26)
+                                )
+                            }
 
                             // Tafsir Content Section (Single isolated commentary matching design)
                             AnimatedContent(
@@ -566,8 +594,8 @@ private fun SurahPickerView(
                 .padding(horizontal = 18.dp, vertical = 8.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(AtharBackground)
-                .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
+                .background(AtharCardSurface)
+                .border(1.dp, Color(0xFF2C3B26), RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -709,6 +737,11 @@ private fun SurahPickerView(
                         )
                     }
                 }
+                HorizontalDivider(
+                    thickness = 0.6.dp,
+                    color = Color(0xFF222C1E).copy(alpha = 0.6f),
+                    modifier = Modifier.padding(horizontal = 6.dp)
+                )
             }
         }
     }
@@ -998,7 +1031,7 @@ private fun SacredAyahCard(
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 if (englishTransliteration.isNotBlank()) {
                     Spacer(Modifier.height(14.dp))
-                    HorizontalDivider(thickness = 0.8.dp, color = AtharCardBorder.copy(alpha = 0.5f))
+                    HorizontalDivider(thickness = 1.dp, color = Color(0xFF2C3B26))
                     Spacer(Modifier.height(10.dp))
 
                     Box(
@@ -1037,7 +1070,7 @@ private fun SacredAyahCard(
                 if (englishTranslation.isNotBlank()) {
                     Spacer(Modifier.height(10.dp))
                     if (englishTransliteration.isBlank()) {
-                        HorizontalDivider(thickness = 0.8.dp, color = AtharCardBorder.copy(alpha = 0.5f))
+                        HorizontalDivider(thickness = 1.dp, color = Color(0xFF2C3B26))
                         Spacer(Modifier.height(10.dp))
                     }
 
@@ -1234,7 +1267,7 @@ private fun TafsirContentView(
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(thickness = 0.8.dp, color = AtharCardBorder.copy(alpha = 0.5f))
+            HorizontalDivider(thickness = 1.dp, color = Color(0xFF2C3B26))
             Spacer(Modifier.height(14.dp))
 
             // Commentary Text
@@ -1248,9 +1281,9 @@ private fun TafsirContentView(
                 fontFamily = if (isAr) ThmanyahSerifText else ThmanyahSans,
                 fontSize = if (isAr) 18.sp else 15.sp,
                 lineHeight = if (isAr) 34.sp else 24.sp,
-                color = Color(0xFFBACABA),
+                color = AtharTextPrimary,
                 style = TextStyle(
-                    color = Color(0xFFBACABA),
+                    color = AtharTextPrimary,
                     textAlign = TextAlign.Start,
                     textDirection = if (isAr) TextDirection.Rtl else TextDirection.Ltr
                 ),
@@ -1302,7 +1335,7 @@ private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
                         )
                         appendStyledTafsirChunk(
                             text = suffix,
-                            baseColor = Color(0xFFBACABA),
+                            baseColor = AtharTextPrimary,
                             baseWeight = FontWeight.Normal
                         )
                     } else if (colonIdx in 1..44 && colonIdx == line.length - 1) {
@@ -1314,13 +1347,13 @@ private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
                     } else {
                         appendStyledTafsirChunk(
                             text = line,
-                            baseColor = if (isHeading) Color(0xFFFFFFFF) else Color(0xFFBACABA),
+                            baseColor = if (isHeading) Color(0xFFFFFFFF) else AtharTextPrimary,
                             baseWeight = if (isHeading) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 }
                 if (index < lines.size - 1) {
-                    withStyle(SpanStyle(color = Color(0xFFBACABA))) {
+                    withStyle(SpanStyle(color = AtharTextPrimary)) {
                         append("\n")
                     }
                 }
@@ -1328,7 +1361,7 @@ private fun buildStyledTafsirAnnotatedString(text: String): AnnotatedString {
         }
     } catch (_: Exception) {
         buildAnnotatedString {
-            withStyle(SpanStyle(color = Color(0xFFBACABA))) {
+            withStyle(SpanStyle(color = AtharTextPrimary)) {
                 append(text)
             }
         }
@@ -1546,13 +1579,13 @@ private fun AlDirayahBottomBar(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             HorizontalDivider(
-                thickness = 0.8.dp,
-                color = AtharCardBorder.copy(alpha = 0.5f)
+                thickness = 1.dp,
+                color = Color(0xFF2C3B26)
             )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(AtharCardSurface)
+                    .background(AtharBackground)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
