@@ -216,6 +216,7 @@
     <string name="quran_layout_pages">Uthmanic Script</string>
     <string name="quran_layout_indopak_13">13-Line IndoPak</string>
     <string name="quran_layout_indopak_badge">Subcontinent</string>
+    <string name="quran_layout_medina_badge">Medina</string>
     <string name="quran_layout_beta">Beta</string>
     <string name="quran_layout_default">Default</string>
     <string name="quran_audio_requires_internet">Audio recitation requires an active internet connection</string>

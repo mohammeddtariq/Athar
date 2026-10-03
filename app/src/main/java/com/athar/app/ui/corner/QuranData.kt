@@ -112,6 +112,17 @@ fun getIndoPakJuzForVerse(surahNumber: Int, ayahNumber: Int): IndoPakJuzTitle {
     return allIndoPakJuzTitles.first()
 }
 
+fun getMadaniJuzForVerse(surahNumber: Int, ayahNumber: Int): JuzMeta {
+    for (i in allJuz.indices.reversed()) {
+        val item = allJuz[i]
+        if (surahNumber > item.startSurahNumber || (surahNumber == item.startSurahNumber && ayahNumber >= item.startAyah)) {
+            return item
+        }
+    }
+    return allJuz.first()
+}
+
+
 val allSurahs: List<SurahMeta> = listOf(
     SurahMeta(1, "الفاتحة", "Al-Fatihah", "The Opening", 7, 1, RevelationType.MECCAN, 1),
     SurahMeta(2, "البقرة", "Al-Baqarah", "The Cow", 286, 1, RevelationType.MEDINAN, 2),
