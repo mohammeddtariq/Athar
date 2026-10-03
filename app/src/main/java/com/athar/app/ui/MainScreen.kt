@@ -48,9 +48,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +60,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.athar.app.data.AppPreferences
+import com.athar.app.ui.corner.AlDirayahAnnouncementDialog
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -147,6 +153,19 @@ fun MainScreen(
     openWidgetSettings: Boolean = false,
     onWidgetSettingsHandled: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appPrefs = remember { AppPreferences(context.applicationContext) }
+    val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = true)
+    var showDirayahAnnouncement by remember { mutableStateOf(false) }
+    var openDirayahDirectly by remember { mutableStateOf(false) }
+
+    LaunchedEffect(hasSeenDirayahAnnouncement) {
+        if (!hasSeenDirayahAnnouncement) {
+            showDirayahAnnouncement = true
+        }
+    }
+
     val navController = rememberNavController()
     var isQuranReading by remember { mutableStateOf(false) }
     var targetSettingsSection by remember { mutableStateOf<String?>(null) }
@@ -206,7 +225,9 @@ fun MainScreen(
             composable(Screen.Quran.route) {
                 QuranScreen(
                     onBack = { navController.navigateToTab(Screen.Home) },
-                    onReadingModeChanged = { isReading -> isQuranReading = isReading }
+                    onReadingModeChanged = { isReading -> isQuranReading = isReading },
+                    openDirayahDirectly = openDirayahDirectly,
+                    onDirayahDirectlyConsumed = { openDirayahDirectly = false }
                 )
             }
             composable(Screen.Duas.route) {
@@ -240,6 +261,22 @@ fun MainScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             AtharNavBar(navController)
+        }
+
+        // One-time announcement popup introducing "Al-Dirayah"
+        if (showDirayahAnnouncement) {
+            AlDirayahAnnouncementDialog(
+                onExplore = {
+                    showDirayahAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenDirayahAnnouncement(true) }
+                    openDirayahDirectly = true
+                    navController.navigateToTab(Screen.Quran)
+                },
+                onDismiss = {
+                    showDirayahAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenDirayahAnnouncement(true) }
+                }
+            )
         }
     }
 }

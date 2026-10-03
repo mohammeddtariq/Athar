@@ -78,6 +78,13 @@ class AppPreferences(private val context: Context) {
         private val NOW_BAR_STYLE_KEY = stringPreferencesKey("now_bar_style")
         private val NOW_BAR_LANGUAGE_KEY = stringPreferencesKey("now_bar_language")
         private val NOW_BAR_NUMBER_STYLE_KEY = stringPreferencesKey("now_bar_number_style")
+
+        // Al-Dirayah Tafsir Announcement
+        private val DIRAYAH_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("dirayah_announcement_seen")
+    }
+
+    val hasSeenDirayahAnnouncement: Flow<Boolean> = context.dataStore.data.map {
+        it[DIRAYAH_ANNOUNCEMENT_SEEN_KEY] ?: false
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -318,6 +325,10 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setQuranLayoutMode(mode: QuranLayoutMode) {
         context.dataStore.edit { it[QURAN_LAYOUT_MODE_KEY] = mode.id }
+    }
+
+    suspend fun setHasSeenDirayahAnnouncement(seen: Boolean) {
+        context.dataStore.edit { it[DIRAYAH_ANNOUNCEMENT_SEEN_KEY] = seen }
     }
 
     suspend fun setNumberStyle(style: NumberStylePreference) {

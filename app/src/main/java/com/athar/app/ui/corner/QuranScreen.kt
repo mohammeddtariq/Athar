@@ -73,6 +73,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -298,7 +299,7 @@ private enum class QuranTabIndex {
     SURAHS, JUZ
 }
 
-private fun isNetworkAvailable(context: android.content.Context): Boolean {
+internal fun isNetworkAvailable(context: android.content.Context): Boolean {
     return runCatching {
         val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
         val activeNetwork = cm.activeNetwork ?: return false
@@ -318,7 +319,9 @@ private fun isNetworkAvailable(context: android.content.Context): Boolean {
 @Composable
 fun QuranScreen(
     onBack: () -> Unit = {},
-    onReadingModeChanged: (Boolean) -> Unit = {}
+    onReadingModeChanged: (Boolean) -> Unit = {},
+    openDirayahDirectly: Boolean = false,
+    onDirayahDirectlyConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -384,11 +387,18 @@ fun QuranScreen(
         }
     }
 
+    LaunchedEffect(openDirayahDirectly) {
+        if (openDirayahDirectly) {
+            showTafsirWithSurahIndex = true
+            onDirayahDirectlyConsumed()
+        }
+    }
+
     val colors = remember(themeMode) { getQuranColors(themeMode) }
 
     val isTafsirOpen = showTafsirWithSurahIndex || tafsirTargetAyah != null
     val backgroundBlurRadius by animateDpAsState(
-        targetValue = if (isTafsirOpen) 18.dp else 0.dp,
+        targetValue = if (openSurah != null && isTafsirOpen) 18.dp else 0.dp,
         animationSpec = tween(durationMillis = 300),
         label = "tafsirBgBlur"
     )
@@ -475,9 +485,7 @@ fun QuranScreen(
         } else {
             // Surah & Juz Index Screen with centered floating Last Read card above nav bar
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(if (backgroundBlurRadius > 0.dp) Modifier.blur(backgroundBlurRadius) else Modifier)
+                modifier = Modifier.fillMaxSize()
             ) {
                 SurahListScreen(
                     query = searchQuery,
@@ -1919,6 +1927,7 @@ private fun SurahReader(
     var showControlsHint by rememberSaveable { mutableStateOf(true) }
     var showIndexHint by rememberSaveable { mutableStateOf(true) }
     var showNavHint by rememberSaveable { mutableStateOf(true) }
+    var showDirayahHint by remember(surah.number) { mutableStateOf(true) }
 
     // Recitation Full-Screen Mode: Tools vanish when reciting starts; reappear on touch/drag; auto-vanish after 4s
     LaunchedEffect(isPlaying) {
@@ -1931,6 +1940,7 @@ private fun SurahReader(
             showControlsHint = false
             showIndexHint = false
             showNavHint = false
+            showDirayahHint = false
         } else {
             areBarsVisible = true
         }
@@ -1948,6 +1958,7 @@ private fun SurahReader(
         showControlsHint = false
         showIndexHint = false
         showNavHint = false
+        showDirayahHint = false
     }
 
     var showJuzInTopBar by remember(surah.number) { mutableStateOf(false) }
@@ -1985,6 +1996,7 @@ private fun SurahReader(
                         showIndexHint = false
                         showNavHint = false
                         showControlsHint = false
+                        showDirayahHint = false
                     } else if (dy > 6f) {
                         areBarsVisible = true
                     }
@@ -2487,7 +2499,12 @@ private fun SurahReader(
                                                 .clickable(
                                                     interactionSource = remember { MutableInteractionSource() },
                                                     indication = null,
-                                                    onClick = { onOpenTafsir(surah.number, verse.number) }
+                                                    onClick = {
+                                                        if (!isNetworkAvailable(context)) {
+                                                            audioAlertMessage = if (isArabic) "يتطلب تحميل التفسير اتصالاً بالإنترنت" else "Commentary requires an active internet connection"
+                                                        }
+                                                        onOpenTafsir(surah.number, verse.number)
+                                                    }
                                                 ),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -2544,6 +2561,9 @@ private fun SurahReader(
                                             activeWordOffsetYInItem = y
                                         },
                                         onAyahClick = { ayahNumber ->
+                                            if (!isNetworkAvailable(context)) {
+                                                audioAlertMessage = if (isArabic) "يتطلب تحميل التفسير اتصالاً بالإنترنت" else "Commentary requires an active internet connection"
+                                            }
                                             onOpenTafsir(surah.number, ayahNumber)
                                         }
                                     )
@@ -2564,6 +2584,9 @@ private fun SurahReader(
                                             indication = null,
                                             onClick = {
                                                 val firstAyah = chunk.verses.firstOrNull()?.number ?: 1
+                                                if (!isNetworkAvailable(context)) {
+                                                    audioAlertMessage = if (isArabic) "يتطلب تحميل التفسير اتصالاً بالإنترنت" else "Commentary requires an active internet connection"
+                                                }
                                                 onOpenTafsir(surah.number, firstAyah)
                                             }
                                         )
@@ -3965,6 +3988,67 @@ private fun SurahReader(
                 }
             }
 
+            // ─── IN-SURAH DIRAYAH & AYAH CLICK GUIDANCE TOOLTIP ───
+            AnimatedVisibility(
+                visible = shouldShowBars && !isPlaying && showDirayahHint,
+                enter = fadeIn(tween(250)) + slideInVertically(tween(250)) { it / 2 },
+                exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 },
+                modifier = Modifier
+                    .align(if (isArabic) Alignment.BottomStart else Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(bottom = 152.dp, start = 14.dp, end = 14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = 280.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (colors.isLight) Color(0xFF1E241A) else Color(0xFF141C13))
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xFFE5C158).copy(alpha = 0.75f),
+                                    AtharPrimaryLight.copy(alpha = 0.50f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(18.dp)
+                        )
+                        .shadow(elevation = 14.dp, shape = RoundedCornerShape(18.dp))
+                        .clickable { showDirayahHint = false }
+                        .padding(horizontal = 14.dp, vertical = 11.dp)
+                ) {
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.MenuBook,
+                                contentDescription = null,
+                                tint = Color(0xFFF3D279),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = if (isArabic) "الدِّرَايَة • تفسير الآيات" else "Al-Dirayah • Verse Tafsir",
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.5.sp,
+                                color = Color(0xFFF3D279)
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = if (isArabic) "انقر على الأيقونة لعرض التفسير، أو اضغط على أي آية في المصحف لتفسيرها مباشرة." else "Tap the icon for verse commentary, or click any verse in the reader to view its tafsir directly.",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 11.sp,
+                            color = Color(0xFFD4D8CF),
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+            }
+
             // ─── FLOATING TAFSIR "AL-MA'RIFAH" ACTION BUTTON (Apple Music lyrics translate style) ───
             AnimatedVisibility(
                 visible = shouldShowBars,
@@ -3987,6 +4071,9 @@ private fun SurahReader(
                                     pageChunks?.getOrNull(listState.firstVisibleItemIndex)?.verses?.firstOrNull()?.number ?: 1
                                 }
                             }
+                        }
+                        if (!isNetworkAvailable(context)) {
+                            audioAlertMessage = if (isArabic) "يتطلب تحميل التفسير اتصالاً بالإنترنت" else "Commentary requires an active internet connection"
                         }
                         onOpenTafsir(surah.number, currentAyahTarget)
                     }

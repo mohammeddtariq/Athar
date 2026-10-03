@@ -59,6 +59,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -112,7 +113,7 @@ import java.util.Locale
 private sealed interface TafsirUiState {
     data object Loading : TafsirUiState
     data class Success(val tafsir: AyahTafsir) : TafsirUiState
-    data class Error(val message: String) : TafsirUiState
+    data class Error(val message: String, val isOffline: Boolean = false) : TafsirUiState
 }
 
 /**
@@ -172,7 +173,13 @@ fun AlDirayahSheet(
         )
         uiState = result.fold(
             onSuccess = { TafsirUiState.Success(it) },
-            onFailure = { TafsirUiState.Error(it.localizedMessage ?: "Error loading Tafsir") }
+            onFailure = {
+                val isOffline = !isNetworkAvailable(context)
+                TafsirUiState.Error(
+                    message = it.localizedMessage ?: "Error loading Tafsir",
+                    isOffline = isOffline
+                )
+            }
         )
     }
 
@@ -216,12 +223,16 @@ fun AlDirayahSheet(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF060A05).copy(alpha = 0.55f),
-                        Color(0xFF020402).copy(alpha = 0.75f)
+                if (startWithSurahIndex) {
+                    SolidColor(Color(0xFF070B06).copy(alpha = 0.95f))
+                } else {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF070B06).copy(alpha = 0.70f),
+                            Color(0xFF030502).copy(alpha = 0.85f)
+                        )
                     )
-                )
+                }
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -245,8 +256,8 @@ fun AlDirayahSheet(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF141C13).copy(alpha = 0.82f),
-                            Color(0xFF0C120B).copy(alpha = 0.88f)
+                            Color(0xFF141C13).copy(alpha = 0.92f),
+                            Color(0xFF0C120B).copy(alpha = 0.96f)
                         )
                     )
                 )
@@ -358,6 +369,7 @@ fun AlDirayahSheet(
                                         TafsirErrorView(
                                             isArabic = effectiveArabic,
                                             errorMessage = state.message,
+                                            isOffline = state.isOffline,
                                             onRetry = {
                                                 selectedEdition = selectedEdition
                                             }
@@ -1455,18 +1467,19 @@ private fun TafsirLoadingView(isArabic: Boolean) {
 }
 
 /**
- * Error state with retry action button.
+ * Error state with retry action button and offline internet detection.
  */
 @Composable
 private fun TafsirErrorView(
     isArabic: Boolean,
     errorMessage: String,
+    isOffline: Boolean = false,
     onRetry: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(200.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF161C14))
             .border(1.dp, Color(0xFF263022), RoundedCornerShape(20.dp))
@@ -1474,21 +1487,37 @@ private fun TafsirErrorView(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Icon(
+            imageVector = if (isOffline) Icons.Rounded.WifiOff else Icons.Rounded.Refresh,
+            contentDescription = null,
+            tint = if (isOffline) Color(0xFFFF8A80) else AtharPrimaryLight,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(Modifier.height(10.dp))
         Text(
-            text = if (isArabic) "تعذر استحضار التفسير حالياً" else "Unable to load commentary right now",
+            text = if (isOffline) {
+                if (isArabic) "لا يوجد اتصال بالإنترنت" else "No Internet Connection"
+            } else {
+                if (isArabic) "تعذر استحضار التفسير حالياً" else "Unable to load commentary right now"
+            },
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.5.sp,
+            fontSize = 14.sp,
             color = Color.White
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = if (isArabic) "يرجى التحقق من اتصالك بالإنترنت" else "Please check your network connection",
+            text = if (isOffline) {
+                if (isArabic) "يتطلب استحضار التفسير اتصالاً نشطاً بالإنترنت" else "Fetching Quranic commentary requires an active internet connection"
+            } else {
+                if (isArabic) "يرجى التحقق من اتصالك بالإنترنت والمحاولة مجدداً" else "Please check your network connection and try again"
+            },
             fontFamily = ThmanyahSans,
             fontSize = 11.5.sp,
-            color = AtharTextSecondary
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
