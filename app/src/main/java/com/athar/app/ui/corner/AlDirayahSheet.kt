@@ -240,31 +240,36 @@ fun AlDirayahSheet(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Floating Sheet Card
         Box(
-            modifier = Modifier
-                .padding(horizontal = cardPaddingH, vertical = cardPaddingV)
-                .fillMaxWidth()
-                .fillMaxHeight(cardHeightFraction)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {} // Prevent taps inside sheet from dismissing
-                )
-                .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
-                .clip(RoundedCornerShape(cardCornerRadius))
-                .background(AtharBackground)
-                .border(
-                    width = 1.2.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            AtharPrimaryLight.copy(alpha = 0.50f),
-                            Color(0xFF33422C),
-                            AtharCardBorder
-                        )
-                    ),
-                    shape = RoundedCornerShape(cardCornerRadius)
-                )
+            modifier = if (isExpanded) {
+                Modifier
+                    .fillMaxSize()
+                    .background(AtharBackground)
+            } else {
+                Modifier
+                    .padding(horizontal = cardPaddingH, vertical = cardPaddingV)
+                    .fillMaxWidth()
+                    .fillMaxHeight(cardHeightFraction)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // Prevent taps inside sheet from dismissing
+                    )
+                    .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
+                    .clip(RoundedCornerShape(cardCornerRadius))
+                    .background(AtharBackground)
+                    .border(
+                        width = 1.2.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                AtharPrimaryLight.copy(alpha = 0.50f),
+                                Color(0xFF33422C),
+                                AtharCardBorder
+                            )
+                        ),
+                        shape = RoundedCornerShape(cardCornerRadius)
+                    )
+            }
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides sheetLayoutDirection) {
                 if (showSurahPicker) {
@@ -527,27 +532,29 @@ private fun SurahPickerView(
             .then(if (isExpanded) Modifier.statusBarsPadding() else Modifier.padding(top = 10.dp))
             .navigationBarsPadding()
     ) {
-        // Drag Handle
-        Box(
-            modifier = Modifier
-                .padding(top = 10.dp, bottom = 6.dp)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
+        if (!isExpanded) {
+            // Drag Handle (Floating modal only)
             Box(
                 modifier = Modifier
-                    .width(42.dp)
-                    .height(4.5.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.22f))
-            )
+                    .padding(top = 10.dp, bottom = 6.dp)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(42.dp)
+                        .height(4.5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color.White.copy(alpha = 0.22f))
+                )
+            }
         }
 
         // Top Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .padding(horizontal = 18.dp, vertical = if (isExpanded) 12.dp else 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -762,24 +769,26 @@ private fun AlDirayahTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 6.dp),
+            .padding(top = if (isExpanded) 6.dp else 10.dp, bottom = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Drag Handle Pill
-        Box(
-            modifier = Modifier
-                .width(42.dp)
-                .height(4.5.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color.White.copy(alpha = 0.22f))
-        )
+        if (!isExpanded) {
+            // Drag Handle Pill (Floating modal only)
+            Box(
+                modifier = Modifier
+                    .width(42.dp)
+                    .height(4.5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color.White.copy(alpha = 0.22f))
+            )
 
-        Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = if (isExpanded) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Brand Title Badge
