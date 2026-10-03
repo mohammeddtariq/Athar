@@ -17,13 +17,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -52,11 +49,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextOnPrimary
+import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
@@ -66,15 +66,8 @@ import java.util.Locale
  * Centered floating App Announcement Dialog.
  *
  * Designed as a generic and extensible modal for major app updates and feature announcements.
+ * Styled matching Athar's floating permission dialog design language (AtharCardSurface + delicate pattern watermark).
  * Currently highlights the flagship feature "Al-Dirayah" (الدِّرَايَة).
- *
- * Design features:
- * - Clean solid dark card surface with no distracting background patterns.
- * - Live glowing flowing gold border matching the feature card.
- * - Classical Riqaah calligraphy with full tashkeel (الدِّرَايَة) and phonetic guide (Ad-Dirāyah).
- * - Ornate poetic contemplation couplet and five classical exegeses badges.
- * - Athar signature sage-green explore button (matching the onboarding setup theme).
- * - Dual action buttons at the top: Try Now and Close.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -117,27 +110,27 @@ fun AppAnnouncementDialog(
         CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .padding(horizontal = 22.dp, vertical = 24.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(AtharBackground)
+                    .fillMaxWidth(0.90f)
+                    .widthIn(max = 400.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(AtharCardSurface)
                     .border(
-                        width = 1.3.dp,
+                        width = 1.2.dp,
                         brush = glowBrush,
-                        shape = RoundedCornerShape(26.dp)
-                    )
-                    .shadow(
-                        elevation = 28.dp,
-                        shape = RoundedCornerShape(26.dp),
-                        spotColor = Color(0xFFE5C158).copy(alpha = 0.35f),
-                        ambientColor = Color.Black
+                        shape = RoundedCornerShape(24.dp)
                     )
             ) {
+                // Architectural pattern watermark exactly matching BatteryOptimizationDialog
+                IslamicPatternBackground(
+                    modifier = Modifier.matchParentSize(),
+                    alpha = 0.05f,
+                    animated = false
+                )
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                        .padding(horizontal = 22.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // ─── TOP BAR: DUAL ACTION BUTTONS (TRY NOW & DISMISS) ───
@@ -203,17 +196,17 @@ fun AppAnnouncementDialog(
                     // ─── ICON & TAFSIR BADGE ───
                     Box(
                         modifier = Modifier
-                            .size(54.dp)
+                            .size(60.dp)
                             .clip(CircleShape)
-                            .background(AtharPrimary.copy(alpha = 0.22f))
-                            .border(1.2.dp, Color(0xFFE5C158).copy(alpha = 0.70f), CircleShape),
+                            .background(AtharPrimarySubtle)
+                            .border(1.dp, AtharPrimary.copy(alpha = 0.4f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.MenuBook,
                             contentDescription = null,
-                            tint = Color(0xFFF3D279),
-                            modifier = Modifier.size(26.dp)
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(30.dp)
                         )
                     }
 
@@ -223,8 +216,8 @@ fun AppAnnouncementDialog(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(AtharPrimary.copy(alpha = 0.25f))
-                            .border(0.7.dp, AtharPrimaryLight.copy(alpha = 0.65f), RoundedCornerShape(8.dp))
+                            .background(AtharPrimarySubtle)
+                            .border(0.7.dp, AtharCardBorder, RoundedCornerShape(8.dp))
                             .padding(horizontal = 10.dp, vertical = 2.5.dp)
                     ) {
                         Text(
@@ -237,7 +230,7 @@ fun AppAnnouncementDialog(
                         )
                     }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     // ─── MAIN TITLE (Riqaah / Classical Calligraphic Style) ───
                     if (isArabic) {
@@ -254,7 +247,7 @@ fun AppAnnouncementDialog(
                             fontFamily = ThmanyahSerifDisplay,
                             fontWeight = FontWeight.Bold,
                             fontSize = 32.sp,
-                            color = Color(0xFFF3D279),
+                            color = AtharTextPrimary,
                             textAlign = TextAlign.Center
                         )
                     } else {
@@ -271,39 +264,29 @@ fun AppAnnouncementDialog(
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
                             fontSize = 21.sp,
-                            color = Color(0xFFF3D279),
+                            color = AtharTextPrimary,
                             textAlign = TextAlign.Center
                         )
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(10.dp))
 
-                    // ─── POETIC COUPLET ───
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(AtharCardSurface)
-                            .border(0.8.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (isArabic) {
-                                "«تَأَمَّلْ كَلَامَ اللهِ تَلْقَ هِدَايَةً • وَدِرَايَةُ التَّنْزِيلِ نُورُ البَصَائِرِ»"
-                            } else {
-                                "\"Contemplate the words of Allāh to find true guidance; for understanding the Revelation is the illumination of hearts.\""
-                            },
-                            fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = if (isArabic) 13.5.sp else 12.sp,
-                            color = Color(0xFFE8E5DD),
-                            textAlign = TextAlign.Center,
-                            lineHeight = if (isArabic) 22.sp else 18.sp
-                        )
-                    }
+                    // ─── POETIC COUPLET (Seamless, no contrasting dark box) ───
+                    Text(
+                        text = if (isArabic) {
+                            "«تَأَمَّلْ كَلَامَ اللهِ تَلْقَ هِدَايَةً • وَدِرَايَةُ التَّنْزِيلِ نُورُ البَصَائِرِ»"
+                        } else {
+                            "\"Contemplate the words of Allāh to find true guidance; for understanding the Revelation is the illumination of hearts.\""
+                        },
+                        fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = if (isArabic) 13.5.sp else 12.sp,
+                        color = AtharPrimaryLight,
+                        textAlign = TextAlign.Center,
+                        lineHeight = if (isArabic) 22.sp else 18.sp
+                    )
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     // ─── FEATURE BIO ───
                     Text(
@@ -314,10 +297,10 @@ fun AppAnnouncementDialog(
                         },
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Normal,
-                        fontSize = 12.5.sp,
-                        color = Color(0xFFC5C9C0),
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary,
                         textAlign = TextAlign.Center,
-                        lineHeight = 19.sp
+                        lineHeight = 18.sp
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -338,8 +321,8 @@ fun AppAnnouncementDialog(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(AtharCardSurface)
-                                    .border(0.6.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                    .background(AtharPrimarySubtle)
+                                    .border(0.7.dp, AtharCardBorder, RoundedCornerShape(8.dp))
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
@@ -347,7 +330,7 @@ fun AppAnnouncementDialog(
                                     fontFamily = ThmanyahSans,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 11.sp,
-                                    color = Color(0xFFDDD8CE)
+                                    color = AtharTextPrimary
                                 )
                             }
                         }
@@ -355,18 +338,18 @@ fun AppAnnouncementDialog(
 
                     Spacer(Modifier.height(18.dp))
 
-                    // ─── BOTTOM SAGE GREEN EXPLORE ACTION BUTTON (MATCHING SETUP "BEGIN" THEME) ───
+                    // ─── BOTTOM SAGE GREEN EXPLORE ACTION BUTTON (MATCHING BATTERY DIALOG STYLE) ───
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(AtharPrimary)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = onExplore
-                            )
-                            .padding(vertical = 13.dp),
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -377,7 +360,7 @@ fun AppAnnouncementDialog(
                                 text = if (isArabic) "استكشف الدِّرَايَة الآن" else "Explore Al-Dirayah Now",
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.5.sp,
+                                fontSize = 14.sp,
                                 color = AtharTextOnPrimary
                             )
                             Icon(
@@ -388,6 +371,24 @@ fun AppAnnouncementDialog(
                             )
                         }
                     }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // ─── MAYBE LATER DISMISS BUTTON ───
+                    Text(
+                        text = if (isArabic) "لاحقاً" else "Maybe later",
+                        fontFamily = ThmanyahSans,
+                        fontSize = 13.sp,
+                        color = AtharTextSecondary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onDismiss
+                            )
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
                 }
             }
         }

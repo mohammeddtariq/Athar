@@ -109,6 +109,7 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.QuranUthmanicHafs
 import com.athar.app.ui.theme.ThmanyahSans
@@ -248,14 +249,14 @@ fun AlDirayahSheet(
                     indication = null,
                     onClick = {} // Prevent taps inside sheet from dismissing
                 )
+                .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
                 .clip(RoundedCornerShape(cardCornerRadius))
-                .background(AtharBackground)
+                .background(AtharCardSurface)
                 .border(
                     width = 1.dp,
                     color = AtharCardBorder,
                     shape = RoundedCornerShape(cardCornerRadius)
                 )
-                .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides sheetLayoutDirection) {
                 if (showSurahPicker) {
@@ -308,7 +309,7 @@ fun AlDirayahSheet(
 
                         HorizontalDivider(
                             thickness = 0.8.dp,
-                            color = Color(0xFF222B1E),
+                            color = AtharCardBorder.copy(alpha = 0.5f),
                             modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
                         )
 
@@ -334,9 +335,13 @@ fun AlDirayahSheet(
                                 onOpenSurahPicker = { showSurahPicker = true }
                             )
 
-                            Spacer(Modifier.height(14.dp))
+                            HorizontalDivider(
+                                thickness = 0.8.dp,
+                                color = AtharCardBorder.copy(alpha = 0.5f),
+                                modifier = Modifier.padding(vertical = 10.dp)
+                            )
 
-                            // Tafsir Content Section (Single isolated commentary card matching design)
+                            // Tafsir Content Section (Single isolated commentary matching design)
                             AnimatedContent(
                                 targetState = uiState,
                                 transitionSpec = {
@@ -560,9 +565,9 @@ private fun SurahPickerView(
             modifier = Modifier
                 .padding(horizontal = 18.dp, vertical = 8.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(AtharCardSurface)
-                .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(14.dp))
+                .background(AtharBackground)
+                .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -631,15 +636,13 @@ private fun SurahPickerView(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = { onSelectSurah(surah.number) }
                         )
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -778,8 +781,8 @@ private fun AlDirayahTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF161E14))
-                    .border(1.dp, Color(0xFF283623), RoundedCornerShape(14.dp))
+                    .background(AtharPrimarySubtle)
+                    .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
                     .padding(2.5.dp)
             ) {
                 val arActive = !isEnglishMode
@@ -906,10 +909,7 @@ private fun SacredAyahCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(AtharCardSurface)
-            .border(1.dp, AtharCardBorder, RoundedCornerShape(20.dp))
-            .padding(16.dp),
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // ALWAYS Persistent Arabic header for Sacred Ayah
@@ -998,7 +998,7 @@ private fun SacredAyahCard(
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 if (englishTransliteration.isNotBlank()) {
                     Spacer(Modifier.height(14.dp))
-                    HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
+                    HorizontalDivider(thickness = 0.8.dp, color = AtharCardBorder.copy(alpha = 0.5f))
                     Spacer(Modifier.height(10.dp))
 
                     Box(
@@ -1037,7 +1037,7 @@ private fun SacredAyahCard(
                 if (englishTranslation.isNotBlank()) {
                     Spacer(Modifier.height(10.dp))
                     if (englishTransliteration.isBlank()) {
-                        HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
+                        HorizontalDivider(thickness = 0.8.dp, color = AtharCardBorder.copy(alpha = 0.5f))
                         Spacer(Modifier.height(10.dp))
                     }
 
@@ -1098,7 +1098,7 @@ private fun TafsirBooksBar(
             TafsirEdition.entries.forEach { edition ->
                 val isSelected = edition == selectedEdition
                 val animatedBg by animateColorAsState(
-                    targetValue = if (isSelected) AtharPrimary.copy(alpha = 0.30f) else AtharCardSurface,
+                    targetValue = if (isSelected) AtharPrimary.copy(alpha = 0.30f) else AtharPrimarySubtle,
                     animationSpec = tween(180),
                     label = "chipBg"
                 )
@@ -1186,10 +1186,7 @@ private fun TafsirContentView(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(containerShape)
-                .background(AtharCardSurface)
-                .border(1.dp, AtharCardBorder, containerShape)
-                .padding(18.dp)
+                .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
             // Card Header
             Row(
@@ -1222,8 +1219,8 @@ private fun TafsirContentView(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFF192217))
-                        .border(0.7.dp, Color(0xFF283624), RoundedCornerShape(6.dp))
+                        .background(AtharPrimarySubtle)
+                        .border(0.7.dp, AtharCardBorder, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -1237,7 +1234,7 @@ private fun TafsirContentView(
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF1E281B))
+            HorizontalDivider(thickness = 0.8.dp, color = AtharCardBorder.copy(alpha = 0.5f))
             Spacer(Modifier.height(14.dp))
 
             // Commentary Text
@@ -1427,10 +1424,7 @@ private fun TafsirLoadingView(isArabic: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF161C14))
-            .border(1.dp, Color(0xFF263022), RoundedCornerShape(20.dp)),
+            .height(200.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1463,9 +1457,6 @@ private fun TafsirErrorView(
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF161C14))
-            .border(1.dp, Color(0xFF263022), RoundedCornerShape(20.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1553,14 +1544,18 @@ private fun AlDirayahBottomBar(
     CompositionLocalProvider(
         LocalLayoutDirection provides if (isArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(AtharBackground)
-                .border(width = 0.8.dp, color = AtharCardBorder)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            HorizontalDivider(
+                thickness = 0.8.dp,
+                color = AtharCardBorder.copy(alpha = 0.5f)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AtharCardSurface)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             // Previous Ayah Button
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1700,6 +1695,7 @@ private fun AlDirayahBottomBar(
             }
         }
     }
+}
 }
 
 /**

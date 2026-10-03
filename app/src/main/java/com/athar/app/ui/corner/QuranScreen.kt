@@ -396,11 +396,20 @@ fun QuranScreen(
 
     val colors = remember(themeMode) { getQuranColors(themeMode) }
 
+    val isTafsirOpen = showTafsirWithSurahIndex || tafsirTargetAyah != null
+    val backgroundBlurRadius by animateDpAsState(
+        targetValue = if (isTafsirOpen) 18.dp else 0.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "tafsirBgBlur"
+    )
+
     val currentSurah = openSurah
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (currentSurah != null) {
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (backgroundBlurRadius > 0.dp) Modifier.blur(backgroundBlurRadius) else Modifier)
             ) {
                 SurahReader(
                     surah = currentSurah,
@@ -476,7 +485,9 @@ fun QuranScreen(
         } else {
             // Surah & Juz Index Screen with centered floating Last Read card above nav bar
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (backgroundBlurRadius > 0.dp) Modifier.blur(backgroundBlurRadius) else Modifier)
             ) {
                 SurahListScreen(
                     query = searchQuery,
