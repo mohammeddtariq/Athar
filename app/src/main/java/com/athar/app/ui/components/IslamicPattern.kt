@@ -189,7 +189,7 @@ private fun DrawScope.drawCornerDiamonds(
     }
 }
 
-/** Convenience wrapper: opaque dark base behind [content]. */
+/** Convenience wrapper: opaque dark base + modern Islamic pattern behind [content]. */
 @Composable
 fun PatternScaffold(
     modifier: Modifier = Modifier,
@@ -202,6 +202,11 @@ fun PatternScaffold(
             .fillMaxSize()
             .background(AtharBackground)
     ) {
+        IslamicPatternBackground(
+            modifier = Modifier.fillMaxSize(),
+            alpha = patternAlpha,
+            animated = animated
+        )
         content()
     }
 }

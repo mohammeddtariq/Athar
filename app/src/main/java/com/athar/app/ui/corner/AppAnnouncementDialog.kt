@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
@@ -132,6 +133,13 @@ fun AppAnnouncementDialog(
                         ambientColor = Color.Black
                     )
             ) {
+                // Islamic geometric watermark pattern strictly inside this announcement card
+                IslamicPatternBackground(
+                    modifier = Modifier.matchParentSize(),
+                    alpha = 0.07f,
+                    animated = false
+                )
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()

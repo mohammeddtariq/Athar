@@ -89,6 +89,12 @@ fun LastReadFloatingCard(
     ) {
         val isCompactWidth = maxWidth < 360.dp
 
+        IslamicPatternBackground(
+            modifier = Modifier.matchParentSize(),
+            alpha = 0.05f,
+            animated = false
+        )
+
         if (isCompactWidth) {
             // Adaptive 2-tier stacked layout for high zoom / narrow widths
             Column(

@@ -513,6 +513,13 @@ fun NextPrayerCard(
                 )
             )
     ) {
+        // Static pattern layer inside the card.
+        IslamicPatternBackground(
+            modifier = Modifier.matchParentSize(),
+            alpha = 0.10f,
+            animated = false,
+            cellDp = 64f
+        )
         Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -798,6 +805,12 @@ fun AfterPrayerDuaDialog(
                 .background(AtharBackground)
                 .border(1.dp, AtharCardBorder, RoundedCornerShape(24.dp))
         ) {
+            IslamicPatternBackground(
+                modifier = Modifier.fillMaxSize(),
+                alpha = 0.08f,
+                animated = false
+            )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
