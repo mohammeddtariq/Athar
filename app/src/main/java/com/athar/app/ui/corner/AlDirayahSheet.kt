@@ -10,6 +10,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -188,10 +190,25 @@ fun AlDirayahSheet(
         currentVerseText = verses?.firstOrNull { it.number == currentAyah }?.text ?: ""
     }
 
-    val sheetHeightFraction by animateFloatAsState(
-        targetValue = if (isExpanded || showSurahPicker) 0.98f else 0.74f,
+    val cardPaddingH by animateDpAsState(
+        targetValue = if (isExpanded) 0.dp else 14.dp,
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
-        label = "sheetHeight"
+        label = "cardPaddingH"
+    )
+    val cardPaddingV by animateDpAsState(
+        targetValue = if (isExpanded) 0.dp else 24.dp,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
+        label = "cardPaddingV"
+    )
+    val cardCornerRadius by animateDpAsState(
+        targetValue = if (isExpanded) 0.dp else 26.dp,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
+        label = "cardCornerRadius"
+    )
+    val cardHeightFraction by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0.84f,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
+        label = "cardHeightFraction"
     )
 
     // Backdrop Scrim
@@ -201,8 +218,8 @@ fun AlDirayahSheet(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF070B06).copy(alpha = 0.50f),
-                        Color(0xFF020402).copy(alpha = 0.70f)
+                        Color(0xFF060A05).copy(alpha = 0.55f),
+                        Color(0xFF020402).copy(alpha = 0.75f)
                     )
                 )
             )
@@ -211,24 +228,25 @@ fun AlDirayahSheet(
                 indication = null,
                 onClick = onDismiss
             ),
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = Alignment.Center
     ) {
         // Floating Sheet Card
         Box(
             modifier = Modifier
+                .padding(horizontal = cardPaddingH, vertical = cardPaddingV)
                 .fillMaxWidth()
-                .fillMaxHeight(sheetHeightFraction)
+                .fillMaxHeight(cardHeightFraction)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {} // Prevent taps inside sheet from dismissing
                 )
-                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .clip(RoundedCornerShape(cardCornerRadius))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF131A12).copy(alpha = 0.96f),
-                            Color(0xFF0C110C).copy(alpha = 0.98f)
+                            Color(0xFF141C13).copy(alpha = 0.82f),
+                            Color(0xFF0C120B).copy(alpha = 0.88f)
                         )
                     )
                 )
@@ -236,19 +254,20 @@ fun AlDirayahSheet(
                     width = 1.dp,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.25f),
-                            AtharPrimaryLight.copy(alpha = 0.45f),
-                            Color(0xFF222B1E).copy(alpha = 0.35f)
+                            Color.White.copy(alpha = 0.28f),
+                            AtharPrimaryLight.copy(alpha = 0.40f),
+                            Color(0xFF222B1E).copy(alpha = 0.30f)
                         )
                     ),
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                    shape = RoundedCornerShape(cardCornerRadius)
                 )
-                .shadow(elevation = 24.dp, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides sheetLayoutDirection) {
                 if (showSurahPicker) {
                     SurahPickerView(
                         isArabic = effectiveArabic,
+                        isExpanded = isExpanded,
                         onSelectSurah = { selectedNum ->
                             currentSurah = selectedNum
                             currentAyah = 1
@@ -267,6 +286,7 @@ fun AlDirayahSheet(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .then(if (isExpanded) Modifier.statusBarsPadding() else Modifier.padding(top = 8.dp))
                             .navigationBarsPadding()
                     ) {
                         // Top Drag Handle & Controls Bar (Sticky)
@@ -458,6 +478,7 @@ fun AlDirayahSheet(
 @Composable
 private fun SurahPickerView(
     isArabic: Boolean,
+    isExpanded: Boolean = true,
     onSelectSurah: (surahNumber: Int) -> Unit,
     onClose: () -> Unit
 ) {
@@ -475,6 +496,7 @@ private fun SurahPickerView(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .then(if (isExpanded) Modifier.statusBarsPadding() else Modifier.padding(top = 10.dp))
             .navigationBarsPadding()
     ) {
         // Drag Handle
@@ -890,157 +912,172 @@ private fun SacredAyahCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF141912))
-            .border(1.dp, Color(0xFF263322), RoundedCornerShape(20.dp))
+            .background(Color(0xFF162014).copy(alpha = 0.75f))
+            .border(1.dp, Color(0xFF283624).copy(alpha = 0.65f), RoundedCornerShape(20.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Reference pill: e.g. "سورة الفاتحة • الآية ١"
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Surah Pill with quick switch action
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AtharPrimary.copy(alpha = 0.18f))
-                    .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onOpenSurahPicker
-                    )
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+        // ALWAYS Persistent Arabic header for Sacred Ayah
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                // Surah Pill with quick switch action (always Arabic)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(AtharPrimary.copy(alpha = 0.18f))
+                        .border(0.8.dp, AtharPrimaryLight.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onOpenSurahPicker
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = "سورة ${surahMeta.arabicName}",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = AtharPrimaryLight
+                        )
+                        Icon(
+                            imageVector = Icons.Rounded.SwapHoriz,
+                            contentDescription = "Change Surah",
+                            tint = AtharPrimaryLight.copy(alpha = 0.8f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "•",
+                    color = AtharTextSecondary.copy(alpha = 0.5f),
+                    fontSize = 12.sp
+                )
+
+                // Ayah pill (always Arabic-Indic numerals)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (isArabic) "سورة ${surahMeta.arabicName}" else "Surah ${surahMeta.englishName}",
+                        text = "الآية ${formatDigits(ayahNumber.toString(), NumberStylePreference.ARABIC_INDIC)}",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
-                        color = AtharPrimaryLight
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.SwapHoriz,
-                        contentDescription = "Change Surah",
-                        tint = AtharPrimaryLight.copy(alpha = 0.8f),
-                        modifier = Modifier.size(14.dp)
+                        color = Color.White
                     )
                 }
             }
 
-            Text(
-                text = "•",
-                color = AtharTextSecondary.copy(alpha = 0.5f),
-                fontSize = 12.sp
-            )
-
-            // Ayah pill (number in Arabic-Indic numerals)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
+            if (verseText.isNotBlank()) {
+                Spacer(Modifier.height(14.dp))
                 Text(
-                    text = if (isArabic) "الآية ${formatDigits(ayahNumber.toString(), NumberStylePreference.ARABIC_INDIC)}"
-                           else "Ayah ${formatDigits(ayahNumber.toString(), NumberStylePreference.ARABIC_INDIC)}",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = Color.White
+                    text = "\u202B﴿ $verseText ﴾\u202C",
+                    fontFamily = QuranUthmanicHafs,
+                    fontSize = 22.sp,
+                    lineHeight = 40.sp,
+                    fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFFF2F6F0),
+                    style = TextStyle(
+                        textDirection = TextDirection.Rtl,
+                        textAlign = TextAlign.Center
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
-
-        if (verseText.isNotBlank()) {
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = "﴿ $verseText ﴾",
-                fontFamily = QuranUthmanicHafs,
-                fontSize = 22.sp,
-                lineHeight = 40.sp,
-                fontWeight = FontWeight.Normal,
-                textAlign = TextAlign.Center,
-                color = Color(0xFFF2F6F0),
-                modifier = Modifier.fillMaxWidth()
-            )
         }
 
         // English Mode additions: Pronunciation (transliteration in English letters) & Translation
         if (isEnglishMode) {
-            if (englishTransliteration.isNotBlank()) {
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
-                Spacer(Modifier.height(10.dp))
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFFE5C158).copy(alpha = 0.14f))
-                        .border(0.6.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "Pronunciation",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.5.sp,
-                        color = Color(0xFFE5C158)
-                    )
-                }
-
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = englishTransliteration,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.5.sp,
-                    lineHeight = 22.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFFE8EFE5),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
-                )
-            }
-
-            if (englishTranslation.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
-                if (englishTransliteration.isBlank()) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                if (englishTransliteration.isNotBlank()) {
+                    Spacer(Modifier.height(14.dp))
                     HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
                     Spacer(Modifier.height(10.dp))
-                }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(AtharPrimary.copy(alpha = 0.16f))
-                        .border(0.6.dp, AtharPrimaryLight.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFE5C158).copy(alpha = 0.14f))
+                            .border(0.6.dp, Color(0xFFE5C158).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Pronunciation",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.5.sp,
+                            color = Color(0xFFE5C158)
+                        )
+                    }
+
+                    Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Translation (Saheeh Int.)",
+                        text = englishTransliteration,
                         fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.5.sp,
-                        color = AtharPrimaryLight
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.5.sp,
+                        lineHeight = 22.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFFE8EFE5),
+                        style = TextStyle(
+                            textDirection = TextDirection.Ltr,
+                            textAlign = TextAlign.Center
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
                     )
                 }
 
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = englishTranslation,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                    lineHeight = 22.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFFCAD7C8),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
-                )
+                if (englishTranslation.isNotBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    if (englishTransliteration.isBlank()) {
+                        HorizontalDivider(thickness = 0.8.dp, color = Color(0xFF263322))
+                        Spacer(Modifier.height(10.dp))
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(AtharPrimary.copy(alpha = 0.16f))
+                            .border(0.6.dp, AtharPrimaryLight.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Translation (Saheeh Int.)",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.5.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = englishTranslation,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 14.sp,
+                        lineHeight = 22.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFFCAD7C8),
+                        style = TextStyle(
+                            textDirection = TextDirection.Ltr,
+                            textAlign = TextAlign.Center
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
+                    )
+                }
             }
         }
     }
@@ -1155,8 +1192,8 @@ private fun TafsirContentView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(containerShape)
-                .background(Color(0xFF10150E))
-                .border(1.dp, Color(0xFF222B1E), containerShape)
+                .background(Color(0xFF131B11).copy(alpha = 0.70f))
+                .border(1.dp, Color(0xFF263322).copy(alpha = 0.60f), containerShape)
                 .padding(18.dp)
         ) {
             // Card Header
@@ -1507,8 +1544,8 @@ private fun AlDirayahBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF131711))
-                .border(width = 0.8.dp, color = Color(0xFF222B1E))
+                .background(Color(0xFF141C13).copy(alpha = 0.85f))
+                .border(width = 0.8.dp, color = Color(0xFF222B1E).copy(alpha = 0.60f))
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
