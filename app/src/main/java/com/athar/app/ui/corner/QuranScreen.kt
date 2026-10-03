@@ -396,20 +396,11 @@ fun QuranScreen(
 
     val colors = remember(themeMode) { getQuranColors(themeMode) }
 
-    val isTafsirOpen = showTafsirWithSurahIndex || tafsirTargetAyah != null
-    val backgroundBlurRadius by animateDpAsState(
-        targetValue = if (openSurah != null && isTafsirOpen) 18.dp else 0.dp,
-        animationSpec = tween(durationMillis = 300),
-        label = "tafsirBgBlur"
-    )
-
     val currentSurah = openSurah
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (currentSurah != null) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(if (backgroundBlurRadius > 0.dp) Modifier.blur(backgroundBlurRadius) else Modifier)
+                modifier = Modifier.fillMaxSize()
             ) {
                 SurahReader(
                     surah = currentSurah,
@@ -4002,7 +3993,7 @@ private fun SurahReader(
                     modifier = Modifier
                         .widthIn(max = 280.dp)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(if (colors.isLight) Color(0xFF1E241A) else Color(0xFF141C13))
+                        .background(Color(0xFF141A12))
                         .border(
                             width = 1.dp,
                             brush = Brush.horizontalGradient(

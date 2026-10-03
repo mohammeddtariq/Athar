@@ -227,18 +227,7 @@ fun AlDirayahSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                if (startWithSurahIndex) {
-                    SolidColor(Color(0xFF070B06).copy(alpha = 0.95f))
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF070B06).copy(alpha = 0.70f),
-                            Color(0xFF030502).copy(alpha = 0.85f)
-                        )
-                    )
-                }
-            )
+            .background(Color.Black.copy(alpha = 0.75f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -258,23 +247,10 @@ fun AlDirayahSheet(
                     onClick = {} // Prevent taps inside sheet from dismissing
                 )
                 .clip(RoundedCornerShape(cardCornerRadius))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF141C13).copy(alpha = 0.92f),
-                            Color(0xFF0C120B).copy(alpha = 0.96f)
-                        )
-                    )
-                )
+                .background(Color(0xFF111510))
                 .border(
                     width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.28f),
-                            AtharPrimaryLight.copy(alpha = 0.40f),
-                            Color(0xFF222B1E).copy(alpha = 0.30f)
-                        )
-                    ),
+                    color = Color(0xFF263223),
                     shape = RoundedCornerShape(cardCornerRadius)
                 )
                 .shadow(elevation = 28.dp, shape = RoundedCornerShape(cardCornerRadius))
@@ -929,8 +905,8 @@ private fun SacredAyahCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF162014).copy(alpha = 0.75f))
-            .border(1.dp, Color(0xFF283624).copy(alpha = 0.65f), RoundedCornerShape(20.dp))
+            .background(Color(0xFF151C13))
+            .border(1.dp, Color(0xFF263223), RoundedCornerShape(20.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1209,8 +1185,8 @@ private fun TafsirContentView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(containerShape)
-                .background(Color(0xFF131B11).copy(alpha = 0.70f))
-                .border(1.dp, Color(0xFF263322).copy(alpha = 0.60f), containerShape)
+                .background(Color(0xFF141A12))
+                .border(1.dp, Color(0xFF263322), containerShape)
                 .padding(18.dp)
         ) {
             // Card Header
@@ -1578,8 +1554,8 @@ private fun AlDirayahBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF141C13).copy(alpha = 0.85f))
-                .border(width = 0.8.dp, color = Color(0xFF222B1E).copy(alpha = 0.60f))
+                .background(Color(0xFF111510))
+                .border(width = 0.8.dp, color = Color(0xFF222B1E))
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
