@@ -68,10 +68,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,6 +97,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.athar.app.data.AppPreferences
 import com.athar.app.data.AyahTafsir
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.QuranRepository
@@ -138,6 +141,8 @@ fun AlDirayahSheet(
     onNavigateToAyah: ((surah: Int, ayah: Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val appPrefs = remember { AppPreferences(context.applicationContext) }
+    val appLanguage by appPrefs.selectedLanguage.collectAsState(initial = if (Locale.getDefault().language == "en") "en" else "ar")
 
     var currentSurah by remember { mutableIntStateOf(initialSurahNumber.coerceIn(1, 114)) }
     val surahMeta = remember(currentSurah) {
@@ -154,7 +159,7 @@ fun AlDirayahSheet(
     }
 
     var selectedEdition by remember { mutableStateOf(TafsirEdition.SAADI) }
-    var isEnglishMode by remember { mutableStateOf(false) }
+    var isEnglishMode by rememberSaveable(appLanguage) { mutableStateOf(appLanguage == "en") }
     var isExpanded by remember { mutableStateOf(startWithSurahIndex) }
     var showSurahPicker by remember { mutableStateOf(startWithSurahIndex) }
     var uiState by remember { mutableStateOf<TafsirUiState>(TafsirUiState.Loading) }

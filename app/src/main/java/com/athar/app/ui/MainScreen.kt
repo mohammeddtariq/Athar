@@ -62,7 +62,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.athar.app.data.AppPreferences
-import com.athar.app.ui.corner.AlDirayahAnnouncementDialog
+import com.athar.app.ui.corner.AppAnnouncementDialog
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -265,16 +265,16 @@ fun MainScreen(
 
         // One-time announcement popup introducing "Al-Dirayah"
         if (showDirayahAnnouncement) {
-            AlDirayahAnnouncementDialog(
+            AppAnnouncementDialog(
                 onExplore = {
                     showDirayahAnnouncement = false
-                    scope.launch { appPrefs.setHasSeenDirayahAnnouncement(true) }
+                    scope.launch { appPrefs.setHasSeenAppAnnouncement(true) }
                     openDirayahDirectly = true
                     navController.navigateToTab(Screen.Quran)
                 },
                 onDismiss = {
                     showDirayahAnnouncement = false
-                    scope.launch { appPrefs.setHasSeenDirayahAnnouncement(true) }
+                    scope.launch { appPrefs.setHasSeenAppAnnouncement(true) }
                 }
             )
         }

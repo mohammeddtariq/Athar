@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -51,34 +52,39 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import java.util.Locale
 
 /**
- * Centered floating announcement dialog for "Al-Dirayah" (الدِّرَايَة).
+ * Centered floating App Announcement Dialog.
  *
- * Shown once for the updated user after launching the application.
- * Highlights:
- * - Animated flowing gold-emerald glowing border matching the Dirayah card.
- * - Arabic calligraphy with full diacritics in Riqaah style (الدِّرَايَة) / English pronunciation (Ad-Dirāyah).
- * - Ornate poetic couplet celebrating Quranic contemplation.
- * - Concise bio introducing the 5 classical authoritative exegeses (Al-Sa'di, Ibn Kathir, Al-Tabari, Al-Qurtubi, Al-Muyassar).
- * - Dual top action buttons: Explore button (with arrow navigating directly to Dirayah) and Dismiss button.
+ * Designed as a generic and extensible modal for major app updates and feature announcements.
+ * Currently highlights the flagship feature "Al-Dirayah" (الدِّرَايَة).
+ *
+ * Design features:
+ * - Islamic geometric watermark lattice exclusively inside this announcement card.
+ * - Live glowing flowing gold border matching the feature card.
+ * - Classical Riqaah calligraphy with full tashkeel (الدِّرَايَة) and phonetic guide (Ad-Dirāyah).
+ * - Ornate poetic contemplation couplet and five classical exegeses badges.
+ * - Athar signature sage-green explore button (matching the onboarding setup theme).
+ * - Dual action buttons at the top: Try Now and Close.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AlDirayahAnnouncementDialog(
+fun AppAnnouncementDialog(
     onExplore: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val isArabic = remember { Locale.getDefault().language == "ar" }
     val layoutDirection = if (isArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
 
-    // Live glowing gold animation matching the Dirayah card inside Quran screen
+    // Live glowing gold animation matching the Dirayah card
     val infiniteTransition = rememberInfiniteTransition(label = "announcementGoldGlow")
     val glowPhase by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -117,8 +123,8 @@ fun AlDirayahAnnouncementDialog(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xFF141C13).copy(alpha = 0.96f),
-                                Color(0xFF0C120B).copy(alpha = 0.98f)
+                                Color(0xFF141C13).copy(alpha = 0.97f),
+                                Color(0xFF0C120B).copy(alpha = 0.99f)
                             )
                         )
                     )
@@ -133,26 +139,34 @@ fun AlDirayahAnnouncementDialog(
                         spotColor = Color(0xFFE5C158).copy(alpha = 0.35f),
                         ambientColor = Color.Black
                     )
-                    .padding(horizontal = 20.dp, vertical = 18.dp)
             ) {
+                // Islamic geometric watermark pattern strictly inside this announcement card
+                IslamicPatternBackground(
+                    modifier = Modifier.matchParentSize(),
+                    alpha = 0.07f,
+                    animated = false
+                )
+
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // ─── TOP BAR: TWO ACTION BUTTONS (EXPLORE & DISMISS) ───
+                    // ─── TOP BAR: DUAL ACTION BUTTONS (TRY NOW & DISMISS) ───
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Explore Button with Arrow at top
+                        // Top Quick Explore Pill with Arrow
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(AtharPrimary.copy(alpha = 0.28f))
-                                .border(1.dp, Color(0xFFE5C158).copy(alpha = 0.60f), RoundedCornerShape(20.dp))
+                                .background(AtharPrimary.copy(alpha = 0.18f))
+                                .border(1.dp, AtharPrimary.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
@@ -165,12 +179,12 @@ fun AlDirayahAnnouncementDialog(
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                color = Color(0xFFF3D279)
+                                color = AtharPrimaryLight
                             )
                             Icon(
                                 imageVector = if (isArabic) Icons.AutoMirrored.Rounded.ArrowBack else Icons.AutoMirrored.Rounded.ArrowForward,
                                 contentDescription = null,
-                                tint = Color(0xFFF3D279),
+                                tint = AtharPrimaryLight,
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -238,7 +252,7 @@ fun AlDirayahAnnouncementDialog(
 
                     Spacer(Modifier.height(10.dp))
 
-                    // ─── MAIN TITLE (Riqaah / Calligraphic Style) ───
+                    // ─── MAIN TITLE (Riqaah / Classical Calligraphic Style) ───
                     if (isArabic) {
                         Text(
                             text = "نُقَدِّمُ لَكُمْ",
@@ -354,27 +368,18 @@ fun AlDirayahAnnouncementDialog(
 
                     Spacer(Modifier.height(18.dp))
 
-                    // ─── BOTTOM FULL EXPLORE ACTION BUTTON ───
+                    // ─── BOTTOM SAGE GREEN EXPLORE ACTION BUTTON (MATCHING SETUP "BEGIN" THEME) ───
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color(0xFF2E4B25),
-                                        Color(0xFF456F37),
-                                        Color(0xFF2E4B25)
-                                    )
-                                )
-                            )
-                            .border(1.dp, Color(0xFFE5C158).copy(alpha = 0.70f), RoundedCornerShape(16.dp))
+                            .background(AtharPrimary)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = onExplore
                             )
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 13.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -385,13 +390,13 @@ fun AlDirayahAnnouncementDialog(
                                 text = if (isArabic) "استكشف الدِّرَايَة الآن" else "Explore Al-Dirayah Now",
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = Color.White
+                                fontSize = 14.5.sp,
+                                color = AtharTextOnPrimary
                             )
                             Icon(
                                 imageVector = if (isArabic) Icons.AutoMirrored.Rounded.ArrowBack else Icons.AutoMirrored.Rounded.ArrowForward,
                                 contentDescription = null,
-                                tint = Color(0xFFF3D279),
+                                tint = AtharTextOnPrimary,
                                 modifier = Modifier.size(17.dp)
                             )
                         }
