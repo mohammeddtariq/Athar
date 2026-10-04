@@ -81,7 +81,8 @@ object AtharWidgetUpdater {
             renderPrayersWideWidget(appContext, appWidgetManager, widgetId, snapshot, day, next)
         }
 
-        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick = false)
+        val requiresMinuteTick = (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC)
+        scheduleNextAlarm(appContext, next.time, next.isTomorrow, requiresMinuteTick = requiresMinuteTick)
     }
 
 
@@ -110,6 +111,14 @@ object AtharWidgetUpdater {
                     if (isAr) R.layout.widget_next_prayer_rtl else R.layout.widget_next_prayer
                 }
                 val views = RemoteViews(appContext.packageName, layoutRes)
+                if (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC) {
+                    views.setViewVisibility(R.id.widget_countdown_chrono, View.GONE)
+                    views.setViewVisibility(R.id.widget_countdown_text, View.VISIBLE)
+                    views.setTextViewText(R.id.widget_countdown_text, "٠٠:٠٠")
+                } else {
+                    views.setViewVisibility(R.id.widget_countdown_chrono, View.VISIBLE)
+                    views.setViewVisibility(R.id.widget_countdown_text, View.GONE)
+                }
                 setupClickIntent(appContext, views)
                 runCatching {
                     appWidgetManager.updateAppWidget(widgetId, views)
@@ -406,15 +415,26 @@ object AtharWidgetUpdater {
         val targetDate = prayerDateToday(targetTime, isTomorrow)
         val diffMillis = targetDate.time - System.currentTimeMillis()
 
-        views.setViewVisibility(textId, View.GONE)
-        views.setViewVisibility(chronoId, View.VISIBLE)
-        if (diffMillis > 0) {
-            val base = SystemClock.elapsedRealtime() + diffMillis
-            views.setChronometerCountDown(chronoId, true)
-            views.setChronometer(chronoId, base, null, true)
+        if (numberStyle == NumberStylePreference.ARABIC_INDIC) {
+            views.setViewVisibility(chronoId, View.GONE)
+            views.setViewVisibility(textId, View.VISIBLE)
+            val totalSeconds = (diffMillis / 1000L).coerceAtLeast(0L)
+            val hours = totalSeconds / 3600L
+            val minutes = (totalSeconds % 3600L) / 60L
+            val formatted = String.format(Locale.ROOT, "%02d:%02d", hours, minutes)
+            val localizedText = formatDigits(formatted, numberStyle)
+            views.setTextViewText(textId, localizedText)
         } else {
-            views.setChronometerCountDown(chronoId, false)
-            views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
+            views.setViewVisibility(textId, View.GONE)
+            views.setViewVisibility(chronoId, View.VISIBLE)
+            if (diffMillis > 0) {
+                val base = SystemClock.elapsedRealtime() + diffMillis
+                views.setChronometerCountDown(chronoId, true)
+                views.setChronometer(chronoId, base, null, true)
+            } else {
+                views.setChronometerCountDown(chronoId, false)
+                views.setChronometer(chronoId, SystemClock.elapsedRealtime(), "00:00", false)
+            }
         }
     }
 

@@ -199,7 +199,8 @@ fun OnboardingFlow(
             0 -> GreetingStep(
                 language = language,
                 onPickLanguage = { language = it },
-                onNext = { if (language != null) step = 1 }
+                onNext = { if (language != null) step = 1 },
+                onSkip = { finish(skipLocation = true) }
             )
             1 -> NotificationStep(
                 language = language,
@@ -266,8 +267,8 @@ fun OnboardingFlow(
             )
         }
 
-        // Sticky top bar with skip button for location setup step
-        if (step == 3) {
+        // Sticky top bar with skip button - visible once language is selected
+        if (language != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -308,7 +309,8 @@ fun OnboardingFlow(
 private fun GreetingStep(
     language: String?,
     onPickLanguage: (String) -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onSkip: () -> Unit
 ) {
     val tagline = if (language == "ar") "رفيقك المسلم" else "\u2066Your Muslim companion app\u2069"
 
@@ -428,6 +430,21 @@ private fun GreetingStep(
                 fontWeight = FontWeight.Black,
                 fontSize = 15.sp
             )
+        }
+        if (language != null) {
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (language == "ar") "تخطَّ الإعداد وابدأ" else "Skip setup & start",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = AtharTextSecondary
+                )
+            }
         }
     }
 }

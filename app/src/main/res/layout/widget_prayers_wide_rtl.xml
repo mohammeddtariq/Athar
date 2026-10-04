@@ -148,16 +148,18 @@
                     android:layout_height="wrap_content"
                     android:textColor="#A5C89E"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/widget_countdown_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:text="٠٠:٠٠"
                     android:textColor="#A5C89E"
                     android:textSize="11sp"
                     android:textStyle="bold"
-                    android:visibility="gone" />
+                    android:visibility="visible" />
             </FrameLayout>
         </LinearLayout>
 
