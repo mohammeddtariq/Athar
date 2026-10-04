@@ -150,6 +150,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
@@ -1160,7 +1161,9 @@ data class MedinaMushafPageData(
     val innerRight: Float,
     val lineAyahs: Map<Int, List<Int>>,
     val lineDividers: Map<Int, List<Pair<Int, Float>>>,
-    val verseWords: Map<Long, MedinaWordBounds>
+    val verseWords: Map<Long, MedinaWordBounds>,
+    val bismillahLine: Int? = null,
+    val surahBannerLines: List<Int> = emptyList()
 )
 
 private val medinaMushafPageCache = LruCache<String, MedinaMushafPageData>(24)
@@ -1401,6 +1404,9 @@ private fun parseMedinaMushafSvg(
         svg.documentHeight = vbH
         val pic = svg.renderToPicture(vbW.toInt().coerceAtLeast(1), vbH.toInt().coerceAtLeast(1)) ?: return null
 
+        val surahBannerLines = effectiveLines.filter { lineTypeMap[it] == "banner" }
+        val bismillahLine = effectiveLines.firstOrNull { lineTypeMap[it] == "bismillah" }
+
         val result = MedinaMushafPageData(
             picture = pic,
             vbX = vbX,
@@ -1413,7 +1419,9 @@ private fun parseMedinaMushafSvg(
             innerRight = innerRight,
             lineAyahs = lineAyahs,
             lineDividers = lineDividers,
-            verseWords = verseWords
+            verseWords = verseWords,
+            bismillahLine = bismillahLine,
+            surahBannerLines = surahBannerLines
         )
         medinaMushafPageCache.put(cacheKey, result)
         return result
@@ -1435,6 +1443,7 @@ private fun UthmanicMushafPageCard(
     isPlaying: Boolean,
     activeVerseNumber: Int?,
     activeWordIndex: Int?,
+    currentPlaybackMs: Long = 0L,
     numberStylePref: NumberStylePreference,
     onActiveWordPosition: (Float) -> Unit,
     onAyahClick: ((Int) -> Unit)? = null
@@ -1469,6 +1478,15 @@ private fun UthmanicMushafPageCard(
         }
     }
 
+    val bannerPainter = painterResource(R.drawable.ic_surah_banner_frame)
+    val bannerTint = remember(colors.isLight, themeMode) {
+        when {
+            colors.isLight -> Color(0xFF6E553F)
+            themeMode == QuranThemeMode.DARK_OLIVE -> Color(0xFF8E9B86)
+            else -> Color(0xFFC8CEC6)
+        }
+    }
+
     val pageNumStr = formatDigits(chunk.pageNumber.toString(), numberStylePref)
     val totalPagesStr = formatDigits("604", numberStylePref)
     val firstAyahNum = chunk.verses.firstOrNull()?.number ?: 1
@@ -1489,156 +1507,281 @@ private fun UthmanicMushafPageCard(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                val baseWidth = (maxWidth - 12.dp).coerceAtLeast(100.dp)
-                val scaledWidth = baseWidth * fontScale.coerceIn(0.70f, 2.0f)
-                val scaledHeight = scaledWidth / aspectRatio
-
-                val scrollModifier = if (fontScale > 1.05f) {
-                    Modifier.horizontalScroll(rememberScrollState())
-                } else {
-                    Modifier
-                }
+                val maxCardWidth = maxWidth.coerceAtMost(540.dp)
+                val cardWidth = (maxCardWidth - 8.dp).coerceAtLeast(100.dp)
+                val cardHeight = cardWidth / aspectRatio
 
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .then(scrollModifier),
-                    contentAlignment = Alignment.Center
+                        .width(cardWidth)
+                        .height(cardHeight)
+                        .onGloballyPositioned { coords ->
+                            contentTopOffsetPx = coords.positionInParent().y
+                        }
                 ) {
-                    Box(
+                    Canvas(
                         modifier = Modifier
-                            .width(scaledWidth)
-                            .height(scaledHeight)
-                            .onGloballyPositioned { coords ->
-                                contentTopOffsetPx = coords.positionInParent().y
+                            .fillMaxSize()
+                            .pointerInput(chunk.verses, data) {
+                                detectTapGestures { tapOffset ->
+                                    val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                                    val canvasH = size.height.toFloat().coerceAtLeast(1f)
+                                    val tapFracX = (tapOffset.x / canvasW).coerceIn(0f, 1f)
+                                    val tapYInVb = data.vbY + (tapOffset.y / canvasH) * data.vbHeight
+
+                                    val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
+                                    val lineIdx = ((tapYInVb - data.innerTop) / lineHeightVb).toInt().coerceIn(0, 14)
+                                    val lineNum = lineIdx + 1
+
+                                    val ayahsOnLine = data.lineAyahs[lineNum] ?: emptyList()
+                                    val dividersOnLine = data.lineDividers[lineNum]?.sortedByDescending { it.second } ?: emptyList()
+
+                                    val targetVerse = when {
+                                        ayahsOnLine.isEmpty() -> chunk.verses.firstOrNull()?.number ?: 1
+                                        ayahsOnLine.size == 1 -> ayahsOnLine.first()
+                                        dividersOnLine.isEmpty() -> ayahsOnLine.first()
+                                        else -> {
+                                            var chosen = ayahsOnLine.last()
+                                            for (d in dividersOnLine) {
+                                                if (tapFracX >= d.second) {
+                                                    chosen = d.first
+                                                    break
+                                                }
+                                            }
+                                            chosen
+                                        }
+                                    }
+                                    onAyahClick?.invoke(targetVerse)
+                                }
                             }
                     ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(chunk.verses, data) {
-                                    detectTapGestures { tapOffset ->
-                                        val canvasW = size.width.toFloat().coerceAtLeast(1f)
-                                        val canvasH = size.height.toFloat().coerceAtLeast(1f)
-                                        val tapFracX = (tapOffset.x / canvasW).coerceIn(0f, 1f)
-                                        val tapYInVb = data.vbY + (tapOffset.y / canvasH) * data.vbHeight
+                        val scaleX = size.width / data.vbWidth
+                        val scaleY = size.height / data.vbHeight
+                        val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
 
-                                        val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
-                                        val lineIdx = ((tapYInVb - data.innerTop) / lineHeightVb).toInt().coerceIn(0, 14)
-                                        val lineNum = lineIdx + 1
+                        val isBismillahActive = isPlaying && (activeVerseNumber == 0 || (activeVerseNumber == null && currentPlaybackMs < 6000L && surah.number != 9 && surah.number != 1))
 
-                                        val ayahsOnLine = data.lineAyahs[lineNum] ?: emptyList()
-                                        val dividersOnLine = data.lineDividers[lineNum]?.sortedByDescending { it.second } ?: emptyList()
+                        // 1. Recitation Audio Highlight (word-by-word or bismillah behind calligraphy)
+                        val highlightBg = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else AtharPrimaryLight.copy(alpha = 0.26f)
 
-                                        val targetVerse = when {
-                                            ayahsOnLine.isEmpty() -> chunk.verses.firstOrNull()?.number ?: 1
-                                            ayahsOnLine.size == 1 -> ayahsOnLine.first()
-                                            dividersOnLine.isEmpty() -> ayahsOnLine.first()
-                                            else -> {
-                                                var chosen = ayahsOnLine.last()
-                                                for (d in dividersOnLine) {
-                                                    if (tapFracX >= d.second) {
-                                                        chosen = d.first
-                                                        break
-                                                    }
-                                                }
-                                                chosen
+                        if (isBismillahActive && data.bismillahLine != null) {
+                            val bLine = data.bismillahLine
+                            val lineTopVb = data.innerTop + (bLine - 1) * lineHeightVb
+                            val lineBottomVb = lineTopVb + lineHeightVb
+                            val lineTopPx = (lineTopVb - data.vbY) * scaleY
+                            val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
+
+                            val textLeftPx = (data.innerLeft - data.vbX) * scaleX
+                            val textRightPx = (data.innerRight - data.vbX) * scaleX
+
+                            val padWordY = 1.5.dp.toPx()
+                            drawRoundRect(
+                                color = highlightBg,
+                                topLeft = Offset(textLeftPx.coerceAtLeast(0f), lineTopPx + padWordY),
+                                size = Size((textRightPx - textLeftPx).coerceAtLeast(12f), (lineBottomPx - lineTopPx) - (padWordY * 2f)),
+                                cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                            )
+
+                            val bMidY = (lineTopPx + lineBottomPx) / 2f
+                            onActiveWordPosition(contentTopOffsetPx + bMidY)
+                        } else if (isPlaying && activeVerseNumber != null && activeVerseNumber > 0) {
+                            val activeWord = if (activeWordIndex != null && activeWordIndex > 0) {
+                                val wordKey = (activeVerseNumber.toLong() shl 16) or activeWordIndex.toLong()
+                                data.verseWords[wordKey]
+                            } else null
+
+                            if (activeWord != null) {
+                                // Precise word-by-word highlight
+                                val lineTopVb = data.innerTop + (activeWord.line - 1) * lineHeightVb
+                                val lineBottomVb = lineTopVb + lineHeightVb
+                                val lineTopPx = (lineTopVb - data.vbY) * scaleY
+                                val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
+
+                                val padWordX = 2.0f
+                                val wordLeftPx = ((activeWord.minX - padWordX) - data.vbX) * scaleX
+                                val wordRightPx = ((activeWord.maxX + padWordX) - data.vbX) * scaleX
+                                val wordWidthPx = (wordRightPx - wordLeftPx).coerceAtLeast(10f)
+
+                                val padWordY = 1.5.dp.toPx()
+                                drawRoundRect(
+                                    color = highlightBg,
+                                    topLeft = Offset(wordLeftPx.coerceAtLeast(0f), lineTopPx + padWordY),
+                                    size = Size(wordWidthPx, (lineBottomPx - lineTopPx) - (padWordY * 2f)),
+                                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                )
+
+                                val wordMidY = (lineTopPx + lineBottomPx) / 2f
+                                onActiveWordPosition(contentTopOffsetPx + wordMidY)
+                            } else {
+                                // Line-level fallback when activeWordIndex is resolving
+                                val activeLines = data.lineAyahs.filter { (_, ayahs) -> activeVerseNumber in ayahs }.keys.sorted()
+                                if (activeLines.isNotEmpty()) {
+                                    val textLeftPx = (data.innerLeft - data.vbX) * scaleX
+                                    val textRightPx = (data.innerRight - data.vbX) * scaleX
+
+                                    for (l in activeLines) {
+                                        val lineTopVb = data.innerTop + (l - 1) * lineHeightVb
+                                        val lineBottomVb = lineTopVb + lineHeightVb
+                                        val lineTopPx = (lineTopVb - data.vbY) * scaleY
+                                        val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
+
+                                        val ayahs = data.lineAyahs[l] ?: emptyList()
+                                        val divs = data.lineDividers[l] ?: emptyList()
+
+                                        val (rectLeft, rectRight) = if (ayahs.size == 1) {
+                                            textLeftPx to textRightPx
+                                        } else {
+                                            val endDiv = divs.firstOrNull { it.first == activeVerseNumber }
+                                            if (endDiv != null) {
+                                                val prevDiv = divs.filter { it.second > endDiv.second }.minByOrNull { it.second }
+                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
+                                                val left = endDiv.second * size.width
+                                                left to r
+                                            } else {
+                                                val prevDiv = divs.lastOrNull()
+                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
+                                                textLeftPx to r
                                             }
                                         }
-                                        onAyahClick?.invoke(targetVerse)
+
+                                        val padWordY = 1.5.dp.toPx()
+                                        drawRoundRect(
+                                            color = highlightBg,
+                                            topLeft = Offset(rectLeft.coerceAtLeast(0f), lineTopPx + padWordY),
+                                            size = Size((rectRight - rectLeft).coerceAtLeast(12f), (lineBottomPx - lineTopPx) - (padWordY * 2f)),
+                                            cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                        )
+                                    }
+
+                                    // Auto-scroll focal position
+                                    val firstMid = (data.innerTop + (activeLines.first() - 0.5f) * lineHeightVb - data.vbY) * scaleY
+                                    val lastMid = (data.innerTop + (activeLines.last() - 0.5f) * lineHeightVb - data.vbY) * scaleY
+                                    val avgMidY = (firstMid + lastMid) / 2f
+                                    onActiveWordPosition(contentTopOffsetPx + avgMidY)
+                                }
+                            }
+                        }
+
+                        // 2. Surah Cartouche / Heading Banner Frame
+                        for (bLine in data.surahBannerLines) {
+                            val lineTopVb = data.innerTop + (bLine - 1) * lineHeightVb
+                            val lineBottomVb = lineTopVb + lineHeightVb
+                            val lineCenterYPx = ((lineTopVb + lineBottomVb) / 2f - data.vbY) * scaleY
+                            val innerWidthPx = (data.innerRight - data.innerLeft) * scaleX
+                            val bannerWidthPx = (innerWidthPx * 0.98f).coerceAtMost(size.width - 8f)
+                            val bannerHeightPx = bannerWidthPx * (79f / 687f)
+                            val bannerLeftPx = (size.width - bannerWidthPx) / 2f
+                            val bannerTopPx = lineCenterYPx - bannerHeightPx / 2f
+
+                            translate(left = bannerLeftPx, top = bannerTopPx) {
+                                with(bannerPainter) {
+                                    draw(
+                                        size = Size(bannerWidthPx, bannerHeightPx),
+                                        colorFilter = ColorFilter.tint(bannerTint)
+                                    )
+                                }
+                            }
+                        }
+
+                        // 3. Draw native vector Picture
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.save()
+                            canvas.nativeCanvas.scale(scaleX, scaleY)
+                            canvas.nativeCanvas.drawPicture(data.picture)
+                            canvas.nativeCanvas.restore()
+                        }
+
+                        // 4. Inactive Verse Dimming Overlays during Audio Recitation
+                        if (isPlaying && (isBismillahActive || (activeVerseNumber != null && activeVerseNumber > 0))) {
+                            val dimOverlayColor = colors.background.copy(alpha = 0.62f)
+
+                            if (isBismillahActive) {
+                                // Dim all lines except the Bismillah line
+                                for (l in 1..15) {
+                                    if (l != data.bismillahLine) {
+                                        val lTopVb = data.innerTop + (l - 1) * lineHeightVb
+                                        val lBottomVb = lTopVb + lineHeightVb
+                                        val lTopPx = (lTopVb - data.vbY) * scaleY
+                                        val lBottomPx = (lBottomVb - data.vbY) * scaleY
+                                        drawRect(
+                                            color = dimOverlayColor,
+                                            topLeft = Offset(0f, lTopPx),
+                                            size = Size(size.width, (lBottomPx - lTopPx).coerceAtLeast(0f))
+                                        )
                                     }
                                 }
-                        ) {
-                            val scaleX = size.width / data.vbWidth
-                            val scaleY = size.height / data.vbHeight
-                            val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
+                            } else if (activeVerseNumber != null && activeVerseNumber > 0) {
+                                val activeVerse = activeVerseNumber
+                                val activeLines = data.lineAyahs.filter { (_, ayahs) -> activeVerse in ayahs }.keys.toSet()
 
-                            // 1. Recitation Audio Highlight (word-by-word synced behind calligraphy)
-                            if (isPlaying && activeVerseNumber != null) {
-                                val highlightBg = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else AtharPrimaryLight.copy(alpha = 0.26f)
-                                val activeWord = if (activeWordIndex != null && activeWordIndex > 0) {
-                                    val wordKey = (activeVerseNumber.toLong() shl 16) or activeWordIndex.toLong()
-                                    data.verseWords[wordKey]
-                                } else null
+                                for (l in 1..15) {
+                                    val lTopVb = data.innerTop + (l - 1) * lineHeightVb
+                                    val lBottomVb = lTopVb + lineHeightVb
+                                    val lTopPx = (lTopVb - data.vbY) * scaleY
+                                    val lBottomPx = (lBottomVb - data.vbY) * scaleY
 
-                                if (activeWord != null) {
-                                    // Precise word-by-word highlight
-                                    val lineTopVb = data.innerTop + (activeWord.line - 1) * lineHeightVb
-                                    val lineBottomVb = lineTopVb + lineHeightVb
-                                    val lineTopPx = (lineTopVb - data.vbY) * scaleY
-                                    val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
+                                    if (l !in activeLines) {
+                                        drawRect(
+                                            color = dimOverlayColor,
+                                            topLeft = Offset(0f, lTopPx),
+                                            size = Size(size.width, (lBottomPx - lTopPx).coerceAtLeast(0f))
+                                        )
+                                    } else {
+                                        // Line contains active verse; dim non-active segments on shared line
+                                        val ayahs = data.lineAyahs[l] ?: emptyList()
+                                        val divs = data.lineDividers[l] ?: emptyList()
 
-                                    val padWordX = 2.0f
-                                    val wordLeftPx = ((activeWord.minX - padWordX) - data.vbX) * scaleX
-                                    val wordRightPx = ((activeWord.maxX + padWordX) - data.vbX) * scaleX
-                                    val wordWidthPx = (wordRightPx - wordLeftPx).coerceAtLeast(10f)
+                                        if (ayahs.size > 1 && divs.isNotEmpty()) {
+                                            val textLeftPx = (data.innerLeft - data.vbX) * scaleX
+                                            val textRightPx = (data.innerRight - data.vbX) * scaleX
 
-                                    val padWordY = 1.5.dp.toPx()
-                                    drawRoundRect(
-                                        color = highlightBg,
-                                        topLeft = Offset(wordLeftPx.coerceAtLeast(0f), lineTopPx + padWordY),
-                                        size = Size(wordWidthPx, (lineBottomPx - lineTopPx) - (padWordY * 2f)),
-                                        cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
-                                    )
-
-                                    val wordMidY = (lineTopPx + lineBottomPx) / 2f
-                                    onActiveWordPosition(contentTopOffsetPx + wordMidY)
-                                } else {
-                                    // Line-level fallback when activeWordIndex is resolving
-                                    val activeLines = data.lineAyahs.filter { (_, ayahs) -> activeVerseNumber in ayahs }.keys.sorted()
-                                    if (activeLines.isNotEmpty()) {
-                                        val textLeftPx = (data.innerLeft - data.vbX) * scaleX
-                                        val textRightPx = (data.innerRight - data.vbX) * scaleX
-
-                                        for (l in activeLines) {
-                                            val lineTopVb = data.innerTop + (l - 1) * lineHeightVb
-                                            val lineBottomVb = lineTopVb + lineHeightVb
-                                            val lineTopPx = (lineTopVb - data.vbY) * scaleY
-                                            val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
-
-                                            val ayahs = data.lineAyahs[l] ?: emptyList()
-                                            val divs = data.lineDividers[l] ?: emptyList()
-
-                                            val (rectLeft, rectRight) = if (ayahs.size == 1) {
-                                                textLeftPx to textRightPx
+                                            val endDiv = divs.firstOrNull { it.first == activeVerse }
+                                            val (activeLeftPx, activeRightPx) = if (endDiv != null) {
+                                                val prevDiv = divs.filter { it.second > endDiv.second }.minByOrNull { it.second }
+                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
+                                                val left = endDiv.second * size.width
+                                                left to r
                                             } else {
-                                                val endDiv = divs.firstOrNull { it.first == activeVerseNumber }
-                                                if (endDiv != null) {
-                                                    val prevDiv = divs.filter { it.second > endDiv.second }.minByOrNull { it.second }
-                                                    val r = prevDiv?.let { it.second * size.width } ?: textRightPx
-                                                    val left = endDiv.second * size.width
-                                                    left to r
-                                                } else {
-                                                    val prevDiv = divs.lastOrNull()
-                                                    val r = prevDiv?.let { it.second * size.width } ?: textRightPx
-                                                    textLeftPx to r
-                                                }
+                                                val prevDiv = divs.lastOrNull()
+                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
+                                                textLeftPx to r
                                             }
 
-                                            val padWordY = 1.5.dp.toPx()
-                                            drawRoundRect(
-                                                color = highlightBg,
-                                                topLeft = Offset(rectLeft.coerceAtLeast(0f), lineTopPx + padWordY),
-                                                size = Size((rectRight - rectLeft).coerceAtLeast(12f), (lineBottomPx - lineTopPx) - (padWordY * 2f)),
-                                                cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
-                                            )
+                                            if (activeRightPx < size.width) {
+                                                drawRect(
+                                                    color = dimOverlayColor,
+                                                    topLeft = Offset(activeRightPx, lTopPx),
+                                                    size = Size((size.width - activeRightPx).coerceAtLeast(0f), (lBottomPx - lTopPx).coerceAtLeast(0f))
+                                                )
+                                            }
+                                            if (activeLeftPx > 0f) {
+                                                drawRect(
+                                                    color = dimOverlayColor,
+                                                    topLeft = Offset(0f, lTopPx),
+                                                    size = Size(activeLeftPx.coerceAtLeast(0f), (lBottomPx - lTopPx).coerceAtLeast(0f))
+                                                )
+                                            }
                                         }
-
-                                        // Auto-scroll focal position
-                                        val firstMid = (data.innerTop + (activeLines.first() - 0.5f) * lineHeightVb - data.vbY) * scaleY
-                                        val lastMid = (data.innerTop + (activeLines.last() - 0.5f) * lineHeightVb - data.vbY) * scaleY
-                                        val avgMidY = (firstMid + lastMid) / 2f
-                                        onActiveWordPosition(contentTopOffsetPx + avgMidY)
                                     }
                                 }
                             }
 
-                            // 2. Draw native vector Picture
-                            drawIntoCanvas { canvas ->
-                                canvas.nativeCanvas.save()
-                                canvas.nativeCanvas.scale(scaleX, scaleY)
-                                canvas.nativeCanvas.drawPicture(data.picture)
-                                canvas.nativeCanvas.restore()
+                            // Dim outer margin padding
+                            val innerTopPx = (data.innerTop - data.vbY) * scaleY
+                            val innerBottomPx = (data.innerBottom - data.vbY) * scaleY
+                            if (innerTopPx > 0f) {
+                                drawRect(
+                                    color = dimOverlayColor,
+                                    topLeft = Offset(0f, 0f),
+                                    size = Size(size.width, innerTopPx)
+                                )
+                            }
+                            if (innerBottomPx < size.height) {
+                                drawRect(
+                                    color = dimOverlayColor,
+                                    topLeft = Offset(0f, innerBottomPx),
+                                    size = Size(size.width, (size.height - innerBottomPx).coerceAtLeast(0f))
+                                )
                             }
                         }
                     }
@@ -1690,20 +1833,37 @@ private fun UthmanicMushafPageCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = juzLabel,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        color = colors.dividerText
-                    )
-                    Text(
-                        text = surahLabel,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        color = colors.dividerText
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.circleButtonBg.copy(alpha = if (colors.isLight) 0.55f else 0.40f))
+                            .border(0.8.dp, colors.dividerLine.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = juzLabel,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.5.sp,
+                            color = colors.dividerText
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.circleButtonBg.copy(alpha = if (colors.isLight) 0.55f else 0.40f))
+                            .border(0.8.dp, colors.dividerLine.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = surahLabel,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.5.sp,
+                            color = colors.dividerText
+                        )
+                    }
                 }
 
                 HorizontalDivider(
@@ -1747,17 +1907,26 @@ private fun UthmanicMushafPageCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 540.dp)
-                    .padding(horizontal = 24.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = juzLabel,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = colors.dividerText.copy(alpha = 0.70f)
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colors.circleButtonBg.copy(alpha = if (colors.isLight) 0.55f else 0.40f))
+                        .border(0.8.dp, colors.dividerLine.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = juzLabel,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.5.sp,
+                        color = colors.dividerText
+                    )
+                }
+
                 Text(
                     text = "$pageNumStr / $totalPagesStr",
                     fontFamily = ThmanyahSans,
@@ -1765,13 +1934,22 @@ private fun UthmanicMushafPageCard(
                     fontSize = 12.5.sp,
                     color = colors.dividerText
                 )
-                Text(
-                    text = surahLabel,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = colors.dividerText.copy(alpha = 0.70f)
-                )
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colors.circleButtonBg.copy(alpha = if (colors.isLight) 0.55f else 0.40f))
+                        .border(0.8.dp, colors.dividerLine.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = surahLabel,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.5.sp,
+                        color = colors.dividerText
+                    )
+                }
             }
         }
     }
@@ -2473,6 +2651,7 @@ private fun SurahReader(
     // Audio recitation state
     var isPlaying by remember(surah.number) { mutableStateOf(false) }
     var isAudioLoading by remember(surah.number) { mutableStateOf(false) }
+    var isFallbackAudioPlaying by remember(surah.number, reciter) { mutableStateOf(false) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     // Recitation Synchronization & Syllable/Word Highlight State
@@ -2529,7 +2708,7 @@ private fun SurahReader(
     }
 
     // High-frequency playback position sampling & active word/verse resolution
-    LaunchedEffect(isPlaying, chapterTiming) {
+    LaunchedEffect(isPlaying, chapterTiming, isFallbackAudioPlaying) {
         if (!isPlaying) {
             currentPlaybackMs = 0L
             activeVerseNumber = null
@@ -2547,9 +2726,22 @@ private fun SurahReader(
                     if (timing != null) {
                         // Compensate audio buffer / hardware latency with reciter-calibrated lead offset
                         // to ensure word highlight syncs instantaneously with the spoken recitation without delay.
-                        val effectivePos = (pos + reciter.syncLeadMs).coerceAtLeast(0L)
-                        val activeVerse = timing.findActiveVerse(effectivePos)
-                        val vNum = activeVerse?.verseNumber
+                        val fallbackOffsetMs = if (isFallbackAudioPlaying && surah.number != 9 && surah.number != 1) 5500L else 0L
+                        val effectivePos = (pos - fallbackOffsetMs + reciter.syncLeadMs).coerceAtLeast(0L)
+                        val activeVerse = if (isFallbackAudioPlaying && pos < fallbackOffsetMs) {
+                            null
+                        } else {
+                            timing.findActiveVerse(effectivePos)
+                        }
+                        val vNum = if (isFallbackAudioPlaying && pos < fallbackOffsetMs) {
+                            0
+                        } else if (activeVerse != null) {
+                            activeVerse.verseNumber
+                        } else if (effectivePos < (timing.verses.firstOrNull()?.startMs ?: 5500L) && surah.number != 9 && surah.number != 1) {
+                            0
+                        } else {
+                            null
+                        }
                         val wIdx = if (activeVerse != null) timing.findActiveWordIndex(activeVerse, effectivePos) else null
                         if (activeVerseNumber != vNum) {
                             activeVerseNumber = vNum
@@ -2573,7 +2765,11 @@ private fun SurahReader(
         if (now - lastUserInteractionTime < 2800L) return@LaunchedEffect
 
         if (layoutMode == QuranLayoutMode.TEXT && !showPageFrame) {
-            val targetIdx = textItems.indexOfFirst { it is QuranTextItem.VerseItem && it.verse.number == vNum }
+            val targetIdx = if (vNum == 0) {
+                textItems.indexOfFirst { it is QuranTextItem.BismillahItem }
+            } else {
+                textItems.indexOfFirst { it is QuranTextItem.VerseItem && it.verse.number == vNum }
+            }
             if (targetIdx >= 0) {
                 try {
                     val layoutInfo = listState.layoutInfo
@@ -2609,7 +2805,11 @@ private fun SurahReader(
             }
         } else if (layoutMode == QuranLayoutMode.INDOPAK_13_LINES || layoutMode == QuranLayoutMode.PAGES_SVG || showPageFrame) {
             val chunks = pageChunks ?: return@LaunchedEffect
-            val chunkIdx = chunks.indexOfFirst { chunk -> chunk.verses.any { it.number == vNum } }
+            val chunkIdx = if (vNum == 0) {
+                0
+            } else {
+                chunks.indexOfFirst { chunk -> chunk.verses.any { it.number == vNum } }
+            }
             if (chunkIdx >= 0) {
                 try {
                     val layoutInfo = listState.layoutInfo
@@ -2744,6 +2944,7 @@ private fun SurahReader(
             } catch (_: Exception) {}
             isPlaying = false
             isAudioLoading = false
+            isFallbackAudioPlaying = false
             activeVerseNumber = null
             activeWordIndex = null
         }
@@ -2758,6 +2959,7 @@ private fun SurahReader(
         } catch (_: Exception) {}
         isPlaying = false
         isAudioLoading = false
+        isFallbackAudioPlaying = false
         activeVerseNumber = null
         activeWordIndex = null
     }
@@ -2825,10 +3027,12 @@ private fun SurahReader(
                 val fallbackUrl = reciter.getFallbackAudioUrl(surah.number)
                 val fallbackSuccess = runCatching {
                     mp.reset()
+                    isFallbackAudioPlaying = true
                     mp.setDataSource(fallbackUrl)
                     mp.prepareAsync()
                 }.isSuccess
                 if (!fallbackSuccess) {
+                    isFallbackAudioPlaying = false
                     isAudioLoading = false
                     isPlaying = false
                     val msg = context.getString(R.string.quran_audio_network_error)
@@ -2841,14 +3045,17 @@ private fun SurahReader(
 
         try {
             val primaryUrl = chapterTiming?.audioUrl?.ifBlank { null } ?: reciter.getPrimaryAudioUrl(surah.number)
+            isFallbackAudioPlaying = false
             player.setDataSource(primaryUrl)
             player.prepareAsync()
         } catch (_: Exception) {
             try {
                 player.reset()
+                isFallbackAudioPlaying = true
                 player.setDataSource(reciter.getFallbackAudioUrl(surah.number))
                 player.prepareAsync()
             } catch (_: Exception) {
+                isFallbackAudioPlaying = false
                 isAudioLoading = false
                 isPlaying = false
                 val msg = context.getString(R.string.quran_audio_network_error)
@@ -3334,6 +3541,7 @@ private fun SurahReader(
                                         isPlaying = isPlaying,
                                         activeVerseNumber = activeVerseNumber,
                                         activeWordIndex = activeWordIndex,
+                                        currentPlaybackMs = currentPlaybackMs,
                                         numberStylePref = numberStylePref,
                                         onActiveWordPosition = { y ->
                                             activeWordOffsetYInItem = y

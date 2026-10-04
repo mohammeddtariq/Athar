@@ -34,7 +34,7 @@ data class ChapterRecitationTiming(
      */
     fun findActiveVerse(positionMs: Long): VerseTiming? {
         if (verses.isEmpty()) return null
-        if (positionMs <= verses.first().startMs) return verses.first()
+        if (positionMs < verses.first().startMs) return null
         return verses.firstOrNull { positionMs in it.startMs..it.endMs }
             ?: verses.lastOrNull { positionMs >= it.endMs }?.takeIf { positionMs <= it.endMs + 3000L }
     }
