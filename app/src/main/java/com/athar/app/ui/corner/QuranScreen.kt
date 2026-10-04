@@ -36,6 +36,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1439,6 +1440,7 @@ private fun UthmanicMushafPageCard(
     themeMode: QuranThemeMode = QuranThemeMode.AMOLED,
     showPageFrame: Boolean = false,
     fontScale: Float,
+    onFontScaleChange: ((Float) -> Unit)? = null,
     fontBold: Boolean,
     isPlaying: Boolean,
     activeVerseNumber: Int?,
@@ -1508,22 +1510,46 @@ private fun UthmanicMushafPageCard(
                 contentAlignment = Alignment.Center
             ) {
                 val maxCardWidth = maxWidth.coerceAtMost(540.dp)
-                val cardWidth = (maxCardWidth - 8.dp).coerceAtLeast(100.dp)
+                val baseCardWidth = (maxCardWidth - 8.dp).coerceAtLeast(100.dp)
+                val cardWidth = (baseCardWidth * fontScale).coerceAtLeast(100.dp)
                 val cardHeight = cardWidth / aspectRatio
 
+                val hScrollState = rememberScrollState()
                 Box(
                     modifier = Modifier
-                        .width(cardWidth)
-                        .height(cardHeight)
-                        .onGloballyPositioned { coords ->
-                            contentTopOffsetPx = coords.positionInParent().y
-                        }
+                        .fillMaxWidth()
+                        .then(
+                            if (cardWidth > maxWidth) Modifier.horizontalScroll(hScrollState)
+                            else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Canvas(
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(chunk.verses, data) {
-                                detectTapGestures { tapOffset ->
+                            .width(cardWidth)
+                            .height(cardHeight)
+                            .then(
+                                if (onFontScaleChange != null) {
+                                    Modifier.pointerInput(fontScale) {
+                                        detectTransformGestures { _, _, zoom, _ ->
+                                            if (zoom != 1f) {
+                                                val newScale = (fontScale * zoom).coerceIn(0.70f, 2.0f)
+                                                onFontScaleChange(newScale)
+                                            }
+                                        }
+                                    }
+                                } else Modifier
+                            )
+                            .onGloballyPositioned { coords ->
+                                contentTopOffsetPx = coords.positionInParent().y
+                            }
+                    ) {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(chunk.verses, data) {
+                                    detectTapGestures(
+                                        onTap = { tapOffset ->
                                     val canvasW = size.width.toFloat().coerceAtLeast(1f)
                                     val canvasH = size.height.toFloat().coerceAtLeast(1f)
                                     val tapFracX = (tapOffset.x / canvasW).coerceIn(0f, 1f)
@@ -1553,7 +1579,8 @@ private fun UthmanicMushafPageCard(
                                     }
                                     onAyahClick?.invoke(targetVerse)
                                 }
-                            }
+                            )
+                        }
                     ) {
                         val scaleX = size.width / data.vbWidth
                         val scaleY = size.height / data.vbHeight
@@ -1787,7 +1814,8 @@ private fun UthmanicMushafPageCard(
                     }
                 }
             }
-        } else if (isError) {
+        }
+    } else if (isError) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3537,6 +3565,7 @@ private fun SurahReader(
                                         themeMode = themeMode,
                                         showPageFrame = showPageFrame,
                                         fontScale = fontScale,
+                                        onFontScaleChange = onFontScaleChange,
                                         fontBold = fontBold,
                                         isPlaying = isPlaying,
                                         activeVerseNumber = activeVerseNumber,
@@ -4447,20 +4476,20 @@ private fun SurahReader(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(if (colors.isLight) AtharPrimary.copy(alpha = 0.12f) else AtharPrimaryLight.copy(alpha = 0.18f))
+                                                .background(if (colors.isLight) Color(0xFFC26E28).copy(alpha = 0.15f) else Color(0xFFE58E3A).copy(alpha = 0.2f))
                                                 .border(
                                                     0.5.dp,
-                                                    if (colors.isLight) AtharPrimary.copy(alpha = 0.35f) else AtharPrimaryLight.copy(alpha = 0.4f),
+                                                    if (colors.isLight) Color(0xFFC26E28).copy(alpha = 0.4f) else Color(0xFFE58E3A).copy(alpha = 0.45f),
                                                     RoundedCornerShape(4.dp)
                                                 )
                                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                                         ) {
                                             Text(
-                                                text = stringResource(R.string.quran_layout_medina_badge),
+                                                text = stringResource(R.string.quran_layout_beta),
                                                 fontFamily = ThmanyahSans,
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (colors.isLight) AtharPrimary else AtharPrimaryLight,
+                                                color = if (colors.isLight) Color(0xFFC26E28) else Color(0xFFE58E3A),
                                                 textAlign = TextAlign.Center,
                                                 maxLines = 1
                                             )

@@ -2045,8 +2045,13 @@ private fun WidgetLivePreviewCard(
                         .background(AtharPrimary.copy(alpha = 0.18f))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
+                    val previewCountdown = if (numberStyle == NumberStylePreference.ARABIC_INDIC) {
+                        formatDigits("04:32", numberStyle)
+                    } else {
+                        formatDigits("04:32:10", numberStyle)
+                    }
                     Text(
-                        text = formatDigits("04:32:10", numberStyle),
+                        text = previewCountdown,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Black,
                         fontSize = 11.5.sp,
