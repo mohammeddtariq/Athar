@@ -7,6 +7,10 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import android.graphics.Picture
+import android.graphics.RectF
+import android.util.LruCache
+import com.caverock.androidsvg.SVG
 import java.util.Locale
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
@@ -1138,6 +1142,153 @@ fun parseVerseTokens(text: String): List<QuranVerseToken> {
     }
 }
 
+data class MedinaMushafPageData(
+    val picture: Picture,
+    val vbX: Float,
+    val vbY: Float,
+    val vbWidth: Float,
+    val vbHeight: Float,
+    val innerTop: Float,
+    val innerBottom: Float,
+    val innerLeft: Float,
+    val innerRight: Float,
+    val lineAyahs: Map<Int, List<Int>>,
+    val lineDividers: Map<Int, List<Pair<Int, Float>>>
+)
+
+private val medinaMushafPageCache = LruCache<String, MedinaMushafPageData>(24)
+
+private fun parseMedinaMushafSvg(
+    context: Context,
+    pageNumber: Int,
+    ink: String,
+    markerInk: String,
+    strokeWidth: String
+): MedinaMushafPageData? {
+    val pageFileName = String.format(Locale.US, "%03d.svg", pageNumber)
+    val cacheKey = "${pageFileName}_${ink}_${markerInk}_${strokeWidth}"
+    medinaMushafPageCache.get(cacheKey)?.let { return it }
+
+    try {
+        val rawSvg = context.assets.open("mushaf/$pageFileName").bufferedReader().use { it.readText() }
+        val cleanSvg = rawSvg.trimStart('\uFEFF')
+
+        val rectMatcher = Regex("""<g\s+id="md-page-inner"\s+data-rect="([^"]+)"""")
+        val rectMatch = rectMatcher.find(cleanSvg) ?: return null
+        val rectCoords = rectMatch.groupValues[1].split(",").mapNotNull { it.trim().toFloatOrNull() }
+        if (rectCoords.size < 4) return null
+        val innerLeft = rectCoords[0]
+        val innerTop = rectCoords[1]
+        val innerRight = rectCoords[2]
+        val innerBottom = rectCoords[3]
+        val width = innerRight - innerLeft
+        val height = innerBottom - innerTop
+
+        val padX = 2.5f
+        val padY = 2.0f
+        val vbX = innerLeft - padX
+        val vbY = innerTop - padY
+        val vbW = width + (padX * 2f)
+        val vbH = height + (padY * 2f)
+
+        // Line Ayahs and Dividers
+        val lineAyahs = mutableMapOf<Int, List<Int>>()
+        val lineDividers = mutableMapOf<Int, List<Pair<Int, Float>>>()
+
+        val lineRegex = Regex("""<g\s+id="md-line-(\d+)"[^>]*>""")
+        val lineMatches = lineRegex.findAll(cleanSvg).toList()
+        for (idx in lineMatches.indices) {
+            val lm = lineMatches[idx]
+            val lNum = lm.groupValues[1].toIntOrNull() ?: (idx + 1)
+            val startIdx = lm.range.last + 1
+            val endIdx = if (idx + 1 < lineMatches.size) lineMatches[idx + 1].range.first else cleanSvg.length
+            val chunkBody = cleanSvg.substring(startIdx, endIdx)
+
+            val words = Regex("""<g\s+id="[^"]+"\s+data-surah="\d+"\s+data-aya="(\d+)"\s+data-line-number="\d+"\s+data-type="text"""")
+                .findAll(chunkBody)
+            val distinctAyahs = mutableListOf<Int>()
+            for (w in words) {
+                val a = w.groupValues[1].toIntOrNull() ?: continue
+                if (a !in distinctAyahs) distinctAyahs.add(a)
+            }
+            if (distinctAyahs.isNotEmpty()) {
+                lineAyahs[lNum] = distinctAyahs
+            }
+
+            val markMatches = Regex("""<g\s+id="([^"]+)"\s+data-surah="\d+"\s+data-aya="(\d+)"\s+data-line-number="\d+"\s+data-type="aya-mark"""")
+                .findAll(chunkBody)
+            val divs = mutableListOf<Pair<Int, Float>>()
+            for (mm in markMatches) {
+                val markId = mm.groupValues[1]
+                val ayaNum = mm.groupValues[2].toIntOrNull() ?: continue
+                val markSub = chunkBody.substringAfter("id=\"$markId\"").substringBefore("</g>")
+                val xs = Regex("""M\s+([-+]?\d*\.?\d+)[\s,]+[-+]?\d*\.?\d+""").findAll(markSub)
+                    .mapNotNull { it.groupValues[1].toFloatOrNull() }
+                    .toList()
+                if (xs.isNotEmpty()) {
+                    val avgX = xs.average().toFloat()
+                    val normX = (avgX - vbX) / vbW
+                    divs.add(ayaNum to normX)
+                }
+            }
+            if (divs.isNotEmpty()) {
+                lineDividers[lNum] = divs
+            }
+        }
+
+        // Transform SVG:
+        // 1. Hide outer margin page decorations
+        var transformedSvg = cleanSvg.replace(
+            Regex("""<g\s+id="md-page-outer"[^>]*>"""),
+            """<g id="md-page-outer" display="none" visibility="hidden">"""
+        )
+
+        // 2. Crop viewBox directly to inner rect bounds
+        transformedSvg = transformedSvg.replace(
+            Regex("""viewBox="0 0 382\.68 547\.09""""),
+            String.format(Locale.US, "viewBox=\"%.2f %.2f %.2f %.2f\" width=\"%.2f\" height=\"%.2f\"", vbX, vbY, vbW, vbH, vbW, vbH)
+        )
+
+        // 3. Inject text ink color and optional stroke width on inner group
+        val innerStroke = if ((strokeWidth.toFloatOrNull() ?: 0f) > 0f) " stroke=\"$ink\" stroke-width=\"$strokeWidth\" stroke-linejoin=\"round\"" else ""
+        transformedSvg = transformedSvg.replace(
+            Regex("""(<g\s+id="md-page-inner"[^>]*)>"""),
+            """$1 fill="$ink"$innerStroke>"""
+        )
+
+        // 4. Inject sage green marker ink on all aya-mark groups so numbers are never white
+        transformedSvg = transformedSvg.replace(
+            Regex("""(<g\s+[^>]*data-type="aya-mark"[^>]*)>"""),
+            """$1 fill="$markerInk" stroke="$markerInk" stroke-width="0">"""
+        )
+
+        val svg = SVG.getFromString(transformedSvg)
+        svg.setDocumentViewBox(vbX, vbY, vbW, vbH)
+        svg.documentWidth = vbW
+        svg.documentHeight = vbH
+        val pic = svg.renderToPicture(vbW.toInt().coerceAtLeast(1), vbH.toInt().coerceAtLeast(1)) ?: return null
+
+        val result = MedinaMushafPageData(
+            picture = pic,
+            vbX = vbX,
+            vbY = vbY,
+            vbWidth = vbW,
+            vbHeight = vbH,
+            innerTop = innerTop,
+            innerBottom = innerBottom,
+            innerLeft = innerLeft,
+            innerRight = innerRight,
+            lineAyahs = lineAyahs,
+            lineDividers = lineDividers
+        )
+        medinaMushafPageCache.put(cacheKey, result)
+        return result
+    } catch (e: Throwable) {
+        android.util.Log.e("MedinaMushaf", "Error loading SVG page $pageFileName", e)
+        return null
+    }
+}
+
 @Composable
 private fun UthmanicMushafPageCard(
     chunk: QuranPageChunk,
@@ -1145,6 +1296,309 @@ private fun UthmanicMushafPageCard(
     colors: QuranReaderColors,
     themeMode: QuranThemeMode = QuranThemeMode.AMOLED,
     showPageFrame: Boolean = false,
+    fontScale: Float,
+    fontBold: Boolean,
+    isPlaying: Boolean,
+    activeVerseNumber: Int?,
+    activeWordIndex: Int?,
+    numberStylePref: NumberStylePreference,
+    onActiveWordPosition: (Float) -> Unit,
+    onAyahClick: ((Int) -> Unit)? = null
+) {
+    val context = LocalContext.current
+    val isArabic = remember { Locale.getDefault().language == "ar" }
+
+    val ink = if (colors.isLight) "#1A1D18" else "#F7F8F5"
+    // Athar's signature sage green for authentic ayah markers
+    val markerInk = when (themeMode) {
+        QuranThemeMode.AMOLED -> "#8DA382"
+        QuranThemeMode.DARK_OLIVE -> "#96AD8B"
+        QuranThemeMode.LIGHT -> "#4A683E"
+    }
+    val strokeWidth = if (fontBold) "0.22" else "0"
+
+    var isError by remember(chunk.pageNumber, ink, markerInk, strokeWidth) { mutableStateOf(false) }
+
+    val pageData by produceState<MedinaMushafPageData?>(
+        initialValue = null,
+        chunk.pageNumber,
+        ink,
+        markerInk,
+        strokeWidth
+    ) {
+        value = withContext(Dispatchers.IO) {
+            isError = false
+            val parsed = parseMedinaMushafSvg(context, chunk.pageNumber, ink, markerInk, strokeWidth)
+            if (parsed == null) isError = true
+            parsed
+        }
+    }
+
+    val pageNumStr = formatDigits(chunk.pageNumber.toString(), numberStylePref)
+    val totalPagesStr = formatDigits("604", numberStylePref)
+    val firstAyahNum = chunk.verses.firstOrNull()?.number ?: 1
+    val juzInfo = remember(surah.number, firstAyahNum) {
+        getMadaniJuzForVerse(surah.number, firstAyahNum)
+    }
+    val juzNumStr = formatDigits(juzInfo.number.toString(), numberStylePref)
+    val juzLabel = if (isArabic) "الجزء $juzNumStr" else "Juz $juzNumStr"
+    val surahLabel = if (isArabic) "سورة ${surah.arabicName}" else "Surah ${surah.englishName}"
+
+    var contentTopOffsetPx by remember { mutableFloatStateOf(0f) }
+
+    // Dynamic horizontal padding scales naturally with font scale preference while preventing horizontal scroll
+    val horizontalPadding = ((14f / fontScale.coerceIn(0.85f, 1.4f))).coerceIn(4f, 22f).dp
+
+    val pageContent = @Composable {
+        val data = pageData
+        if (data != null) {
+            val aspectRatio = data.vbWidth / data.vbHeight
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = horizontalPadding)
+                    .aspectRatio(aspectRatio)
+                    .onGloballyPositioned { coords ->
+                        contentTopOffsetPx = coords.positionInParent().y
+                    }
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(chunk.verses, data) {
+                            detectTapGestures { tapOffset ->
+                                val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                                val canvasH = size.height.toFloat().coerceAtLeast(1f)
+                                val tapFracX = (tapOffset.x / canvasW).coerceIn(0f, 1f)
+                                val tapYInVb = data.vbY + (tapOffset.y / canvasH) * data.vbHeight
+
+                                val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
+                                val lineIdx = ((tapYInVb - data.innerTop) / lineHeightVb).toInt().coerceIn(0, 14)
+                                val lineNum = lineIdx + 1
+
+                                val ayahsOnLine = data.lineAyahs[lineNum] ?: emptyList()
+                                val dividersOnLine = data.lineDividers[lineNum]?.sortedByDescending { it.second } ?: emptyList()
+
+                                val targetVerse = when {
+                                    ayahsOnLine.isEmpty() -> chunk.verses.firstOrNull()?.number ?: 1
+                                    ayahsOnLine.size == 1 -> ayahsOnLine.first()
+                                    dividersOnLine.isEmpty() -> ayahsOnLine.first()
+                                    else -> {
+                                        var chosen = ayahsOnLine.last()
+                                        for (d in dividersOnLine) {
+                                            if (tapFracX >= d.second) {
+                                                chosen = d.first
+                                                break
+                                            }
+                                        }
+                                        chosen
+                                    }
+                                }
+                                onAyahClick?.invoke(targetVerse)
+                            }
+                        }
+                ) {
+                    val scaleX = size.width / data.vbWidth
+                    val scaleY = size.height / data.vbHeight
+
+                    // 1. Recitation Audio Highlight (drawn behind vector calligraphy)
+                    if (isPlaying && activeVerseNumber != null) {
+                        val activeLines = data.lineAyahs.filter { (_, ayahs) -> activeVerseNumber in ayahs }.keys.sorted()
+                        if (activeLines.isNotEmpty()) {
+                            val highlightBg = if (colors.isLight) AtharPrimary.copy(alpha = 0.16f) else AtharPrimaryLight.copy(alpha = 0.22f)
+                            val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
+                            val textLeftPx = (data.innerLeft - data.vbX) * scaleX
+                            val textRightPx = (data.innerRight - data.vbX) * scaleX
+
+                            for (l in activeLines) {
+                                val lineTopVb = data.innerTop + (l - 1) * lineHeightVb
+                                val lineBottomVb = lineTopVb + lineHeightVb
+                                val lineTopPx = (lineTopVb - data.vbY) * scaleY
+                                val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
+
+                                val ayahs = data.lineAyahs[l] ?: emptyList()
+                                val divs = data.lineDividers[l] ?: emptyList()
+
+                                val (rectLeft, rectRight) = if (ayahs.size == 1) {
+                                    textLeftPx to textRightPx
+                                } else {
+                                    val endDiv = divs.firstOrNull { it.first == activeVerseNumber }
+                                    if (endDiv != null) {
+                                        val prevDiv = divs.filter { it.second > endDiv.second }.minByOrNull { it.second }
+                                        val r = prevDiv?.let { it.second * size.width } ?: textRightPx
+                                        val left = endDiv.second * size.width
+                                        left to r
+                                    } else {
+                                        val prevDiv = divs.lastOrNull()
+                                        val r = prevDiv?.let { it.second * size.width } ?: textRightPx
+                                        textLeftPx to r
+                                    }
+                                }
+
+                                drawRoundRect(
+                                    color = highlightBg,
+                                    topLeft = Offset(rectLeft.coerceAtLeast(0f), lineTopPx),
+                                    size = Size((rectRight - rectLeft).coerceAtLeast(12f), lineBottomPx - lineTopPx),
+                                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                )
+                            }
+
+                            // Auto-scroll focal position
+                            val firstMid = (data.innerTop + (activeLines.first() - 0.5f) * lineHeightVb - data.vbY) * scaleY
+                            val lastMid = (data.innerTop + (activeLines.last() - 0.5f) * lineHeightVb - data.vbY) * scaleY
+                            val avgMidY = (firstMid + lastMid) / 2f
+                            onActiveWordPosition(contentTopOffsetPx + avgMidY)
+                        }
+                    }
+
+                    // 2. Draw native vector Picture
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.save()
+                        canvas.nativeCanvas.scale(scaleX, scaleY)
+                        canvas.nativeCanvas.drawPicture(data.picture)
+                        canvas.nativeCanvas.restore()
+                    }
+                }
+            }
+        } else if (isError) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isArabic) "تعذر تحميل الصفحة ${chunk.pageNumber}" else "Unable to load page ${chunk.pageNumber}",
+                    fontFamily = ThmanyahSans,
+                    fontSize = 13.sp,
+                    color = colors.dividerText
+                )
+            }
+        }
+    }
+
+    if (showPageFrame) {
+        // Container Box Mode (enabled via toggle)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 540.dp)
+                .padding(vertical = 10.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    if (colors.isLight) Color(0xFFFBFBF9) else colors.circleButtonBg.copy(alpha = 0.40f)
+                )
+                .border(
+                    width = 1.2.dp,
+                    color = if (colors.isLight) colors.dividerLine.copy(alpha = 0.75f) else colors.dividerLine.copy(alpha = 0.40f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = juzLabel,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.5.sp,
+                        color = colors.dividerText
+                    )
+                    Text(
+                        text = surahLabel,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.5.sp,
+                        color = colors.dividerText
+                    )
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    thickness = 1.dp,
+                    color = colors.dividerLine.copy(alpha = 0.65f)
+                )
+
+                pageContent()
+
+                Spacer(Modifier.height(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$pageNumStr / $totalPagesStr",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = colors.dividerText
+                    )
+                }
+            }
+        }
+    } else {
+        // Seamless Edge-to-Edge Default Mode
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            pageContent()
+
+            // Authentic Medina Mushaf Footer Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 540.dp)
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = juzLabel,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = colors.dividerText.copy(alpha = 0.70f)
+                )
+                Text(
+                    text = "$pageNumStr / $totalPagesStr",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = colors.dividerText
+                )
+                Text(
+                    text = surahLabel,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = colors.dividerText.copy(alpha = 0.70f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FramedTextMushafPageCard(
+    chunk: QuranPageChunk,
+    surah: SurahMeta,
+    colors: QuranReaderColors,
+    themeMode: QuranThemeMode = QuranThemeMode.AMOLED,
     fontScale: Float,
     fontBold: Boolean,
     isPlaying: Boolean,
@@ -1169,7 +1623,6 @@ private fun UthmanicMushafPageCard(
     val juzLabel = if (isArabic) "الجزء $juzNumStr" else "Juz $juzNumStr"
     val surahLabel = if (isArabic) "سورة ${surah.arabicName}" else "Surah ${surah.englishName}"
 
-    // Precalculate inline content for ayah end medallions
     val inlineContent = remember(chunk.verses, fontScale, colors.ayahMarker, activeVerseNumber, isPlaying) {
         val map = mutableMapOf<String, InlineTextContent>()
         val sizeSp = (22 * fontScale).sp
@@ -1192,7 +1645,6 @@ private fun UthmanicMushafPageCard(
         map
     }
 
-    // Build the continuous flowing text of the page with active word highlighting and verse character ranges
     val (annotatedText, activeWordCharOffset, verseCharRanges) = remember(
         chunk.verses,
         isPlaying,
@@ -1287,211 +1739,35 @@ private fun UthmanicMushafPageCard(
         Triple(builder.toAnnotatedString(), charOffset, ranges)
     }
 
-    val surahBannerAndBismillah = @Composable {
-        if (isFirstPageOfSurah) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                SurahHeaderBanner(
-                    surahNumber = surah.number,
-                    colors = colors,
-                    themeMode = themeMode,
-                    modifier = Modifier.padding(bottom = 6.dp)
-                )
-                if (surah.number != 9) {
-                    Text(
-                        text = "\uFDFD", // ﷽ authentic sweeping calligraphy from bismillah.ttf
-                        fontFamily = QuranBismillah,
-                        fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = (42 * fontScale).sp,
-                        color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
-                        style = TextStyle(
-                            shadow = if (fontBold) Shadow(
-                                color = (if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8)).copy(alpha = 0.5f),
-                                offset = Offset(0.35f, 0.35f),
-                                blurRadius = 0.5f
-                            ) else null
-                        ),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-
-    val textContent = @Composable {
-        val hasActiveVerse = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onGloballyPositioned { coords ->
-                    contentTopOffsetPx = coords.positionInParent().y
-                }
-                .pointerInput(chunk.verses, verseCharRanges) {
-                    detectTapGestures { tapOffset ->
-                        val layout = textLayoutResult ?: return@detectTapGestures
-                        val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
-                        val targetVerse = verseCharRanges.find { tappedCharOffset in it.second }?.first
-                            ?: chunk.verses.firstOrNull()?.number
-                        if (targetVerse != null && onAyahClick != null) {
-                            onAyahClick(targetVerse)
-                        }
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = annotatedText,
-                inlineContent = inlineContent,
-                fontFamily = QuranUthmanicHafs,
-                fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                fontSize = (21 * fontScale).sp,
-                lineHeight = (44 * fontScale).sp,
-                color = colors.text,
-                textAlign = TextAlign.Center,
-                style = TextStyle(
-                    textDirection = TextDirection.Rtl,
-                    shadow = if (fontBold) Shadow(
-                        color = colors.text.copy(alpha = 0.5f),
-                        offset = Offset(0.35f, 0.35f),
-                        blurRadius = 0.5f
-                    ) else null
-                ),
-                onTextLayout = { layoutResult ->
-                    textLayoutResult = layoutResult
-                    if (hasActiveVerse && activeWordCharOffset >= 0 && activeWordCharOffset < layoutResult.layoutInput.text.length) {
-                        val line = layoutResult.getLineForOffset(activeWordCharOffset)
-                        val lineTop = layoutResult.getLineTop(line)
-                        val lineBottom = layoutResult.getLineBottom(line)
-                        val wordCenterY = (lineTop + lineBottom) / 2f
-                        onActiveWordPosition(contentTopOffsetPx + wordCenterY)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 540.dp)
+            .padding(vertical = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (colors.isLight) Color(0xFFFBFBF9) else colors.circleButtonBg.copy(alpha = 0.40f)
             )
-        }
-    }
-
-    if (showPageFrame) {
-        // Container Box Mode (enabled via toggle)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 540.dp)
-                .padding(vertical = 10.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    if (colors.isLight) Color(0xFFFBFBF9) else colors.circleButtonBg.copy(alpha = 0.40f)
-                )
-                .border(
-                    width = 1.2.dp,
-                    color = if (colors.isLight) colors.dividerLine.copy(alpha = 0.75f) else colors.dividerLine.copy(alpha = 0.40f),
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(horizontal = 14.dp, vertical = 12.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header inside frame
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = juzLabel,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        color = colors.dividerText
-                    )
-                    Text(
-                        text = surahLabel,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        color = colors.dividerText
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(bottom = 12.dp),
-                    thickness = 1.dp,
-                    color = colors.dividerLine.copy(alpha = 0.65f)
-                )
-
-                surahBannerAndBismillah()
-
-                textContent()
-
-                Spacer(Modifier.height(10.dp))
-
-                // Footer inside frame
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$pageNumStr / $totalPagesStr",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = colors.dividerText
-                    )
-                }
-            }
-        }
-    } else {
-        // Seamless Edge-to-Edge Mode (Authentic Medina Mushaf text layout)
+            .border(
+                width = 1.2.dp,
+                color = if (colors.isLight) colors.dividerLine.copy(alpha = 0.75f) else colors.dividerLine.copy(alpha = 0.40f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 540.dp)
-                .padding(vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            surahBannerAndBismillah()
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp)
-            ) {
-                textContent()
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Authentic Medina Mushaf Footer
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = juzLabel,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = colors.dividerText.copy(alpha = 0.70f)
-                )
-                Text(
-                    text = "$pageNumStr / $totalPagesStr",
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.5.sp,
@@ -1500,22 +1776,119 @@ private fun UthmanicMushafPageCard(
                 Text(
                     text = surahLabel,
                     fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = colors.dividerText.copy(alpha = 0.70f)
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = colors.dividerText
                 )
             }
 
             HorizontalDivider(
+                modifier = Modifier.padding(bottom = 12.dp),
+                thickness = 1.dp,
+                color = colors.dividerLine.copy(alpha = 0.65f)
+            )
+
+            if (isFirstPageOfSurah) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    SurahHeaderBanner(
+                        surahNumber = surah.number,
+                        colors = colors,
+                        themeMode = themeMode,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    if (surah.number != 9) {
+                        Text(
+                            text = "\uFDFD",
+                            fontFamily = QuranBismillah,
+                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = (42 * fontScale).sp,
+                            color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+            }
+
+            val hasActiveVerse = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 6.dp),
-                thickness = 0.8.dp,
-                color = colors.dividerLine.copy(alpha = 0.45f)
-            )
+                    .onGloballyPositioned { coords ->
+                        contentTopOffsetPx = coords.positionInParent().y
+                    }
+                    .pointerInput(chunk.verses, verseCharRanges) {
+                        detectTapGestures { tapOffset ->
+                            val layout = textLayoutResult ?: return@detectTapGestures
+                            val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                            val targetVerse = verseCharRanges.find { tappedCharOffset in it.second }?.first
+                                ?: chunk.verses.firstOrNull()?.number
+                            if (targetVerse != null && onAyahClick != null) {
+                                onAyahClick(targetVerse)
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = annotatedText,
+                    inlineContent = inlineContent,
+                    fontFamily = QuranUthmanicHafs,
+                    fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                    fontSize = (21 * fontScale).sp,
+                    lineHeight = (44 * fontScale).sp,
+                    color = colors.text,
+                    textAlign = TextAlign.Center,
+                    style = TextStyle(
+                        textDirection = TextDirection.Rtl,
+                        shadow = if (fontBold) Shadow(
+                            color = colors.text.copy(alpha = 0.5f),
+                            offset = Offset(0.35f, 0.35f),
+                            blurRadius = 0.5f
+                        ) else null
+                    ),
+                    onTextLayout = { layoutResult ->
+                        textLayoutResult = layoutResult
+                        if (hasActiveVerse && activeWordCharOffset >= 0 && activeWordCharOffset < layoutResult.layoutInput.text.length) {
+                            val line = layoutResult.getLineForOffset(activeWordCharOffset)
+                            val lineTop = layoutResult.getLineTop(line)
+                            val lineBottom = layoutResult.getLineBottom(line)
+                            val wordCenterY = (lineTop + lineBottom) / 2f
+                            onActiveWordPosition(contentTopOffsetPx + wordCenterY)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "$pageNumStr / $totalPagesStr",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = colors.dividerText
+                )
+            }
         }
     }
 }
+
 
 
 @Composable
@@ -2458,12 +2831,11 @@ private fun SurahReader(
                                         items = chunks,
                                         key = { "framed_text_page_${surah.number}_${it.pageNumber}" }
                                     ) { chunk ->
-                                        UthmanicMushafPageCard(
+                                        FramedTextMushafPageCard(
                                             chunk = chunk,
                                             surah = surah,
                                             colors = colors,
                                             themeMode = themeMode,
-                                            showPageFrame = true,
                                             fontScale = fontScale,
                                             fontBold = fontBold,
                                             isPlaying = isPlaying,
