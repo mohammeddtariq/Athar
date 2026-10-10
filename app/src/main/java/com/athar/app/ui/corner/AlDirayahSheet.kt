@@ -1878,7 +1878,7 @@ fun AlDirayahGlowCard(
 
 /**
  * Floating circular Tafsir action button inside the Quran Reader.
- * Styled like Apple Music's lyrics translate floating circular button.
+ * Floating circular Tafsir quick action button.
  */
 @Composable
 fun AlDirayahFloatingButton(

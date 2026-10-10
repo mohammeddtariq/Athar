@@ -9,6 +9,7 @@
     <string name="nav_qibla">Qibla</string>
     <string name="nav_services">Essence</string>
     <string name="nav_settings">Settings</string>
+    <string name="nav_amanah">Al-Amanah</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">My Location</string>

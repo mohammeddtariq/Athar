@@ -9,6 +9,7 @@
     <string name="nav_qibla">القبلة</string>
     <string name="nav_services">الجوهر</string>
     <string name="nav_settings">الإعدادات</string>
+    <string name="nav_amanah">الأَمَنَة</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">موقعي</string>

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -82,6 +83,17 @@ class AppPreferences(private val context: Context) {
 
         // App Feature Announcements
         private val APP_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("app_announcement_seen")
+        private val AMANAH_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("amanah_announcement_seen")
+
+        // Al-Amanah Sanctuary Preferences
+        private val AMANAH_120HZ_KEY = booleanPreferencesKey("amanah_120hz_enabled")
+        private val AMANAH_DAILY_GOAL_MIN_KEY = intPreferencesKey("amanah_daily_goal_minutes")
+        private val AMANAH_FAVORITES_KEY = stringSetPreferencesKey("amanah_favorites")
+        private val AMANAH_LAST_SURAH_KEY = intPreferencesKey("amanah_last_surah")
+        private val AMANAH_LAST_RECITER_KEY = stringPreferencesKey("amanah_last_reciter")
+        private val AMANAH_TODAY_LISTEN_SEC_KEY = longPreferencesKey("amanah_today_listen_sec")
+        private val AMANAH_LAST_LISTEN_DATE_KEY = stringPreferencesKey("amanah_last_listen_date")
+        private val AMANAH_STREAK_DAYS_KEY = intPreferencesKey("amanah_streak_days")
     }
 
     val hasSeenAppAnnouncement: Flow<Boolean> = context.dataStore.data.map {
@@ -89,6 +101,35 @@ class AppPreferences(private val context: Context) {
     }
 
     val hasSeenDirayahAnnouncement: Flow<Boolean> get() = hasSeenAppAnnouncement
+
+    val hasSeenAmanahAnnouncement: Flow<Boolean> = context.dataStore.data.map {
+        it[AMANAH_ANNOUNCEMENT_SEEN_KEY] ?: false
+    }
+
+    val amanahHighRefreshRate: Flow<Boolean> = context.dataStore.data.map {
+        it[AMANAH_120HZ_KEY] ?: true
+    }
+    val amanahDailyGoalMin: Flow<Int> = context.dataStore.data.map {
+        it[AMANAH_DAILY_GOAL_MIN_KEY] ?: 20
+    }
+    val amanahFavorites: Flow<Set<Int>> = context.dataStore.data.map {
+        (it[AMANAH_FAVORITES_KEY] ?: emptySet()).mapNotNull { s -> s.toIntOrNull() }.toSet()
+    }
+    val amanahLastSurah: Flow<Int> = context.dataStore.data.map {
+        it[AMANAH_LAST_SURAH_KEY] ?: 1
+    }
+    val amanahLastReciter: Flow<String> = context.dataStore.data.map {
+        it[AMANAH_LAST_RECITER_KEY] ?: "minshawi"
+    }
+    val amanahTodayListenSec: Flow<Long> = context.dataStore.data.map {
+        it[AMANAH_TODAY_LISTEN_SEC_KEY] ?: 0L
+    }
+    val amanahLastListenDate: Flow<String?> = context.dataStore.data.map {
+        it[AMANAH_LAST_LISTEN_DATE_KEY]
+    }
+    val amanahStreakDays: Flow<Int> = context.dataStore.data.map {
+        it[AMANAH_STREAK_DAYS_KEY] ?: 0
+    }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
     val numberStyle: Flow<NumberStylePreference> = context.dataStore.data.map {
@@ -345,6 +386,57 @@ class AppPreferences(private val context: Context) {
         setHasSeenAppAnnouncement(seen)
     }
 
+    suspend fun setHasSeenAmanahAnnouncement(seen: Boolean) {
+        context.dataStore.edit { it[AMANAH_ANNOUNCEMENT_SEEN_KEY] = seen }
+    }
+
+    suspend fun setAmanahHighRefreshRate(enabled: Boolean) {
+        context.dataStore.edit { it[AMANAH_120HZ_KEY] = enabled }
+    }
+
+    suspend fun setAmanahDailyGoalMin(minutes: Int) {
+        context.dataStore.edit { it[AMANAH_DAILY_GOAL_MIN_KEY] = minutes }
+    }
+
+    suspend fun toggleAmanahFavorite(surahNumber: Int) {
+        context.dataStore.edit { prefs ->
+            val current = (prefs[AMANAH_FAVORITES_KEY] ?: emptySet()).toMutableSet()
+            val str = surahNumber.toString()
+            if (current.contains(str)) {
+                current.remove(str)
+            } else {
+                current.add(str)
+            }
+            prefs[AMANAH_FAVORITES_KEY] = current
+        }
+    }
+
+    suspend fun setAmanahLastPlayback(surahNumber: Int, reciterId: String) {
+        context.dataStore.edit {
+            it[AMANAH_LAST_SURAH_KEY] = surahNumber
+            it[AMANAH_LAST_RECITER_KEY] = reciterId
+        }
+    }
+
+    suspend fun recordAmanahListeningSeconds(seconds: Long) {
+        if (seconds <= 0) return
+        val todayStr = java.time.LocalDate.now().toString()
+        context.dataStore.edit { prefs ->
+            val lastDate = prefs[AMANAH_LAST_LISTEN_DATE_KEY]
+            val currentStreak = prefs[AMANAH_STREAK_DAYS_KEY] ?: 0
+            if (lastDate == todayStr) {
+                val currentToday = prefs[AMANAH_TODAY_LISTEN_SEC_KEY] ?: 0L
+                prefs[AMANAH_TODAY_LISTEN_SEC_KEY] = currentToday + seconds
+            } else {
+                val yesterdayStr = java.time.LocalDate.now().minusDays(1).toString()
+                val newStreak = if (lastDate == yesterdayStr) currentStreak + 1 else 1
+                prefs[AMANAH_STREAK_DAYS_KEY] = newStreak
+                prefs[AMANAH_LAST_LISTEN_DATE_KEY] = todayStr
+                prefs[AMANAH_TODAY_LISTEN_SEC_KEY] = seconds
+            }
+        }
+    }
+
     suspend fun setNumberStyle(style: NumberStylePreference) {
         context.dataStore.edit { it[NUMBER_STYLE_KEY] = style.id }
     }
@@ -519,6 +611,51 @@ enum class QuranReciter(
         quranComId = 7,
         qdcSubpath = "mishari_al_afasy",
         syncLeadMs = 110L
+    ),
+    AL_SUDAIS(
+        id = "sudais",
+        arabicName = "الشيخ عبد الرحمن السديس",
+        englishName = "Abdur-Rahman As-Sudais",
+        baseUrl = "https://server11.mp3quran.net/sds",
+        quranComId = 3,
+        qdcSubpath = "abdurrahmaan_as_sudais",
+        syncLeadMs = 120L
+    ),
+    AL_SHURAIM(
+        id = "shuraim",
+        arabicName = "الشيخ سعود الشريم",
+        englishName = "Sa'ud Ash-Shuraym",
+        baseUrl = "https://server7.mp3quran.net/shur",
+        quranComId = 10,
+        qdcSubpath = "sa3ood_al-shuraym",
+        syncLeadMs = 120L
+    ),
+    AL_MUAIQLY(
+        id = "muaiqly",
+        arabicName = "الشيخ ماهر المعيقلي",
+        englishName = "Maher Al-Muaiqly",
+        baseUrl = "https://server12.mp3quran.net/maher",
+        quranComId = 12,
+        qdcSubpath = "maher_al-mu3aiqly",
+        syncLeadMs = 130L
+    ),
+    AL_SHATRI(
+        id = "shatri",
+        arabicName = "الشيخ أبو بكر الشاطري",
+        englishName = "Abu Bakr Al-Shatri",
+        baseUrl = "https://server11.mp3quran.net/shatri",
+        quranComId = 4,
+        qdcSubpath = "abu_bakr_ash-shatri",
+        syncLeadMs = 140L
+    ),
+    AL_HUSSARY(
+        id = "hussary",
+        arabicName = "الشيخ محمود خليل الحصري (مرتل)",
+        englishName = "Mahmoud Khalil Al-Husary",
+        baseUrl = "https://server13.mp3quran.net/husr",
+        quranComId = 6,
+        qdcSubpath = "mahmoud_khalil_al-husary",
+        syncLeadMs = 150L
     );
 
     fun getPrimaryAudioUrl(chapterNumber: Int): String =

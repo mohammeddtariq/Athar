@@ -17,8 +17,8 @@ android {
         applicationId = "com.athar.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.6-beta"
+        versionCode = 9
+        versionName = "1.0.7-beta"
 
         manifestPlaceholders["appName"] = "@string/app_name"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

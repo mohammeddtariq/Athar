@@ -5080,7 +5080,7 @@ private fun SurahReader(
                 }
             }
 
-            // ─── FLOATING TAFSIR "AL-MA'RIFAH" ACTION BUTTON (Apple Music lyrics translate style) ───
+            // ─── FLOATING TAFSIR "AL-MA'RIFAH" ACTION BUTTON ───
             AnimatedVisibility(
                 visible = shouldShowBars,
                 enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 2 },

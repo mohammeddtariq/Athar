@@ -61,6 +61,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.ui.corner.AppAnnouncementDialog
 import kotlinx.coroutines.launch
@@ -81,7 +82,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.athar.app.R
+import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.GraphicEq
+import com.athar.app.ui.corner.AlAmanahAnnouncementDialog
+import com.athar.app.ui.corner.AlAmanahScreen
 import com.athar.app.ui.corner.DuasScreen
 import com.athar.app.ui.corner.QiblaScreen
 import com.athar.app.ui.corner.QuranScreen
@@ -136,6 +141,13 @@ sealed class Screen(
         selectedVector = Icons.Rounded.Settings,
         unselectedVector = Icons.Outlined.Settings
     )
+
+    object Amanah : Screen(
+        route = "amanah",
+        labelResId = R.string.nav_amanah,
+        selectedVector = Icons.Rounded.GraphicEq,
+        unselectedVector = Icons.Outlined.GraphicEq
+    )
 }
 
 val allNavScreens = listOf(
@@ -156,19 +168,29 @@ fun MainScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val appPrefs = remember { AppPreferences(context.applicationContext) }
-    val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = true)
+    val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = null)
+    val hasSeenAmanahAnnouncement by appPrefs.hasSeenAmanahAnnouncement.collectAsState(initial = null)
     var showDirayahAnnouncement by remember { mutableStateOf(false) }
+    var showAmanahAnnouncement by remember { mutableStateOf(false) }
     var openDirayahDirectly by remember { mutableStateOf(false) }
 
-    LaunchedEffect(hasSeenDirayahAnnouncement) {
-        if (!hasSeenDirayahAnnouncement) {
+    LaunchedEffect(hasSeenAmanahAnnouncement, hasSeenDirayahAnnouncement) {
+        val amanahSeen = hasSeenAmanahAnnouncement ?: return@LaunchedEffect
+        val dirayahSeen = hasSeenDirayahAnnouncement ?: return@LaunchedEffect
+        if (!amanahSeen) {
+            showAmanahAnnouncement = true
+        } else if (!dirayahSeen) {
             showDirayahAnnouncement = true
         }
     }
 
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
     var isQuranReading by remember { mutableStateOf(false) }
     var targetSettingsSection by remember { mutableStateOf<String?>(null) }
+
+    val isImmersive = isQuranReading || currentRoute == Screen.Amanah.route
 
     LaunchedEffect(openWidgetSettings) {
         if (openWidgetSettings) {
@@ -245,11 +267,16 @@ fun MainScreen(
                     onTargetSectionConsumed = { targetSettingsSection = null }
                 )
             }
+            composable(Screen.Amanah.route) {
+                AlAmanahScreen(
+                    onBack = { navController.navigateToTab(Screen.Home) }
+                )
+            }
         }
 
         // Floating Nav Dock
         AnimatedVisibility(
-            visible = !isQuranReading,
+            visible = !isImmersive,
             enter = slideInVertically(
                 initialOffsetY = { it },
                 animationSpec = spring(dampingRatio = 0.85f, stiffness = 350f)
@@ -263,8 +290,23 @@ fun MainScreen(
             AtharNavBar(navController)
         }
 
-        // One-time announcement popup introducing "Al-Dirayah"
-        if (showDirayahAnnouncement) {
+        // Feature Announcements (Al-Amanah or Al-Dirayah)
+        if (showAmanahAnnouncement) {
+            AlAmanahAnnouncementDialog(
+                onExplore = {
+                    showAmanahAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenAmanahAnnouncement(true) }
+                    navController.navigateToTab(Screen.Amanah)
+                },
+                onDismiss = {
+                    showAmanahAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenAmanahAnnouncement(true) }
+                    if (hasSeenDirayahAnnouncement == false) {
+                        showDirayahAnnouncement = true
+                    }
+                }
+            )
+        } else if (showDirayahAnnouncement) {
             AppAnnouncementDialog(
                 onExplore = {
                     showDirayahAnnouncement = false
@@ -316,54 +358,97 @@ fun AtharNavBar(
         BoxWithConstraints(
             modifier = modifier
                 .fillMaxWidth()
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .padding(bottom = 12.dp),
             contentAlignment = Alignment.Center
         ) {
-            val isCompact = maxWidth < 380.dp
-            val outerPadHorizontal = if (isCompact) 8.dp else 14.dp
-            val outerPadVertical = if (isCompact) 10.dp else 14.dp
-            val dockInnerPadH = if (isCompact) 6.dp else 8.dp
-            val dockInnerPadV = if (isCompact) 5.dp else 7.dp
-            val itemSpacing = if (isCompact) 2.dp else 4.dp
-            val unselectedPadH = if (isCompact) 8.dp else 12.dp
-            val selectedPadH = if (isCompact) 12.dp else 16.dp
-            val iconSize = if (isCompact) 21.dp else 24.dp
-            val fontSize = if (isCompact) 12.sp else 13.5.sp
+            val isCompact = maxWidth < 400.dp
+            val outerPadHorizontal = if (isCompact) 6.dp else 10.dp
+            val outerPadVertical = 8.dp
+            val dockInnerPadH = if (isCompact) 4.dp else 6.dp
+            val dockInnerPadV = 4.dp
+            val itemSpacing = 2.dp
+            val unselectedPadH = if (isCompact) 6.dp else 8.dp
+            val selectedPadH = if (isCompact) 8.dp else 11.dp
+            val iconSize = if (isCompact) 18.dp else 20.dp
+            val fontSize = if (isCompact) 11.sp else 12.sp
 
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = outerPadHorizontal, vertical = outerPadVertical)
-                    .shadow(
-                        elevation = 18.dp,
-                        shape = RoundedCornerShape(38.dp),
-                        spotColor = AtharNavGlow.copy(alpha = 0.35f),
-                        ambientColor = Color.Black.copy(alpha = 0.70f)
-                    )
-                    .clip(RoundedCornerShape(38.dp))
-                    .background(AtharNavbarBg)
-                    .border(
-                        width = 1.2.dp,
-                        color = AtharNavbarBorder,
-                        shape = RoundedCornerShape(38.dp)
-                    )
-                    .padding(horizontal = dockInnerPadH, vertical = dockInnerPadV),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.padding(horizontal = outerPadHorizontal, vertical = outerPadVertical),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.CenterHorizontally)
-                ) {
-                    allNavScreens.forEach { screen ->
-                        NavDockItem(
-                            screen = screen,
-                            selected = isSelected(screen),
-                            unselectedPadH = unselectedPadH,
-                            selectedPadH = selectedPadH,
-                            iconSize = iconSize,
-                            fontSize = fontSize,
-                            onClick = { navController.navigateToTab(screen) }
+                // Main Navigation Dock Capsule
+                Box(
+                    modifier = Modifier
+                        .shadow(
+                            elevation = 14.dp,
+                            shape = RoundedCornerShape(32.dp),
+                            spotColor = AtharNavGlow.copy(alpha = 0.30f),
+                            ambientColor = Color.Black.copy(alpha = 0.70f)
                         )
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(AtharNavbarBg)
+                        .border(
+                            width = 1.1.dp,
+                            color = AtharNavbarBorder,
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                        .padding(horizontal = dockInnerPadH, vertical = dockInnerPadV),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.CenterHorizontally)
+                    ) {
+                        allNavScreens.forEach { screen ->
+                            NavDockItem(
+                                screen = screen,
+                                selected = isSelected(screen),
+                                unselectedPadH = unselectedPadH,
+                                selectedPadH = selectedPadH,
+                                iconSize = iconSize,
+                                fontSize = fontSize,
+                                onClick = { navController.navigateToTab(screen) }
+                            )
+                        }
                     }
+                }
+
+                // Standalone Floating Al-Amanah Action Button (Beside the Dock)
+                val isAmanahSelected = isSelected(Screen.Amanah)
+                val amanahButtonHeight = if (isCompact) 40.dp else 44.dp
+                val amanahButtonWidth = if (isCompact) 40.dp else 44.dp
+
+                Box(
+                    modifier = Modifier
+                        .size(width = amanahButtonWidth, height = amanahButtonHeight)
+                        .shadow(
+                            elevation = 14.dp,
+                            shape = RoundedCornerShape(18.dp),
+                            spotColor = Color(0xFFB5DB88).copy(alpha = 0.40f),
+                            ambientColor = Color.Black.copy(alpha = 0.70f)
+                        )
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (isAmanahSelected) Color(0xFFD6F5AE) else Color(0xFFB5DB88))
+                        .border(
+                            width = 1.1.dp,
+                            color = if (isAmanahSelected) Color.White else Color(0xFFD6F5AE),
+                            shape = RoundedCornerShape(18.dp)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { navController.navigateToTab(Screen.Amanah) }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.GraphicEq,
+                        contentDescription = "Al-Amanah",
+                        tint = Color(0xFF141C16),
+                        modifier = Modifier.size(if (isCompact) 19.dp else 21.dp)
+                    )
                 }
             }
         }
@@ -419,13 +504,13 @@ private fun NavDockItem(
     Box(
         modifier = Modifier
             .scale(scale)
-            .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(if (fontSize < 13.sp) 38.dp else 42.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(pillBackground)
             .border(
                 width = if (selected) 1.dp else 0.dp,
                 color = pillBorderColor,
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
             .clickable(
                 interactionSource = interactionSource,
