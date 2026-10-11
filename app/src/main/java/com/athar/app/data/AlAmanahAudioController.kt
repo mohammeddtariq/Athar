@@ -81,6 +81,27 @@ object AlAmanahAudioController {
         private set
     private var sleepTimerJob: Job? = null
 
+    enum class PlaybackMode {
+        SEQUENTIAL,
+        REPEAT_ONE,
+        REPEAT_ALL,
+        SHUFFLE
+    }
+
+    var playbackMode by mutableStateOf(PlaybackMode.SEQUENTIAL)
+        private set
+
+    fun cyclePlaybackMode(): PlaybackMode {
+        val modes = PlaybackMode.entries
+        val next = modes[(playbackMode.ordinal + 1) % modes.size]
+        playbackMode = next
+        return next
+    }
+
+    fun updatePlaybackMode(mode: PlaybackMode) {
+        playbackMode = mode
+    }
+
     fun getAudioStorageDir(context: Context): File =
         File(context.filesDir, "amanah_audio").apply { if (!exists()) mkdirs() }
 
@@ -162,8 +183,7 @@ object AlAmanahAudioController {
                 player.setOnCompletionListener {
                     isPlaying = false
                     currentPositionMs = totalDurationMs
-                    // Auto-advance to next surah
-                    playNextSurah(context)
+                    handleTrackCompletion(context)
                 }
 
                 player.setOnErrorListener { _, _, _ ->
@@ -208,7 +228,7 @@ object AlAmanahAudioController {
             }
             player.setOnCompletionListener {
                 isPlaying = false
-                playNextSurah(context)
+                handleTrackCompletion(context)
             }
             player.prepareAsync()
             mediaPlayer = player
@@ -248,6 +268,29 @@ object AlAmanahAudioController {
         seekTo(verse.startMs)
     }
 
+    private fun handleTrackCompletion(context: Context) {
+        when (playbackMode) {
+            PlaybackMode.REPEAT_ONE -> {
+                seekTo(0)
+                mediaPlayer?.start()
+                isPlaying = true
+                startSyncLoop(context)
+            }
+            PlaybackMode.SHUFFLE -> {
+                playRandomSurah(context)
+            }
+            PlaybackMode.REPEAT_ALL, PlaybackMode.SEQUENTIAL -> {
+                playNextSurah(context)
+            }
+        }
+    }
+
+    fun playRandomSurah(context: Context) {
+        val remaining = allSurahs.filter { it.number != currentSurah.number }
+        val nextSurah = if (remaining.isNotEmpty()) remaining.random() else allSurahs.random()
+        playSurah(context, nextSurah, currentReciter)
+    }
+
     fun playNextSurah(context: Context) {
         val nextNum = if (currentSurah.number < 114) currentSurah.number + 1 else 1
         val nextSurah = allSurahs.firstOrNull { it.number == nextNum } ?: allSurahs.first()
@@ -261,6 +304,10 @@ object AlAmanahAudioController {
     }
 
     fun skipNext(context: Context) {
+        if (playbackMode == PlaybackMode.SHUFFLE) {
+            playRandomSurah(context)
+            return
+        }
         val timing = chapterTiming
         val curVerse = activeVerseNumber
         if (timing != null && curVerse != null) {
@@ -274,6 +321,10 @@ object AlAmanahAudioController {
     }
 
     fun skipPrevious(context: Context) {
+        if (playbackMode == PlaybackMode.SHUFFLE) {
+            playRandomSurah(context)
+            return
+        }
         val timing = chapterTiming
         val curVerse = activeVerseNumber
         val curPos = currentPositionMs
@@ -522,6 +573,50 @@ object AlAmanahAudioController {
             }
         }
         return AudioOutputType.PHONE
+    }
+
+    fun getDeviceModelName(): String {
+        val model = android.os.Build.MODEL ?: "Phone"
+        return model
+    }
+
+    fun getConnectedAudioDeviceName(context: Context): String? {
+        val outputType = getActiveAudioOutputType(context)
+        if (outputType == AudioOutputType.BLUETOOTH_OR_HEADSET) {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && audioManager != null) {
+                val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+                for (device in devices) {
+                    val isBt = device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                            device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                            (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+                                (device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                                 device.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER))
+                    if (isBt) {
+                        val name = device.productName?.toString()
+                        if (!name.isNullOrBlank()) return name
+                    }
+                }
+            }
+            return "Bluetooth Audio"
+        }
+        return null
+    }
+
+    fun openCastSettings(context: Context) {
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_CAST_SETTINGS).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_SOUND_SETTINGS).apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) {}
+        }
     }
 
     fun openSystemAudioOutputPicker(context: Context) {
