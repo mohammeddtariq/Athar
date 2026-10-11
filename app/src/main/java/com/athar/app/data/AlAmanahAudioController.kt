@@ -545,34 +545,18 @@ object AlAmanahAudioController {
         BLUETOOTH_OR_HEADSET
     }
 
+    private var explicitTarget by mutableStateOf<AudioOutputType?>(null)
+
+    fun setPreferredAudioTarget(target: AudioOutputType) {
+        explicitTarget = target
+    }
+
     fun getActiveAudioOutputType(context: Context): AudioOutputType {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return AudioOutputType.PHONE
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-            for (device in devices) {
-                when (device.type) {
-                    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
-                    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
-                    android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
-                    android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
-                    android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> {
-                        return AudioOutputType.BLUETOOTH_OR_HEADSET
-                    }
-                }
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                    if (device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
-                        device.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER) {
-                        return AudioOutputType.BLUETOOTH_OR_HEADSET
-                    }
-                }
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            if (audioManager.isBluetoothA2dpOn || audioManager.isWiredHeadsetOn) {
-                return AudioOutputType.BLUETOOTH_OR_HEADSET
-            }
+        val connectedDevice = getConnectedAudioDeviceName(context)
+        if (connectedDevice == null) {
+            return AudioOutputType.PHONE
         }
-        return AudioOutputType.PHONE
+        return explicitTarget ?: AudioOutputType.BLUETOOTH_OR_HEADSET
     }
 
     fun getDeviceModelName(): String {
@@ -581,23 +565,30 @@ object AlAmanahAudioController {
     }
 
     fun getConnectedAudioDeviceName(context: Context): String? {
-        val outputType = getActiveAudioOutputType(context)
-        if (outputType == AudioOutputType.BLUETOOTH_OR_HEADSET) {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && audioManager != null) {
-                val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                for (device in devices) {
-                    val isBt = device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                            device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                            (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
-                                (device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
-                                 device.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER))
-                    if (isBt) {
-                        val name = device.productName?.toString()
-                        if (!name.isNullOrBlank()) return name
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return null
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+            for (device in devices) {
+                val isMediaAudioDevice = device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                        device.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                        device.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                        device.type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET ||
+                        (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+                            (device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                             device.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER))
+                if (isMediaAudioDevice) {
+                    val name = device.productName?.toString() ?: ""
+                    val lower = name.lowercase(java.util.Locale.ROOT)
+                    // Filter out smartwatches / fitness bands that are not actual audio listening headphones
+                    if (lower.contains("watch") || lower.contains("band") || lower.contains("fit")) {
+                        continue
                     }
+                    if (name.isNotBlank()) return name
                 }
             }
+        }
+        @Suppress("DEPRECATION")
+        if (audioManager.isBluetoothA2dpOn) {
             return "Bluetooth Audio"
         }
         return null

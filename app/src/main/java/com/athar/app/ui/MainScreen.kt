@@ -22,6 +22,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -191,8 +195,26 @@ fun MainScreen(
     val currentRoute = navBackStackEntry?.destination?.route
     var isQuranReading by remember { mutableStateOf(false) }
     var targetSettingsSection by remember { mutableStateOf<String?>(null) }
+    var isNavBarVisible by remember { mutableStateOf(true) }
 
     val isImmersive = isQuranReading || currentRoute == Screen.Amanah.route
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -12f) {
+                    isNavBarVisible = false
+                } else if (available.y > 12f) {
+                    isNavBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(currentRoute) {
+        isNavBarVisible = true
+    }
 
     LaunchedEffect(openWidgetSettings) {
         if (openWidgetSettings) {
@@ -206,6 +228,7 @@ fun MainScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AtharBackground)
+            .nestedScroll(nestedScrollConnection)
     ) {
         NavHost(
             navController = navController,
@@ -276,9 +299,9 @@ fun MainScreen(
             }
         }
 
-        // Floating Nav Dock
+        // Floating Nav Dock (hides when scrolling down)
         AnimatedVisibility(
-            visible = !isImmersive,
+            visible = !isImmersive && isNavBarVisible,
             enter = slideInVertically(
                 initialOffsetY = { it },
                 animationSpec = spring(dampingRatio = 0.85f, stiffness = 350f)
@@ -369,34 +392,34 @@ fun AtharNavBar(
             val isCompact = maxWidth < 380.dp
             val outerPadHorizontal = if (isCompact) 8.dp else 12.dp
             val outerPadVertical = 8.dp
-            val dockInnerPadH = if (isCompact) 6.dp else 8.dp
-            val dockInnerPadV = if (isCompact) 5.dp else 6.dp
-            val itemSpacing = if (isCompact) 2.dp else 4.dp
-            val unselectedPadH = if (isCompact) 8.dp else 11.dp
-            val selectedPadH = if (isCompact) 12.dp else 16.dp
-            val iconSize = if (isCompact) 20.dp else 22.dp
-            val fontSize = if (isCompact) 12.sp else 13.sp
+            val dockInnerPadH = if (isCompact) 8.dp else 10.dp
+            val dockInnerPadV = if (isCompact) 6.dp else 7.dp
+            val itemSpacing = if (isCompact) 3.dp else 5.dp
+            val unselectedPadH = if (isCompact) 10.dp else 13.dp
+            val selectedPadH = if (isCompact) 14.dp else 18.dp
+            val iconSize = if (isCompact) 22.dp else 24.dp
+            val fontSize = if (isCompact) 12.5.sp else 13.5.sp
 
             Row(
                 modifier = Modifier.padding(horizontal = outerPadHorizontal, vertical = outerPadVertical),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 // Main Navigation Dock Capsule
                 Box(
                     modifier = Modifier
                         .shadow(
-                            elevation = 16.dp,
-                            shape = RoundedCornerShape(36.dp),
-                            spotColor = AtharNavGlow.copy(alpha = 0.32f),
+                            elevation = 18.dp,
+                            shape = RoundedCornerShape(38.dp),
+                            spotColor = AtharNavGlow.copy(alpha = 0.35f),
                             ambientColor = Color.Black.copy(alpha = 0.70f)
                         )
-                        .clip(RoundedCornerShape(36.dp))
+                        .clip(RoundedCornerShape(38.dp))
                         .background(AtharNavbarBg)
                         .border(
                             width = 1.2.dp,
                             color = AtharNavbarBorder,
-                            shape = RoundedCornerShape(36.dp)
+                            shape = RoundedCornerShape(38.dp)
                         )
                         .padding(horizontal = dockInnerPadH, vertical = dockInnerPadV),
                     contentAlignment = Alignment.Center
@@ -421,24 +444,24 @@ fun AtharNavBar(
 
                 // Standalone Floating Al-Amanah Action Button (Beside the Dock)
                 val isAmanahSelected = isSelected(Screen.Amanah)
-                val amanahButtonHeight = if (isCompact) 42.dp else 46.dp
-                val amanahButtonWidth = if (isCompact) 42.dp else 46.dp
+                val amanahButtonHeight = if (isCompact) 48.dp else 52.dp
+                val amanahButtonWidth = if (isCompact) 48.dp else 52.dp
 
                 Box(
                     modifier = Modifier
                         .size(width = amanahButtonWidth, height = amanahButtonHeight)
                         .shadow(
-                            elevation = 16.dp,
-                            shape = RoundedCornerShape(20.dp),
+                            elevation = 18.dp,
+                            shape = RoundedCornerShape(26.dp),
                             spotColor = Color(0xFFB5DB88).copy(alpha = 0.40f),
                             ambientColor = Color.Black.copy(alpha = 0.70f)
                         )
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(26.dp))
                         .background(if (isAmanahSelected) Color(0xFFD6F5AE) else Color(0xFFB5DB88))
                         .border(
                             width = 1.2.dp,
                             color = if (isAmanahSelected) Color.White else Color(0xFFD6F5AE),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = RoundedCornerShape(26.dp)
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -451,7 +474,7 @@ fun AtharNavBar(
                         imageVector = Icons.Rounded.GraphicEq,
                         contentDescription = "Al-Amanah",
                         tint = Color(0xFF141C16),
-                        modifier = Modifier.size(if (isCompact) 20.dp else 22.dp)
+                        modifier = Modifier.size(if (isCompact) 22.dp else 24.dp)
                     )
                 }
             }
@@ -508,13 +531,13 @@ private fun NavDockItem(
     Box(
         modifier = Modifier
             .scale(scale)
-            .height(if (fontSize < 13.sp) 42.dp else 46.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(if (fontSize < 13.sp) 48.dp else 52.dp)
+            .clip(RoundedCornerShape(26.dp))
             .background(pillBackground)
             .border(
                 width = if (selected) 1.dp else 0.dp,
                 color = pillBorderColor,
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(26.dp)
             )
             .clickable(
                 interactionSource = interactionSource,
