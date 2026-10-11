@@ -46,6 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
@@ -233,8 +234,7 @@ fun HomeScreen(
                 .statusBarsPadding()
         ) {
             TopBar(
-                cityLabel = currentCityLabel,
-                onLocationClick = onOpenSettings,
+                onSettingsClick = onOpenSettings,
                 onAfterPrayerClick = { showAfterPrayerDialog = true }
             )
 
@@ -256,7 +256,9 @@ fun HomeScreen(
                         nextTime = next.time,
                         isTomorrow = next.isTomorrow,
                         numberStyle = numberStyle,
-                        language = selectedLanguage
+                        language = selectedLanguage,
+                        cityLabel = currentCityLabel,
+                        onLocationClick = onOpenSettings
                     )
                 }
             }
@@ -331,8 +333,7 @@ fun HomeScreen(
 
 @Composable
 private fun TopBar(
-    cityLabel: String?,
-    onLocationClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onAfterPrayerClick: () -> Unit
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -351,7 +352,7 @@ private fun TopBar(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // 1. Location Pill
+                // 1. Settings Pill
                 Row(
                     modifier = Modifier
                         .height(30.dp)
@@ -361,20 +362,20 @@ private fun TopBar(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onLocationClick
+                            onClick = onSettingsClick
                         )
                         .padding(horizontal = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Outlined.LocationOn,
+                        Icons.Outlined.Settings,
                         contentDescription = null,
                         tint = AtharPrimaryLight,
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        cityLabel ?: stringResource(R.string.home_location_not_set),
+                        stringResource(R.string.nav_settings),
                         color = AtharTextPrimary,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
@@ -431,7 +432,9 @@ fun NextPrayerCard(
     nextTime: LocalTime,
     isTomorrow: Boolean,
     numberStyle: NumberStylePreference = NumberStylePreference.WESTERN,
-    language: String = "ar"
+    language: String = "ar",
+    cityLabel: String? = null,
+    onLocationClick: () -> Unit = {}
 ) {
     // Second ticker scoped to this card only.
     var now by remember { mutableStateOf(LocalTime.now()) }
@@ -563,6 +566,39 @@ fun NextPrayerCard(
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 12.sp
+                            )
+                        }
+
+                        // Location Button inside next prayer card below both dates
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AtharCardSurface.copy(alpha = 0.85f))
+                                .border(1.dp, AtharCardBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onLocationClick
+                                )
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.LocationOn,
+                                contentDescription = null,
+                                tint = AtharPrimaryLight,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                cityLabel ?: stringResource(R.string.home_location_not_set),
+                                color = AtharTextPrimary,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

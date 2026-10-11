@@ -488,4 +488,55 @@ object AlAmanahAudioController {
             isOfflinePlayback = false
         }
     }
+
+    enum class AudioOutputType {
+        PHONE,
+        BLUETOOTH_OR_HEADSET
+    }
+
+    fun getActiveAudioOutputType(context: Context): AudioOutputType {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return AudioOutputType.PHONE
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+            for (device in devices) {
+                when (device.type) {
+                    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+                    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                    android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                    android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                    android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> {
+                        return AudioOutputType.BLUETOOTH_OR_HEADSET
+                    }
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    if (device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                        device.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER) {
+                        return AudioOutputType.BLUETOOTH_OR_HEADSET
+                    }
+                }
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            if (audioManager.isBluetoothA2dpOn || audioManager.isWiredHeadsetOn) {
+                return AudioOutputType.BLUETOOTH_OR_HEADSET
+            }
+        }
+        return AudioOutputType.PHONE
+    }
+
+    fun openSystemAudioOutputPicker(context: Context) {
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_SOUND_SETTINGS).apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) {}
+        }
+    }
 }

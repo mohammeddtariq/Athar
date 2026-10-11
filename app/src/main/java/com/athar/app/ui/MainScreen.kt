@@ -27,9 +27,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -154,8 +157,7 @@ val allNavScreens = listOf(
     Screen.Home,
     Screen.Quran,
     Screen.Duas,
-    Screen.Qibla,
-    Screen.Settings
+    Screen.Qibla
 )
 
 private val TabMotionEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
@@ -355,23 +357,25 @@ fun AtharNavBar(
 
     // Force Left-to-Right layout order regardless of active language (Arabic or English)
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val effectiveBottomPadding = maxOf(navBarBottomInset, 20.dp) + 6.dp
+
         BoxWithConstraints(
             modifier = modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 12.dp),
+                .padding(bottom = effectiveBottomPadding),
             contentAlignment = Alignment.Center
         ) {
-            val isCompact = maxWidth < 400.dp
-            val outerPadHorizontal = if (isCompact) 6.dp else 10.dp
+            val isCompact = maxWidth < 380.dp
+            val outerPadHorizontal = if (isCompact) 8.dp else 12.dp
             val outerPadVertical = 8.dp
-            val dockInnerPadH = if (isCompact) 4.dp else 6.dp
-            val dockInnerPadV = 4.dp
-            val itemSpacing = 2.dp
-            val unselectedPadH = if (isCompact) 6.dp else 8.dp
-            val selectedPadH = if (isCompact) 8.dp else 11.dp
-            val iconSize = if (isCompact) 18.dp else 20.dp
-            val fontSize = if (isCompact) 11.sp else 12.sp
+            val dockInnerPadH = if (isCompact) 6.dp else 8.dp
+            val dockInnerPadV = if (isCompact) 5.dp else 6.dp
+            val itemSpacing = if (isCompact) 2.dp else 4.dp
+            val unselectedPadH = if (isCompact) 8.dp else 11.dp
+            val selectedPadH = if (isCompact) 12.dp else 16.dp
+            val iconSize = if (isCompact) 20.dp else 22.dp
+            val fontSize = if (isCompact) 12.sp else 13.sp
 
             Row(
                 modifier = Modifier.padding(horizontal = outerPadHorizontal, vertical = outerPadVertical),
@@ -382,17 +386,17 @@ fun AtharNavBar(
                 Box(
                     modifier = Modifier
                         .shadow(
-                            elevation = 14.dp,
-                            shape = RoundedCornerShape(32.dp),
-                            spotColor = AtharNavGlow.copy(alpha = 0.30f),
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(36.dp),
+                            spotColor = AtharNavGlow.copy(alpha = 0.32f),
                             ambientColor = Color.Black.copy(alpha = 0.70f)
                         )
-                        .clip(RoundedCornerShape(32.dp))
+                        .clip(RoundedCornerShape(36.dp))
                         .background(AtharNavbarBg)
                         .border(
-                            width = 1.1.dp,
+                            width = 1.2.dp,
                             color = AtharNavbarBorder,
-                            shape = RoundedCornerShape(32.dp)
+                            shape = RoundedCornerShape(36.dp)
                         )
                         .padding(horizontal = dockInnerPadH, vertical = dockInnerPadV),
                     contentAlignment = Alignment.Center
@@ -417,24 +421,24 @@ fun AtharNavBar(
 
                 // Standalone Floating Al-Amanah Action Button (Beside the Dock)
                 val isAmanahSelected = isSelected(Screen.Amanah)
-                val amanahButtonHeight = if (isCompact) 40.dp else 44.dp
-                val amanahButtonWidth = if (isCompact) 40.dp else 44.dp
+                val amanahButtonHeight = if (isCompact) 42.dp else 46.dp
+                val amanahButtonWidth = if (isCompact) 42.dp else 46.dp
 
                 Box(
                     modifier = Modifier
                         .size(width = amanahButtonWidth, height = amanahButtonHeight)
                         .shadow(
-                            elevation = 14.dp,
-                            shape = RoundedCornerShape(18.dp),
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(20.dp),
                             spotColor = Color(0xFFB5DB88).copy(alpha = 0.40f),
                             ambientColor = Color.Black.copy(alpha = 0.70f)
                         )
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(if (isAmanahSelected) Color(0xFFD6F5AE) else Color(0xFFB5DB88))
                         .border(
-                            width = 1.1.dp,
+                            width = 1.2.dp,
                             color = if (isAmanahSelected) Color.White else Color(0xFFD6F5AE),
-                            shape = RoundedCornerShape(18.dp)
+                            shape = RoundedCornerShape(20.dp)
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -447,7 +451,7 @@ fun AtharNavBar(
                         imageVector = Icons.Rounded.GraphicEq,
                         contentDescription = "Al-Amanah",
                         tint = Color(0xFF141C16),
-                        modifier = Modifier.size(if (isCompact) 19.dp else 21.dp)
+                        modifier = Modifier.size(if (isCompact) 20.dp else 22.dp)
                     )
                 }
             }
@@ -504,13 +508,13 @@ private fun NavDockItem(
     Box(
         modifier = Modifier
             .scale(scale)
-            .height(if (fontSize < 13.sp) 38.dp else 42.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .height(if (fontSize < 13.sp) 42.dp else 46.dp)
+            .clip(RoundedCornerShape(24.dp))
             .background(pillBackground)
             .border(
                 width = if (selected) 1.dp else 0.dp,
                 color = pillBorderColor,
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(24.dp)
             )
             .clickable(
                 interactionSource = interactionSource,
