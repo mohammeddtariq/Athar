@@ -592,6 +592,7 @@ fun AlAmanahScreen(
     val favorites by appPrefs.amanahFavorites.collectAsState(initial = emptySet())
     val todayListenSec by appPrefs.amanahTodayListenSec.collectAsState(initial = 0L)
     val streakDays by appPrefs.amanahStreakDays.collectAsState(initial = 0)
+    val playedSurahs by appPrefs.amanahPlayedSurahs.collectAsState(initial = emptyList())
 
     var currentTab by remember { mutableStateOf(AmanahTab.HOME) }
     var isPlayerExpanded by remember { mutableStateOf(false) }
@@ -740,6 +741,7 @@ fun AlAmanahScreen(
                     when (tab) {
                         AmanahTab.HOME -> AmanahHomeScreen(
                             isArabic = isArabic,
+                            playedSurahs = playedSurahs,
                             onPlaySurah = { surah ->
                                 AlAmanahAudioController.playSurah(context, surah)
                                 isPlayerExpanded = true
@@ -940,6 +942,7 @@ fun AlAmanahScreen(
 @Composable
 private fun AmanahHomeScreen(
     isArabic: Boolean,
+    playedSurahs: List<Int>,
     onPlaySurah: (SurahMeta) -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenReplayPlaylist: (AmanahReplayPlaylist) -> Unit,
@@ -982,15 +985,6 @@ private fun AmanahHomeScreen(
         }
     }
 
-    val recentPicks = remember(hour) {
-        listOf(
-            Triple(36, if (isArabic) "محطة الاستكشاف" else "Discovery Station", if (isArabic) "سورة يس" else "Surah Yaseen"),
-            Triple(19, if (isArabic) "طمأنينة الروح" else "Soul Serenity", if (isArabic) "سورة مريم" else "Surah Maryam"),
-            Triple(89, if (isArabic) "نور الفجر" else "Dawn Light", if (isArabic) "سورة الفجر" else "Surah Al-Fajr"),
-            Triple(56, if (isArabic) "راحة البال" else "Peace of Mind", if (isArabic) "سورة الواقعة" else "Surah Al-Waqi'ah")
-        )
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
@@ -1028,33 +1022,35 @@ private fun AmanahHomeScreen(
             }
         }
 
-        // ─── RECENTLY PLAYED SECTION ───
-        item {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = if (isArabic) "تم الاستماع مؤخراً" else "Recently Played",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
-                )
+        // ─── RECENTLY PLAYED SECTION (Real History Only) ───
+        if (playedSurahs.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = if (isArabic) "تم الاستماع مؤخراً" else "Recently Played",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                    )
 
-                Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(10.dp))
 
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    itemsIndexed(recentPicks) { idx, pick ->
-                        val surah = allSurahs.firstOrNull { it.number == pick.first } ?: allSurahs[0]
-                        AmanahRecentlyPlayedCard(
-                            index = idx,
-                            title = pick.second,
-                            surahName = pick.third,
-                            onClick = { onPlaySurah(surah) }
-                        )
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val recentSurahs = playedSurahs.take(6).mapNotNull { num -> allSurahs.find { it.number == num } }
+                        itemsIndexed(recentSurahs) { idx, surah ->
+                            AmanahRecentlyPlayedCard(
+                                index = idx,
+                                title = if (isArabic) "تلاوة سابقة" else "Recent Session",
+                                surahName = if (isArabic) surah.arabicName else surah.englishName,
+                                onClick = { onPlaySurah(surah) }
+                            )
+                        }
                     }
                 }
             }
@@ -1110,17 +1106,12 @@ private fun AmanahHomeScreen(
                         Triple(
                             if (isArabic) "إعادة هذا الشهر" else "Month Replay '26",
                             if (isArabic) "أكثر التلاوات استماعاً هذا الشهر" else "Top sanctuary tracks this month",
-                            listOf(55, 67, 18, 36)
+                            playedSurahs
                         ),
                         Triple(
                             if (isArabic) "التسجيلات الدائمة" else "All-Time Replay",
-                            if (isArabic) "السور المفضلة والملاذ الدائم" else "Timeless Quranic sanctuaries",
-                            listOf(2, 19, 12, 56)
-                        ),
-                        Triple(
-                            if (isArabic) "هدوء الليل" else "Night Serenity Replay",
-                            if (isArabic) "تلاوات الهدوء التام والنوم" else "Calming reflections for sleep",
-                            listOf(76, 32, 67, 89)
+                            if (isArabic) "السور الأكثر استماعاً والملاذ الدائم" else "Timeless Quranic sanctuaries",
+                            playedSurahs
                         )
                     )
 
@@ -2646,7 +2637,11 @@ private fun AmanahPlaylistDetailSheet(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "${playlist.subtitle} • ${playlist.surahNumbers.size} ${if (isArabic) "سور" else "surahs"}",
+                            text = if (playlist.surahNumbers.isNotEmpty()) {
+                                "${playlist.subtitle} • ${playlist.surahNumbers.size} ${if (isArabic) "سور" else "surahs"}"
+                            } else {
+                                "${playlist.subtitle} • ${if (isArabic) "لا توجد تلاوات مسجلة" else "No recordings yet"}"
+                            },
                             fontFamily = ThmanyahSans,
                             fontSize = 13.sp,
                             color = AmoledMutedText,
@@ -2655,106 +2650,149 @@ private fun AmanahPlaylistDetailSheet(
 
                         Spacer(Modifier.height(18.dp))
 
-                        // Play All & Shuffle Buttons Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Play All
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = {
-                                            playlistSurahs.firstOrNull()?.let { onPlaySurah(it) }
-                                        }
-                                    ),
-                                contentAlignment = Alignment.Center
+                        // Play All & Shuffle Buttons Row (Only if playlist has tracks)
+                        if (playlistSurahs.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                // Play All
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(Color.White)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {
+                                                playlistSurahs.firstOrNull()?.let { onPlaySurah(it) }
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.PlayArrow,
-                                        contentDescription = null,
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Text(
-                                        text = if (isArabic) "تشغيل الكل" else "Play All",
-                                        fontFamily = ThmanyahSans,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.5.sp,
-                                        color = Color.Black
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.PlayArrow,
+                                            contentDescription = null,
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Text(
+                                            text = if (isArabic) "تشغيل الكل" else "Play All",
+                                            fontFamily = ThmanyahSans,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.5.sp,
+                                            color = Color.Black
+                                        )
+                                    }
                                 }
-                            }
 
-                            // Shuffle
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = 0.12f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = {
-                                            playlistSurahs.shuffled().firstOrNull()?.let { onPlaySurah(it) }
-                                        }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                // Shuffle
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(Color.White.copy(alpha = 0.12f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {
+                                                playlistSurahs.shuffled().firstOrNull()?.let { onPlaySurah(it) }
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Shuffle,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = if (isArabic) "خلط" else "Shuffle",
-                                        fontFamily = ThmanyahSans,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.5.sp,
-                                        color = Color.White
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Shuffle,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = if (isArabic) "خلط" else "Shuffle",
+                                            fontFamily = ThmanyahSans,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.5.sp,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                item {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (isArabic) "السور في هذه القائمة" else "Surahs in Playlist",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color.White
-                    )
-                }
+                if (playlistSurahs.isNotEmpty()) {
+                    item {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = if (isArabic) "السور في هذه القائمة" else "Surahs in Playlist",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color.White
+                        )
+                    }
 
-                itemsIndexed(playlistSurahs) { _, surah ->
-                    val isPlaying = surah.number == AlAmanahAudioController.currentSurah.number && AlAmanahAudioController.isPlaying
-                    AmanahSurahRow(
-                        surah = surah,
-                        isArabic = isArabic,
-                        isPlaying = isPlaying,
-                        onClick = { onPlaySurah(surah) }
-                    )
+                    itemsIndexed(playlistSurahs) { _, surah ->
+                        val isPlaying = surah.number == AlAmanahAudioController.currentSurah.number && AlAmanahAudioController.isPlaying
+                        AmanahSurahRow(
+                            surah = surah,
+                            isArabic = isArabic,
+                            isPlaying = isPlaying,
+                            onClick = { onPlaySurah(surah) }
+                        )
+                    }
+                } else {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(AmoledCard)
+                                .border(1.dp, AmoledCardBorder, RoundedCornerShape(20.dp))
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Rounded.GraphicEq,
+                                    contentDescription = null,
+                                    tint = AmoledAccent.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(Modifier.height(14.dp))
+                                Text(
+                                    text = if (isArabic) "لا توجد تسجيلات بعد" else "No Recordings Yet",
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = if (isArabic) "ابدأ الاستماع إلى السور لتسجيل أثرك هنا"
+                                    else "Start listening to Quran surahs to build your replay here",
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 12.5.sp,
+                                    color = AmoledMutedText,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2771,7 +2809,7 @@ private fun AmanahMonthlyReplayView(
     val appPrefs = remember { AppPreferences(context) }
     val todaySec by appPrefs.amanahTodayListenSec.collectAsState(initial = 0L)
     val favorites by appPrefs.amanahFavorites.collectAsState(initial = emptySet())
-    val activeReciter = AlAmanahAudioController.currentReciter
+    val playedSurahNumbers by appPrefs.amanahPlayedSurahs.collectAsState(initial = emptyList())
 
     val months = if (isArabic) {
         listOf("أكتوبر", "نوفمبر", "ديسمبر")
@@ -2787,18 +2825,10 @@ private fun AmanahMonthlyReplayView(
         label = "replayMinAnim"
     )
 
-    val topSurahs = remember(favorites) {
-        val favSurahs = allSurahs.filter { favorites.contains(it.number) }
-        if (favSurahs.isNotEmpty()) {
-            (favSurahs + allSurahs.filter { it.number in listOf(18, 67, 36, 55) }).distinctBy { it.number }.take(4)
-        } else {
-            listOf(
-                allSurahs.first { it.number == 18 }, // Al-Kahf
-                allSurahs.first { it.number == 67 }, // Al-Mulk
-                allSurahs.first { it.number == 36 }, // Ya-Sin
-                allSurahs.first { it.number == 55 }  // Ar-Rahman
-            )
-        }
+    val topSurahs = remember(playedSurahNumbers) {
+        playedSurahNumbers.mapNotNull { num -> allSurahs.find { it.number == num } }
+            .distinctBy { it.number }
+            .take(10)
     }
 
     Box(
@@ -2979,84 +3009,7 @@ private fun AmanahMonthlyReplayView(
                     }
                 }
 
-                // Section: Top Reciters
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = if (isArabic) "أكثر القراء استماعاً" else "Your Top Reciters",
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = Color.White
-                            )
-                        }
-
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            val r1Minutes = if (animatedMinutes > 0) animatedMinutes else 20
-                            val reciters = listOf(
-                                Triple(1, activeReciter, "$r1Minutes"),
-                                Triple(2, if (activeReciter == QuranReciter.ALAFASY) QuranReciter.ABDUL_BASIT else QuranReciter.ALAFASY, "${(r1Minutes * 0.65f).toInt().coerceAtLeast(5)}"),
-                                Triple(3, if (activeReciter == QuranReciter.MINSHAWI) QuranReciter.AL_SUDAIS else QuranReciter.MINSHAWI, "${(r1Minutes * 0.35f).toInt().coerceAtLeast(3)}")
-                            )
-                            items(reciters) { (rank, r, min) ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(width = 170.dp, height = 210.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(
-                                                    Color(0xFF242424),
-                                                    Color(0xFF121212)
-                                                )
-                                            )
-                                        )
-                                        .border(1.dp, AmoledCardBorder, RoundedCornerShape(20.dp))
-                                        .padding(14.dp)
-                                ) {
-                                    Text(
-                                        text = "$rank",
-                                        fontFamily = ThmanyahSerifDisplay,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 38.sp,
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        modifier = Modifier.align(Alignment.TopStart)
-                                    )
-
-                                    Column(
-                                        modifier = Modifier.align(Alignment.BottomStart)
-                                    ) {
-                                        Text(
-                                            text = if (isArabic) r.arabicName else r.englishName,
-                                            fontFamily = ThmanyahSans,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.5.sp,
-                                            color = Color.White,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            text = if (isArabic) "$min دقيقة" else "$min minutes",
-                                            fontFamily = ThmanyahSans,
-                                            fontSize = 11.5.sp,
-                                            color = AmoledMutedText
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Section: Top Surahs (1-4)
+                // Section: Top Surahs (or Empty State)
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
@@ -3067,56 +3020,94 @@ private fun AmanahMonthlyReplayView(
                             color = Color.White
                         )
 
-                        topSurahs.forEachIndexed { idx, surah ->
-                            val rank = idx + 1
+                        if (topSurahs.isNotEmpty()) {
+                            topSurahs.forEachIndexed { idx, surah ->
+                                val rank = idx + 1
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(AmoledCard)
+                                        .border(1.dp, AmoledCardBorder, RoundedCornerShape(16.dp))
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = { onPlaySurah(surah) }
+                                        )
+                                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "$rank",
+                                            fontFamily = ThmanyahSans,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = AmoledMutedText,
+                                            modifier = Modifier.width(28.dp)
+                                        )
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = if (isArabic) surah.arabicName else surah.englishName,
+                                                fontFamily = ThmanyahSans,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 15.sp,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "${if (isArabic) surah.englishName else surah.arabicName} • ${if (isArabic) "الجزء ${surah.juz}" else "Juz ${surah.juz}"} • ${surah.ayahs} ${if (isArabic) "آية" else "verses"}",
+                                                fontFamily = ThmanyahSans,
+                                                fontSize = 11.5.sp,
+                                                color = AmoledMutedText
+                                            )
+                                        }
+
+                                        Icon(
+                                            imageVector = Icons.Rounded.PlayArrow,
+                                            contentDescription = null,
+                                            tint = AmoledAccent,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(20.dp))
                                     .background(AmoledCard)
-                                    .border(1.dp, AmoledCardBorder, RoundedCornerShape(16.dp))
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = { onPlaySurah(surah) }
-                                    )
-                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                                    .border(1.dp, AmoledCardBorder, RoundedCornerShape(20.dp))
+                                    .padding(28.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.GraphicEq,
+                                        contentDescription = null,
+                                        tint = AmoledAccent.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
                                     Text(
-                                        text = "$rank",
+                                        text = if (isArabic) "لا توجد تلاوات مسجلة بعد" else "No Recitations Yet",
                                         fontFamily = ThmanyahSans,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = AmoledMutedText,
-                                        modifier = Modifier.width(28.dp)
+                                        fontSize = 15.5.sp,
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
                                     )
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = if (isArabic) surah.arabicName else surah.englishName,
-                                            fontFamily = ThmanyahSans,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = if (isArabic) "${36 - idx * 7} تلاوة • الجزء ${surah.juz}"
-                                            else "${36 - idx * 7} recitations • Juz ${surah.juz}",
-                                            fontFamily = ThmanyahSans,
-                                            fontSize = 11.5.sp,
-                                            color = AmoledMutedText
-                                        )
-                                    }
-
-                                    Icon(
-                                        imageVector = Icons.Rounded.PlayArrow,
-                                        contentDescription = null,
-                                        tint = AmoledAccent,
-                                        modifier = Modifier.size(22.dp)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = if (isArabic) "استمع إلى سورتك المفضلة لتظهر في إعادتك الشهرية هنا"
+                                        else "Listen to your favorite surahs to see them appear in your monthly replay",
+                                        fontFamily = ThmanyahSans,
+                                        fontSize = 12.sp,
+                                        color = AmoledMutedText,
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -3124,7 +3115,7 @@ private fun AmanahMonthlyReplayView(
                     }
                 }
 
-                // Section: Milestones
+                // Section: Milestones (Real User Telemetry)
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
@@ -3151,14 +3142,18 @@ private fun AmanahMonthlyReplayView(
                                     Icon(Icons.Rounded.GraphicEq, null, tint = AmoledAccent, modifier = Modifier.size(22.dp))
                                     Spacer(Modifier.height(8.dp))
                                     Text(
-                                        text = if (isArabic) "ختمة الأمان" else "Sanctuary Milestone",
+                                        text = if (isArabic) "وقت الاستماع" else "Listening Time",
                                         fontFamily = ThmanyahSans,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = Color.White
                                     )
                                     Text(
-                                        text = if (isArabic) "${(animatedMinutes / 60).coerceAtLeast(1)} ساعات استماع" else "${(animatedMinutes / 60).coerceAtLeast(1)} hours total",
+                                        text = if (animatedMinutes > 0) {
+                                            if (isArabic) "$animatedMinutes دقيقة" else "$animatedMinutes min"
+                                        } else {
+                                            if (isArabic) "٠ دقيقة" else "0 min"
+                                        },
                                         fontFamily = ThmanyahSans,
                                         fontSize = 11.sp,
                                         color = AmoledMutedText
@@ -3175,17 +3170,17 @@ private fun AmanahMonthlyReplayView(
                                     .padding(14.dp)
                             ) {
                                 Column {
-                                    Icon(Icons.Rounded.NightsStay, null, tint = AmoledAccent, modifier = Modifier.size(22.dp))
+                                    Icon(Icons.Rounded.Favorite, null, tint = AmoledAccent, modifier = Modifier.size(22.dp))
                                     Spacer(Modifier.height(8.dp))
                                     Text(
-                                        text = if (isArabic) "هدوء الليل" else "Night Serenity",
+                                        text = if (isArabic) "المفضلة" else "Favorites",
                                         fontFamily = ThmanyahSans,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = Color.White
                                     )
                                     Text(
-                                        text = if (isArabic) "١٤ ليلة مباركة" else "14 serene nights",
+                                        text = if (isArabic) "${favorites.size} سورة" else "${favorites.size} surahs",
                                         fontFamily = ThmanyahSans,
                                         fontSize = 11.sp,
                                         color = AmoledMutedText
@@ -3196,35 +3191,37 @@ private fun AmanahMonthlyReplayView(
                     }
                 }
 
-                // Action Button: Play Monthly Mix
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(26.dp))
-                            .background(Color.White)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {
-                                    topSurahs.firstOrNull()?.let { onPlaySurah(it) }
-                                }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Action Button: Play Monthly Mix (Only when surahs are present)
+                if (topSurahs.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(26.dp))
+                                .background(Color.White)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        topSurahs.firstOrNull()?.let { onPlaySurah(it) }
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Rounded.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(22.dp))
-                            Text(
-                                text = if (isArabic) "تشغيل مزيج الشهر" else "Play Monthly Mix",
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Color.Black
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Rounded.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(22.dp))
+                                Text(
+                                    text = if (isArabic) "تشغيل مزيج الشهر" else "Play Monthly Mix",
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = Color.Black
+                                )
+                            }
                         }
                     }
                 }
