@@ -335,30 +335,49 @@ private fun IslamicPlaylistOrnament(
                 drawPath(starPath, tint)
             }
             3 -> {
-                // Style 3: Shamsah Rosette (8-Fold Geometric Rosette)
-                val petalCount = 8
-                val outerR = radius * 1.05f
-                val innerR = radius * 0.38f
+                // Style 3: Scalloped Shamsah Medallion (Classical Islamic Manuscript Frontispiece)
+                val lobes = 16
+                val outerR = radius * 1.10f
+                val innerCuspR = radius * 0.88f
+                val path = Path()
 
-                for (i in 0 until petalCount) {
-                    val angle = (i * (360f / petalCount)) * (PI.toFloat() / 180f)
-                    val px = cx + outerR * kotlin.math.cos(angle)
-                    val py = cy + outerR * kotlin.math.sin(angle)
-                    drawLine(
-                        tint,
-                        start = Offset(cx, cy),
-                        end = Offset(px, py),
-                        strokeWidth = 1.8.dp.toPx(),
-                        cap = StrokeCap.Round
-                    )
-                    drawCircle(
-                        tint,
-                        radius = 3.dp.toPx(),
-                        center = Offset(px, py)
-                    )
+                for (i in 0 until lobes) {
+                    val angleStart = (i * (360.0 / lobes) - 90.0) * (PI / 180.0)
+                    val angleMid = ((i + 0.5) * (360.0 / lobes) - 90.0) * (PI / 180.0)
+                    val angleEnd = ((i + 1) * (360.0 / lobes) - 90.0) * (PI / 180.0)
+
+                    val xStart = (cx + innerCuspR * kotlin.math.cos(angleStart)).toFloat()
+                    val yStart = (cy + innerCuspR * kotlin.math.sin(angleStart)).toFloat()
+                    val xApex = (cx + outerR * kotlin.math.cos(angleMid)).toFloat()
+                    val yApex = (cy + outerR * kotlin.math.sin(angleMid)).toFloat()
+                    val xEnd = (cx + innerCuspR * kotlin.math.cos(angleEnd)).toFloat()
+                    val yEnd = (cy + innerCuspR * kotlin.math.sin(angleEnd)).toFloat()
+
+                    if (i == 0) path.moveTo(xStart, yStart)
+                    path.quadraticTo(xApex, yApex, xEnd, yEnd)
                 }
-                drawCircle(tint, radius = innerR, style = Stroke(width = 1.8.dp.toPx()))
-                drawCircle(tint, radius = radius * 0.75f, style = Stroke(width = 1.2.dp.toPx()))
+                path.close()
+                drawPath(path, tint, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
+
+                // Inner Concentric Circular Border
+                drawCircle(tint.copy(alpha = tint.alpha * 0.70f), radius = radius * 0.76f, style = Stroke(width = 1.2.dp.toPx()))
+
+                // Centered 8-pointed Islamic Star
+                val starR = radius * 0.60f
+                val starMidR = radius * 0.38f
+                val starPath = Path()
+                for (i in 0 until 16) {
+                    val r = if (i % 2 == 0) starR else starMidR
+                    val angle = (i * 22.5 - 90.0) * (PI / 180.0)
+                    val px = (cx + r * kotlin.math.cos(angle)).toFloat()
+                    val py = (cy + r * kotlin.math.sin(angle)).toFloat()
+                    if (i == 0) starPath.moveTo(px, py) else starPath.lineTo(px, py)
+                }
+                starPath.close()
+                drawPath(starPath, tint, style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round))
+
+                // Inner Center Jewel
+                drawCircle(tint, radius = radius * 0.16f, style = Stroke(width = 1.4.dp.toPx()))
                 drawCircle(tint, radius = 3.dp.toPx())
             }
             else -> {
