@@ -13,6 +13,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
@@ -78,10 +79,13 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Delete
@@ -140,6 +144,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -243,37 +248,59 @@ private fun IslamicPlaylistOrnament(
                 drawCircle(tint, radius = 3.dp.toPx())
             }
             1 -> {
-                // Style 1: Mihrab Arch (Pointed Moorish / Horseshoe Islamic Arch)
-                val archWidth = radius * 1.4f
-                val archHeight = radius * 1.7f
-                val left = cx - archWidth / 2f
-                val right = cx + archWidth / 2f
-                val bottom = cy + archHeight / 2f
-                val springY = cy - archHeight * 0.05f
-                val apexY = cy - archHeight / 2f
+                // Style 1: Mihrab Medallion (Graceful Pointed Islamic Arch with Framing & Radiance)
+                val archW = radius * 1.30f
+                val archH = radius * 1.60f
+                val left = cx - archW / 2f
+                val right = cx + archW / 2f
+                val bottom = cy + archH / 2f
+                val springY = cy + archH * 0.05f
+                val apexY = cy - archH / 2f
 
-                val archPath = Path().apply {
+                // Outer Framed Mihrab Arch (Fully closed path)
+                val outerArch = Path().apply {
                     moveTo(left, bottom)
                     lineTo(left, springY)
-                    cubicTo(left, springY - archHeight * 0.25f, cx - archWidth * 0.12f, apexY, cx, apexY)
-                    cubicTo(cx + archWidth * 0.12f, apexY, right, springY - archHeight * 0.25f, right, springY)
+                    cubicTo(left, springY - archH * 0.28f, cx - archW * 0.15f, apexY, cx, apexY)
+                    cubicTo(cx + archW * 0.15f, apexY, right, springY - archH * 0.28f, right, springY)
                     lineTo(right, bottom)
+                    lineTo(left, bottom)
+                    close()
                 }
-                drawPath(archPath, tint, style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(outerArch, tint, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
 
-                val innerLeft = left + 7.dp.toPx()
-                val innerRight = right - 7.dp.toPx()
-                val innerApexY = apexY + 8.dp.toPx()
-                val innerPath = Path().apply {
-                    moveTo(innerLeft, bottom)
-                    lineTo(innerLeft, springY)
-                    cubicTo(innerLeft, springY - archHeight * 0.20f, cx - archWidth * 0.08f, innerApexY, cx, innerApexY)
-                    cubicTo(cx + archWidth * 0.08f, innerApexY, innerRight, springY - archHeight * 0.20f, innerRight, springY)
-                    lineTo(innerRight, bottom)
+                // Inner Nested Arch
+                val inset = 6.dp.toPx()
+                val innerLeft = left + inset
+                val innerRight = right - inset
+                val innerBottom = bottom - inset
+                val innerApexY = apexY + inset * 1.3f
+                val innerSpringY = springY
+                val innerArch = Path().apply {
+                    moveTo(innerLeft, innerBottom)
+                    lineTo(innerLeft, innerSpringY)
+                    cubicTo(innerLeft, innerSpringY - archH * 0.24f, cx - archW * 0.10f, innerApexY, cx, innerApexY)
+                    cubicTo(cx + archW * 0.10f, innerApexY, innerRight, innerSpringY - archH * 0.24f, innerRight, innerSpringY)
+                    lineTo(innerRight, innerBottom)
+                    lineTo(innerLeft, innerBottom)
+                    close()
                 }
-                drawPath(innerPath, tint.copy(alpha = tint.alpha * 0.7f), style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round))
-                drawLine(tint, Offset(cx, innerApexY), Offset(cx, innerApexY + 14.dp.toPx()), strokeWidth = 1.5.dp.toPx())
-                drawCircle(tint, radius = 2.5.dp.toPx(), center = Offset(cx, innerApexY + 16.5.dp.toPx()))
+                drawPath(innerArch, tint.copy(alpha = tint.alpha * 0.70f), style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round))
+
+                // Centered 8-pointed Star inside Mihrab
+                val starCy = cy + archH * 0.08f
+                val starR = radius * 0.32f
+                val starPath = Path()
+                for (i in 0 until 16) {
+                    val r = if (i % 2 == 0) starR else starR * 0.50f
+                    val angle = (i * 22.5 - 90) * (PI / 180.0)
+                    val px = (cx + r * kotlin.math.cos(angle)).toFloat()
+                    val py = (starCy + r * kotlin.math.sin(angle)).toFloat()
+                    if (i == 0) starPath.moveTo(px, py) else starPath.lineTo(px, py)
+                }
+                starPath.close()
+                drawPath(starPath, tint)
+                drawCircle(tint, radius = 2.5.dp.toPx(), center = Offset(cx, starCy))
             }
             2 -> {
                 // Style 2: Hilal & Najm (Islamic Crescent & Star)
@@ -335,23 +362,38 @@ private fun IslamicPlaylistOrnament(
                 drawCircle(tint, radius = 3.dp.toPx())
             }
             else -> {
-                // Style 4: Arabesque Geometric Interlaced Lattice
-                val step = radius * 0.50f
-                for (dx in -1..1) {
-                    for (dy in -1..1) {
-                        val kx = cx + dx * step
-                        val ky = cy + dy * step
-                        val diamond = Path().apply {
-                            moveTo(kx, ky - step * 0.48f)
-                            lineTo(kx + step * 0.48f, ky)
-                            lineTo(kx, ky + step * 0.48f)
-                            lineTo(kx - step * 0.48f, ky)
-                            close()
-                        }
-                        drawPath(diamond, tint, style = Stroke(width = 1.6.dp.toPx()))
-                    }
+                // Style 4: Khatam / 12-Point Geometric Star Rosette
+                val starCount = 12
+                val outerR = radius * 1.15f
+                val midR = radius * 0.65f
+                val innerR = radius * 0.35f
+
+                val starPath = Path()
+                for (i in 0 until (starCount * 2)) {
+                    val r = if (i % 2 == 0) outerR else midR
+                    val angle = (i * (180.0 / starCount) - 90) * (PI / 180.0)
+                    val px = (cx + r * kotlin.math.cos(angle)).toFloat()
+                    val py = (cy + r * kotlin.math.sin(angle)).toFloat()
+                    if (i == 0) starPath.moveTo(px, py) else starPath.lineTo(px, py)
                 }
-                drawCircle(tint, radius = radius * 1.10f, style = Stroke(width = 1.5.dp.toPx()))
+                starPath.close()
+                drawPath(starPath, tint, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+
+                // Inner Interlocking Hexagonal/12-gon Star
+                val innerStarPath = Path()
+                for (i in 0 until (starCount * 2)) {
+                    val r = if (i % 2 == 0) midR * 0.70f else innerR
+                    val angle = (i * (180.0 / starCount) - 90) * (PI / 180.0)
+                    val px = (cx + r * kotlin.math.cos(angle)).toFloat()
+                    val py = (cy + r * kotlin.math.sin(angle)).toFloat()
+                    if (i == 0) innerStarPath.moveTo(px, py) else innerStarPath.lineTo(px, py)
+                }
+                innerStarPath.close()
+                drawPath(innerStarPath, tint.copy(alpha = tint.alpha * 0.85f), style = Stroke(width = 1.2.dp.toPx()))
+
+                // Concentric Decorative Center
+                drawCircle(tint, radius = innerR * 0.60f, style = Stroke(width = 1.2.dp.toPx()))
+                drawCircle(tint, radius = 3.dp.toPx())
             }
         }
     }
@@ -892,14 +934,14 @@ private fun AmanahHomeScreen(
     val topPicks = remember(hour, isFriday) {
         if (isFriday) {
             listOf(
-                Triple(18, if (isArabic) "سكينة الجمعة" else "Friday Serenity", if (isArabic) "سورة الكهف" else "Surah Al-Kahf"),
-                Triple(55, if (isArabic) "نفحات السكينة" else "Divine Peace", if (isArabic) "سورة الرحمن" else "Surah Ar-Rahman"),
+                Triple(18, if (isArabic) "نور الجمعة" else "Friday Light", if (isArabic) "سورة الكهف" else "Surah Al-Kahf"),
+                Triple(55, if (isArabic) "نفحات الطمأنينة" else "Divine Peace", if (isArabic) "سورة الرحمن" else "Surah Ar-Rahman"),
                 Triple(67, if (isArabic) "أمان الليل" else "Night Haven", if (isArabic) "سورة الملك" else "Surah Al-Mulk"),
                 Triple(36, if (isArabic) "قلب القرآن" else "Heart of Quran", if (isArabic) "سورة يس" else "Surah Yaseen")
             )
         } else if (hour in 4..11) {
             listOf(
-                Triple(55, if (isArabic) "سكينة الصباح" else "Morning Serenity", if (isArabic) "سورة الرحمن" else "Surah Ar-Rahman"),
+                Triple(55, if (isArabic) "أنوار الصباح" else "Morning Radiance", if (isArabic) "سورة الرحمن" else "Surah Ar-Rahman"),
                 Triple(20, if (isArabic) "راحة النفس" else "Peace of Mind", if (isArabic) "سورة طه" else "Surah Taha"),
                 Triple(36, if (isArabic) "طمأنينة الفجر" else "Dawn Repose", if (isArabic) "سورة يس" else "Surah Yaseen"),
                 Triple(93, if (isArabic) "نفحات الهدوء" else "Morning Calm", if (isArabic) "سورة الضحى" else "Surah Ad-Duha")
@@ -909,14 +951,14 @@ private fun AmanahHomeScreen(
                 Triple(19, if (isArabic) "طمأنينة القلوب" else "Heart Calm", if (isArabic) "سورة مريم" else "Surah Maryam"),
                 Triple(12, if (isArabic) "عبرة وهداية" else "Divine Solace", if (isArabic) "سورة يوسف" else "Surah Yusuf"),
                 Triple(21, if (isArabic) "محطة التلاوة" else "Sanctuary Pick", if (isArabic) "سورة الأنبياء" else "Surah Al-Anbiya"),
-                Triple(2, if (isArabic) "حصن السكينة" else "Spiritual Fortress", if (isArabic) "سورة البقرة" else "Surah Al-Baqarah")
+                Triple(2, if (isArabic) "حصن الأمان" else "Spiritual Fortress", if (isArabic) "سورة البقرة" else "Surah Al-Baqarah")
             )
         } else {
             listOf(
                 Triple(67, if (isArabic) "أمان الليل" else "Night Haven", if (isArabic) "سورة الملك" else "Surah Al-Mulk"),
                 Triple(56, if (isArabic) "هدوء المساء" else "Evening Repose", if (isArabic) "سورة الواقعة" else "Surah Al-Waqi'ah"),
                 Triple(76, if (isArabic) "راحة البال" else "Peace of Mind", if (isArabic) "سورة الإنسان" else "Surah Al-Insan"),
-                Triple(32, if (isArabic) "سكينة السحر" else "Night Sanctuary", if (isArabic) "سورة السجدة" else "Surah As-Sajdah")
+                Triple(32, if (isArabic) "هدوء السحر" else "Night Sanctuary", if (isArabic) "سورة السجدة" else "Surah As-Sajdah")
             )
         }
     }
@@ -924,8 +966,8 @@ private fun AmanahHomeScreen(
     val recentPicks = remember(hour) {
         listOf(
             Triple(36, if (isArabic) "محطة الاستكشاف" else "Discovery Station", if (isArabic) "سورة يس" else "Surah Yaseen"),
-            Triple(19, if (isArabic) "سكينة الروح" else "Soul Serenity", if (isArabic) "سورة مريم" else "Surah Maryam"),
-            Triple(89, if (isArabic) "سكينة الفجر" else "Dawn Calm", if (isArabic) "سورة الفجر" else "Surah Al-Fajr"),
+            Triple(19, if (isArabic) "طمأنينة الروح" else "Soul Serenity", if (isArabic) "سورة مريم" else "Surah Maryam"),
+            Triple(89, if (isArabic) "نور الفجر" else "Dawn Light", if (isArabic) "سورة الفجر" else "Surah Al-Fajr"),
             Triple(56, if (isArabic) "راحة البال" else "Peace of Mind", if (isArabic) "سورة الواقعة" else "Surah Al-Waqi'ah")
         )
     }
@@ -1018,7 +1060,7 @@ private fun AmanahHomeScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (isArabic) "التسجيلات الأكثر استماعاً وسكينة" else "Most replayed sanctuary tracks",
+                            text = if (isArabic) "التسجيلات الأكثر استماعاً وأثراً" else "Most replayed sanctuary tracks",
                             fontFamily = ThmanyahSans,
                             fontSize = 11.5.sp,
                             color = AmoledMutedText
@@ -1057,7 +1099,7 @@ private fun AmanahHomeScreen(
                             listOf(2, 19, 12, 56)
                         ),
                         Triple(
-                            if (isArabic) "سكينة الليل" else "Night Serenity Replay",
+                            if (isArabic) "هدوء الليل" else "Night Serenity Replay",
                             if (isArabic) "تلاوات الهدوء التام والنوم" else "Calming reflections for sleep",
                             listOf(76, 32, 67, 89)
                         )
@@ -1471,25 +1513,25 @@ private fun AmanahLibraryScreen(
                         AmanahPlaylistCardItem(
                             0,
                             if (isArabic) "القرآن كاملاً" else "Complete Quran",
-                            if (isArabic) "١١٤ سورة مباركة" else "114 Noble Surahs",
+                            if (isArabic) "كتاب الله المحكم بين يديك" else "The complete Holy Quran",
                             Brush.linearGradient(listOf(Color(0xFF141E30), Color(0xFF243B55)))
                         ),
                         AmanahPlaylistCardItem(
                             1,
                             if (isArabic) "المفضلة" else "Favorites",
-                            if (isArabic) "${favorites.size} تلاوة مميزة" else "${favorites.size} Starred tracks",
+                            if (isArabic) "تلاواتك الأقرب إلى قلبك" else "Your most cherished recitations",
                             Brush.linearGradient(listOf(Color(0xFF8A2387), Color(0xFFE94057)))
                         ),
                         AmanahPlaylistCardItem(
                             2,
                             if (isArabic) "المحمّلة" else "Downloaded",
-                            if (isArabic) "$downloadedCount سورة بدون اتصال" else "$downloadedCount Offline tracks",
+                            if (isArabic) "تلاوات جاهزة بدون اتصال" else "Offline recitation collection",
                             Brush.linearGradient(listOf(Color(0xFF134E5E), Color(0xFF71B280)))
                         ),
                         AmanahPlaylistCardItem(
                             3,
                             if (isArabic) "أجزاء المصحف" else "30 Juz' Divisions",
-                            if (isArabic) "٣٠ جزءاً مرتباً" else "Organized by 30 Juz'",
+                            if (isArabic) "تصفح حسب أجزاء المصحف الشريف" else "Arranged by the thirty Juz'",
                             Brush.linearGradient(listOf(Color(0xFF654EA3), Color(0xFFEAAFC8)))
                         )
                     )
@@ -1798,17 +1840,26 @@ private fun AmanahSettingsScreen(
     onOpenSleepTimer: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appPrefs = remember { AppPreferences(context) }
     val todayMinutes = todayListenSec / 60
     val weekMinutes = todayMinutes * 3
     val reciter = AlAmanahAudioController.currentReciter
     val activeTimer = AlAmanahAudioController.sleepTimerMinutes
+
+    val audioQuality by appPrefs.amanahAudioQuality.collectAsState(initial = "HIGH")
+    val pauseOnPrayer by appPrefs.amanahPauseOnPrayer.collectAsState(initial = true)
+    val bgPlayback by appPrefs.amanahBackgroundPlayback.collectAsState(initial = true)
+    var cacheSizeBytes by remember {
+        mutableLongStateOf(AlAmanahAudioController.getAudioCacheSizeBytes(context))
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Top 3 Stats Badges
+        // Top 2 Stats Badges (Clean 2-column layout)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1825,12 +1876,6 @@ private fun AmanahSettingsScreen(
                     title = if (isArabic) "الأسبوع" else "THIS WEEK",
                     value = if (isArabic) "$weekMinutes دقيقة" else "$weekMinutes min",
                     icon = Icons.Rounded.DateRange
-                )
-                AmanahStatBadge(
-                    modifier = Modifier.weight(1f),
-                    title = if (isArabic) "الأَمَنَة" else "AL-AMANAH",
-                    value = if (isArabic) "مصحف مرتل" else "Murattal",
-                    icon = Icons.Rounded.GraphicEq
                 )
             }
         }
@@ -1909,6 +1954,151 @@ private fun AmanahSettingsScreen(
                 },
                 actionLabel = if (isArabic) "ضبط" else "Set",
                 onClick = onOpenSleepTimer
+            )
+        }
+
+        // Card 3: Audio Streaming Quality
+        item {
+            val isHighQuality = audioQuality == "HIGH"
+            AmanahSettingsActionCard(
+                icon = Icons.Rounded.HighQuality,
+                title = if (isArabic) "جودة بث الصوت" else "Streaming Audio Quality",
+                subtitle = if (isHighQuality) {
+                    if (isArabic) "عالية الوضوح (192 kbps)" else "High Fidelity (192 kbps)"
+                } else {
+                    if (isArabic) "توفير البيانات (64 kbps)" else "Data Saver (64 kbps)"
+                },
+                actionLabel = if (isArabic) "تبديل" else "Switch",
+                onClick = {
+                    val next = if (isHighQuality) "SAVER" else "HIGH"
+                    scope.launch { appPrefs.setAmanahAudioQuality(next) }
+                }
+            )
+        }
+
+        // Card 4: Auto-Pause on Prayer Time
+        item {
+            AmanahSettingsToggleCard(
+                icon = Icons.Rounded.AccessTime,
+                title = if (isArabic) "إيقاف مؤقت عند الأذان" else "Auto-Pause at Prayer Time",
+                subtitle = if (isArabic) "إيقاف التلاوة تلقائياً عند دخول وقت الصلاة" else "Automatically pause when prayer begins",
+                checked = pauseOnPrayer,
+                onCheckedChange = { newVal ->
+                    scope.launch { appPrefs.setAmanahPauseOnPrayer(newVal) }
+                }
+            )
+        }
+
+        // Card 5: Continuous Background Playback
+        item {
+            AmanahSettingsToggleCard(
+                icon = Icons.Rounded.PhoneAndroid,
+                title = if (isArabic) "التشغيل في الخلفية" else "Continuous Background Playback",
+                subtitle = if (isArabic) "استمرار التلاوة عند إغلاق الشاشة أو تصفح التطبيقات" else "Keep playing while using other apps or screen off",
+                checked = bgPlayback,
+                onCheckedChange = { newVal ->
+                    scope.launch { appPrefs.setAmanahBackgroundPlayback(newVal) }
+                }
+            )
+        }
+
+        // Card 6: Audio Cache Cleanup
+        item {
+            val mb = cacheSizeBytes / (1024.0 * 1024.0)
+            val sizeFormatted = if (isArabic) {
+                String.format(java.util.Locale.US, "%.1f ميغابايت", mb)
+            } else {
+                String.format(java.util.Locale.US, "%.1f MB", mb)
+            }
+            AmanahSettingsActionCard(
+                icon = Icons.Rounded.CleaningServices,
+                title = if (isArabic) "الذاكرة المؤقتة للتسجيلات" else "Audio Cache Storage",
+                subtitle = if (cacheSizeBytes > 0) {
+                    if (isArabic) "$sizeFormatted مستخدمة" else "$sizeFormatted cached"
+                } else {
+                    if (isArabic) "الذاكرة نظيفة" else "Clean"
+                },
+                actionLabel = if (isArabic) "تنظيف" else "Clear",
+                onClick = {
+                    AlAmanahAudioController.clearAudioCache(context)
+                    cacheSizeBytes = 0L
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AmanahSettingsToggleCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(AmoledCard)
+            .border(1.dp, AmoledCardBorder, RoundedCornerShape(18.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { onCheckedChange(!checked) }
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.08f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.padding(end = 8.dp)) {
+                    Text(
+                        text = title,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        text = subtitle,
+                        fontFamily = ThmanyahSans,
+                        fontSize = 11.5.sp,
+                        color = AmoledMutedText
+                    )
+                }
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color(0xFF141C16),
+                    checkedTrackColor = AmoledAccent,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Color.White.copy(alpha = 0.16f)
+                )
             )
         }
     }
@@ -2558,20 +2748,38 @@ private fun AmanahMonthlyReplayView(
     onClose: () -> Unit,
     onPlaySurah: (SurahMeta) -> Unit
 ) {
-    val months = if (isArabic) {
-        listOf("مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر")
-    } else {
-        listOf("May", "Jun", "Jul", "Aug", "Sep", "Oct")
-    }
-    var selectedMonthIndex by remember { mutableStateOf(4) } // September by default
+    val context = LocalContext.current
+    val appPrefs = remember { AppPreferences(context) }
+    val todaySec by appPrefs.amanahTodayListenSec.collectAsState(initial = 0L)
+    val favorites by appPrefs.amanahFavorites.collectAsState(initial = emptySet())
+    val activeReciter = AlAmanahAudioController.currentReciter
 
-    val topSurahs = remember {
-        listOf(
-            allSurahs.first { it.number == 18 }, // Al-Kahf
-            allSurahs.first { it.number == 67 }, // Al-Mulk
-            allSurahs.first { it.number == 36 }, // Ya-Sin
-            allSurahs.first { it.number == 55 }  // Ar-Rahman
-        )
+    val months = if (isArabic) {
+        listOf("أكتوبر", "نوفمبر", "ديسمبر")
+    } else {
+        listOf("October", "November", "December")
+    }
+    var selectedMonthIndex by remember { mutableStateOf(0) } // October release month
+
+    val listenMinutes = (todaySec / 60).coerceAtLeast(0L)
+    val animatedMinutes by animateIntAsState(
+        targetValue = listenMinutes.toInt(),
+        animationSpec = tween(750, easing = TabMotionEasing),
+        label = "replayMinAnim"
+    )
+
+    val topSurahs = remember(favorites) {
+        val favSurahs = allSurahs.filter { favorites.contains(it.number) }
+        if (favSurahs.isNotEmpty()) {
+            (favSurahs + allSurahs.filter { it.number in listOf(18, 67, 36, 55) }).distinctBy { it.number }.take(4)
+        } else {
+            listOf(
+                allSurahs.first { it.number == 18 }, // Al-Kahf
+                allSurahs.first { it.number == 67 }, // Al-Mulk
+                allSurahs.first { it.number == 36 }, // Ya-Sin
+                allSurahs.first { it.number == 55 }  // Ar-Rahman
+            )
+        }
     }
 
     Box(
@@ -2579,7 +2787,7 @@ private fun AmanahMonthlyReplayView(
             .fillMaxSize()
             .background(AmoledBg)
     ) {
-        // Ambient Warm Golden/Amber Replay Glow Header
+        // Ambient Radiant White & Olive Replay Glow Header (Clean Athar Style)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2587,8 +2795,8 @@ private fun AmanahMonthlyReplayView(
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFFE65100).copy(alpha = 0.28f),
-                            Color(0xFFB71C1C).copy(alpha = 0.15f),
+                            Color.White.copy(alpha = 0.12f),
+                            Color(0xFFB5DB88).copy(alpha = 0.08f),
                             Color.Transparent
                         ),
                         center = Offset(Float.POSITIVE_INFINITY, 0f),
@@ -2657,7 +2865,7 @@ private fun AmanahMonthlyReplayView(
                 }
             }
 
-            // Horizontal Month Tabs (May, Jun, Jul, Aug, Sep, Oct)
+            // Horizontal Month Tabs starting with October
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2696,26 +2904,59 @@ private fun AmanahMonthlyReplayView(
                 contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(22.dp)
             ) {
-                // Hero Listening Stat Banner
+                // Hero Listening Stat Banner with Poetic Sentences
                 item {
                     val currentMonth = months[selectedMonthIndex]
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp)
+                            .padding(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
                             text = if (isArabic) {
-                                "استمعت إلى القرآن لمدة 420 دقيقة في شهر $currentMonth."
+                                if (animatedMinutes > 0) {
+                                    "استمعت إلى القرآن لمدة $animatedMinutes دقيقة في شهر $currentMonth."
+                                } else {
+                                    "استهللتَ نفحات الاستماع في شهر $currentMonth."
+                                }
                             } else {
-                                "You listened for 420 minutes in $currentMonth."
+                                if (animatedMinutes > 0) {
+                                    "You listened for $animatedMinutes minutes in $currentMonth."
+                                } else {
+                                    "Beginning your recitation journey in $currentMonth."
+                                }
                             },
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
-                            fontSize = 28.sp,
+                            fontSize = 27.sp,
                             color = Color.White,
-                            lineHeight = 36.sp
+                            lineHeight = 35.sp
                         )
+
+                        // Poetic Quranic reflection banner
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = if (isArabic) {
+                                    "﴿ قَدْ جَاءَتْكُم مَّوْعِظَةٌ مِّن رَّبِّكُمْ وَشِفَاءٌ لِّمَا فِي الصُّدُورِ ﴾"
+                                } else {
+                                    "\"There has come to you instruction from your Lord and healing for what is in the breasts.\""
+                                },
+                                fontFamily = QuranUthmanicHafs,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 16.sp,
+                                color = Color(0xFFD6F5AE),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
 
@@ -2739,10 +2980,11 @@ private fun AmanahMonthlyReplayView(
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
+                            val r1Minutes = if (animatedMinutes > 0) animatedMinutes else 20
                             val reciters = listOf(
-                                Triple(1, QuranReciter.ALAFASY, "240"),
-                                Triple(2, QuranReciter.ABDUL_BASIT, "120"),
-                                Triple(3, QuranReciter.MINSHAWI, "60")
+                                Triple(1, activeReciter, "$r1Minutes"),
+                                Triple(2, if (activeReciter == QuranReciter.ALAFASY) QuranReciter.ABDUL_BASIT else QuranReciter.ALAFASY, "${(r1Minutes * 0.65f).toInt().coerceAtLeast(5)}"),
+                                Triple(3, if (activeReciter == QuranReciter.MINSHAWI) QuranReciter.AL_SUDAIS else QuranReciter.MINSHAWI, "${(r1Minutes * 0.35f).toInt().coerceAtLeast(3)}")
                             )
                             items(reciters) { (rank, r, min) ->
                                 Box(
@@ -2890,14 +3132,14 @@ private fun AmanahMonthlyReplayView(
                                     Icon(Icons.Rounded.GraphicEq, null, tint = AmoledAccent, modifier = Modifier.size(22.dp))
                                     Spacer(Modifier.height(8.dp))
                                     Text(
-                                        text = if (isArabic) "ختمة السكينة" else "Sanctuary Milestone",
+                                        text = if (isArabic) "ختمة الأمان" else "Sanctuary Milestone",
                                         fontFamily = ThmanyahSans,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = Color.White
                                     )
                                     Text(
-                                        text = if (isArabic) "٧ ساعات استماع" else "7 hours total",
+                                        text = if (isArabic) "${(animatedMinutes / 60).coerceAtLeast(1)} ساعات استماع" else "${(animatedMinutes / 60).coerceAtLeast(1)} hours total",
                                         fontFamily = ThmanyahSans,
                                         fontSize = 11.sp,
                                         color = AmoledMutedText
@@ -3270,9 +3512,9 @@ private fun AmanahFullscreenPlayer(
                     // Previous Pill
                     Box(
                         modifier = Modifier
-                            .width(88.dp)
-                            .height(80.dp)
-                            .clip(RoundedCornerShape(28.dp))
+                            .width(92.dp)
+                            .height(98.dp)
+                            .clip(RoundedCornerShape(30.dp))
                             .background(Color.White.copy(alpha = 0.12f))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -3285,16 +3527,16 @@ private fun AmanahFullscreenPlayer(
                             imageVector = Icons.Rounded.SkipPrevious,
                             contentDescription = "Previous",
                             tint = Color.White,
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(38.dp)
                         )
                     }
 
                     // Large Center Play / Pause Pill
                     Box(
                         modifier = Modifier
-                            .width(140.dp)
-                            .height(88.dp)
-                            .clip(RoundedCornerShape(36.dp))
+                            .width(152.dp)
+                            .height(108.dp)
+                            .clip(RoundedCornerShape(40.dp))
                             .background(Color.White)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -3307,14 +3549,14 @@ private fun AmanahFullscreenPlayer(
                             CircularProgressIndicator(
                                 color = Color.Black,
                                 strokeWidth = 3.dp,
-                                modifier = Modifier.size(34.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         } else {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = if (isPlaying) "Pause" else "Play",
                                 tint = Color(0xFF111111),
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(50.dp)
                             )
                         }
                     }
@@ -3322,9 +3564,9 @@ private fun AmanahFullscreenPlayer(
                     // Next Pill
                     Box(
                         modifier = Modifier
-                            .width(88.dp)
-                            .height(80.dp)
-                            .clip(RoundedCornerShape(28.dp))
+                            .width(92.dp)
+                            .height(98.dp)
+                            .clip(RoundedCornerShape(30.dp))
                             .background(Color.White.copy(alpha = 0.12f))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -3337,7 +3579,7 @@ private fun AmanahFullscreenPlayer(
                             imageVector = Icons.Rounded.SkipNext,
                             contentDescription = "Next",
                             tint = Color.White,
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(38.dp)
                         )
                     }
                 }

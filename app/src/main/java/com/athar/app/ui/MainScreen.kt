@@ -452,16 +452,16 @@ fun AtharNavBar(
                         .size(width = amanahButtonWidth, height = amanahButtonHeight)
                         .shadow(
                             elevation = 18.dp,
-                            shape = RoundedCornerShape(26.dp),
+                            shape = RoundedCornerShape(16.dp),
                             spotColor = Color(0xFFB5DB88).copy(alpha = 0.40f),
                             ambientColor = Color.Black.copy(alpha = 0.70f)
                         )
-                        .clip(RoundedCornerShape(26.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(if (isAmanahSelected) Color(0xFFD6F5AE) else Color(0xFFB5DB88))
                         .border(
                             width = 1.2.dp,
                             color = if (isAmanahSelected) Color.White else Color(0xFFD6F5AE),
-                            shape = RoundedCornerShape(26.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },

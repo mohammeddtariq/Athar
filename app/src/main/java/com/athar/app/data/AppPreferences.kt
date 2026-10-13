@@ -94,6 +94,9 @@ class AppPreferences(private val context: Context) {
         private val AMANAH_TODAY_LISTEN_SEC_KEY = longPreferencesKey("amanah_today_listen_sec")
         private val AMANAH_LAST_LISTEN_DATE_KEY = stringPreferencesKey("amanah_last_listen_date")
         private val AMANAH_STREAK_DAYS_KEY = intPreferencesKey("amanah_streak_days")
+        private val AMANAH_AUDIO_QUALITY_KEY = stringPreferencesKey("amanah_audio_quality")
+        private val AMANAH_PAUSE_ON_PRAYER_KEY = booleanPreferencesKey("amanah_pause_on_prayer")
+        private val AMANAH_BACKGROUND_PLAYBACK_KEY = booleanPreferencesKey("amanah_background_playback")
     }
 
     val hasSeenAppAnnouncement: Flow<Boolean> = context.dataStore.data.map {
@@ -129,6 +132,15 @@ class AppPreferences(private val context: Context) {
     }
     val amanahStreakDays: Flow<Int> = context.dataStore.data.map {
         it[AMANAH_STREAK_DAYS_KEY] ?: 0
+    }
+    val amanahAudioQuality: Flow<String> = context.dataStore.data.map {
+        it[AMANAH_AUDIO_QUALITY_KEY] ?: "HIGH"
+    }
+    val amanahPauseOnPrayer: Flow<Boolean> = context.dataStore.data.map {
+        it[AMANAH_PAUSE_ON_PRAYER_KEY] ?: true
+    }
+    val amanahBackgroundPlayback: Flow<Boolean> = context.dataStore.data.map {
+        it[AMANAH_BACKGROUND_PLAYBACK_KEY] ?: true
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "ar" }
@@ -435,6 +447,18 @@ class AppPreferences(private val context: Context) {
                 prefs[AMANAH_TODAY_LISTEN_SEC_KEY] = seconds
             }
         }
+    }
+
+    suspend fun setAmanahAudioQuality(quality: String) {
+        context.dataStore.edit { it[AMANAH_AUDIO_QUALITY_KEY] = quality }
+    }
+
+    suspend fun setAmanahPauseOnPrayer(enabled: Boolean) {
+        context.dataStore.edit { it[AMANAH_PAUSE_ON_PRAYER_KEY] = enabled }
+    }
+
+    suspend fun setAmanahBackgroundPlayback(enabled: Boolean) {
+        context.dataStore.edit { it[AMANAH_BACKGROUND_PLAYBACK_KEY] = enabled }
     }
 
     suspend fun setNumberStyle(style: NumberStylePreference) {

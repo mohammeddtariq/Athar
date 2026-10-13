@@ -277,6 +277,12 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 if (mode != PrayerNotifMode.OFF) {
                     PrayerNotifications.showPrayerNotification(context, key, langCode, mode)
                 }
+                val shouldPauseAmanah = prefs.amanahPauseOnPrayer.first()
+                if (shouldPauseAmanah && com.athar.app.data.AlAmanahAudioController.isPlaying) {
+                    withContext(Dispatchers.Main) {
+                        com.athar.app.data.AlAmanahAudioController.togglePlayPause(context)
+                    }
+                }
                 PrayerNotifications.scheduleNext(context)
                 com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
                 LiveStatusNotificationManager.update(context)

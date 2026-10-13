@@ -38,6 +38,7 @@ object AlAmanahAudioController {
     private var mediaPlayer: MediaPlayer? = null
     private var syncJob: Job? = null
     private var listeningTrackerJob: Job? = null
+    private var appContext: Context? = null
 
     // Reactive State for UI
     var currentSurah by mutableStateOf<SurahMeta>(allSurahs.first())
@@ -117,6 +118,7 @@ object AlAmanahAudioController {
         reciter: QuranReciter? = null,
         startFromVerse: Int? = null
     ) {
+        appContext = context.applicationContext
         val selectedReciter = reciter ?: currentReciter
         currentSurah = surah
         currentReciter = selectedReciter
@@ -178,6 +180,7 @@ object AlAmanahAudioController {
                     mp.start()
                     isPlaying = true
                     startSyncLoop(context)
+                    AlAmanahAudioService.startOrUpdate(context)
                 }
 
                 player.setOnCompletionListener {
@@ -225,6 +228,7 @@ object AlAmanahAudioController {
                 mp.start()
                 isPlaying = true
                 startSyncLoop(context)
+                AlAmanahAudioService.startOrUpdate(context)
             }
             player.setOnCompletionListener {
                 isPlaying = false
@@ -239,6 +243,7 @@ object AlAmanahAudioController {
     }
 
     fun togglePlayPause(context: Context? = null) {
+        if (context != null) appContext = context.applicationContext
         val player = mediaPlayer ?: return
         try {
             if (player.isPlaying) {
@@ -248,8 +253,9 @@ object AlAmanahAudioController {
             } else {
                 player.start()
                 isPlaying = true
-                if (context != null) startSyncLoop(context)
+                appContext?.let { startSyncLoop(it) }
             }
+            appContext?.let { AlAmanahAudioService.startOrUpdate(it) }
         } catch (_: Exception) {}
     }
 
@@ -259,6 +265,7 @@ object AlAmanahAudioController {
             player.seekTo(positionMs.toInt())
             currentPositionMs = positionMs
             updateActiveVerse(positionMs)
+            appContext?.let { AlAmanahAudioService.startOrUpdate(it) }
         } catch (_: Exception) {}
     }
 
@@ -442,6 +449,29 @@ object AlAmanahAudioController {
         } catch (_: Exception) {}
         mediaPlayer = null
         isPlaying = false
+        appContext?.let { AlAmanahAudioService.stop(it) }
+    }
+
+    fun getAudioCacheSizeBytes(context: Context): Long {
+        val dir = getAudioStorageDir(context)
+        var size = 0L
+        dir.listFiles()?.forEach { file ->
+            if (file.isFile) size += file.length()
+        }
+        return size
+    }
+
+    fun clearAudioCache(context: Context): Long {
+        val dir = getAudioStorageDir(context)
+        var freed = 0L
+        dir.listFiles()?.forEach { file ->
+            if (file.isFile) {
+                freed += file.length()
+                file.delete()
+            }
+        }
+        isOfflinePlayback = false
+        return freed
     }
 
     /**
