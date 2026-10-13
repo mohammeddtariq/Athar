@@ -3,6 +3,7 @@ package com.athar.app.data
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -36,6 +37,7 @@ object AlAmanahAudioController {
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
+    private var playJob: Job? = null
     private var syncJob: Job? = null
     private var listeningTrackerJob: Job? = null
     private var appContext: Context? = null
@@ -125,25 +127,18 @@ object AlAmanahAudioController {
         isLoading = true
         isPlaying = false
 
-        // Save last playback in preferences
+        // Record playback and add surah to user's real listening history
         scope.launch(Dispatchers.IO) {
             val prefs = AppPreferences(context.applicationContext)
             prefs.setAmanahLastPlayback(surah.number, selectedReciter.id)
+            prefs.recordAmanahPlayedSurah(surah.number)
         }
 
-        // Release existing player
+        // Release existing player without killing the service
         releasePlayer()
 
-        scope.launch {
-            // 1. Fetch or load timing
-            val timing = QuranRecitationSyncRepository.getChapterTiming(
-                context = context,
-                reciter = selectedReciter,
-                chapter = surah.number
-            )
-            chapterTiming = timing
-
-            // 2. Setup MediaPlayer
+        playJob?.cancel()
+        playJob = scope.launch {
             val localFile = getDownloadedFile(context, surah.number, selectedReciter)
             val isLocal = localFile.exists() && localFile.length() > 1024L
             isOfflinePlayback = isLocal
@@ -151,7 +146,27 @@ object AlAmanahAudioController {
             val audioUri = if (isLocal) {
                 localFile.absolutePath
             } else {
-                timing?.audioUrl?.ifBlank { null } ?: selectedReciter.getPrimaryAudioUrl(surah.number)
+                selectedReciter.getPrimaryAudioUrl(surah.number)
+            }
+
+            // Asynchronously resolve verse timings without delaying audio buffering
+            launch(Dispatchers.IO) {
+                val timing = QuranRecitationSyncRepository.getChapterTiming(
+                    context = context,
+                    reciter = selectedReciter,
+                    chapter = surah.number
+                )
+                withContext(Dispatchers.Main) {
+                    chapterTiming = timing
+                    if (startFromVerse != null && timing != null) {
+                        val verseTiming = timing.verses.firstOrNull { it.verseNumber == startFromVerse }
+                        if (verseTiming != null) {
+                            try {
+                                mediaPlayer?.seekTo(verseTiming.startMs.toInt())
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
             }
 
             try {
@@ -163,17 +178,27 @@ object AlAmanahAudioController {
                             .build()
                     )
                     setVolume(playerVolume, playerVolume)
-                    setDataSource(audioUri)
+                    if (isLocal) {
+                        setDataSource(audioUri)
+                    } else {
+                        val headers = mapOf(
+                            "User-Agent" to "AtharApp/1.0.6",
+                            "Accept" to "*/*"
+                        )
+                        setDataSource(context, Uri.parse(audioUri), headers)
+                    }
                 }
 
                 player.setOnPreparedListener { mp ->
                     isLoading = false
                     totalDurationMs = mp.duration.toLong().coerceAtLeast(0L)
-                    
-                    if (startFromVerse != null && timing != null) {
-                        val verseTiming = timing.verses.firstOrNull { it.verseNumber == startFromVerse }
-                        if (verseTiming != null) {
-                            mp.seekTo(verseTiming.startMs.toInt())
+
+                    if (startFromVerse != null) {
+                        chapterTiming?.let { timing ->
+                            val verseTiming = timing.verses.firstOrNull { it.verseNumber == startFromVerse }
+                            if (verseTiming != null) {
+                                mp.seekTo(verseTiming.startMs.toInt())
+                            }
                         }
                     }
 
@@ -189,12 +214,13 @@ object AlAmanahAudioController {
                     handleTrackCompletion(context)
                 }
 
-                player.setOnErrorListener { _, _, _ ->
-                    isLoading = false
-                    isPlaying = false
-                    // Try fallback stream if primary failed and not local
+                player.setOnErrorListener { mp, _, _ ->
+                    runCatching { mp.reset(); mp.release() }
                     if (!isLocal) {
                         playFallbackStream(context, surah, selectedReciter)
+                    } else {
+                        isLoading = false
+                        isPlaying = false
                     }
                     true
                 }
@@ -203,8 +229,20 @@ object AlAmanahAudioController {
                 mediaPlayer = player
 
             } catch (_: Exception) {
-                isLoading = false
-                isPlaying = false
+                if (!isLocal) {
+                    playFallbackStream(context, surah, selectedReciter)
+                } else {
+                    isLoading = false
+                    isPlaying = false
+                }
+            }
+
+            // Safety watchdog timeout (18s): ensure spinner never spins indefinitely
+            launch {
+                delay(18000L)
+                if (isLoading && !isPlaying) {
+                    isLoading = false
+                }
             }
         }
     }
@@ -220,7 +258,11 @@ object AlAmanahAudioController {
                         .build()
                 )
                 setVolume(playerVolume, playerVolume)
-                setDataSource(fallbackUrl)
+                val headers = mapOf(
+                    "User-Agent" to "AtharApp/1.0.6",
+                    "Accept" to "*/*"
+                )
+                setDataSource(context, Uri.parse(fallbackUrl), headers)
             }
             player.setOnPreparedListener { mp ->
                 isLoading = false
@@ -233,6 +275,12 @@ object AlAmanahAudioController {
             player.setOnCompletionListener {
                 isPlaying = false
                 handleTrackCompletion(context)
+            }
+            player.setOnErrorListener { mp, _, _ ->
+                runCatching { mp.reset(); mp.release() }
+                isLoading = false
+                isPlaying = false
+                true
             }
             player.prepareAsync()
             mediaPlayer = player
@@ -442,6 +490,8 @@ object AlAmanahAudioController {
     }
 
     fun releasePlayer() {
+        playJob?.cancel()
+        playJob = null
         stopSyncLoop()
         try {
             mediaPlayer?.stop()
@@ -449,7 +499,14 @@ object AlAmanahAudioController {
         } catch (_: Exception) {}
         mediaPlayer = null
         isPlaying = false
-        appContext?.let { AlAmanahAudioService.stop(it) }
+    }
+
+    fun stopPlayback(context: Context? = null) {
+        releasePlayer()
+        isLoading = false
+        isPlaying = false
+        val ctx = context ?: appContext
+        ctx?.let { AlAmanahAudioService.stop(it) }
     }
 
     fun getAudioCacheSizeBytes(context: Context): Long {

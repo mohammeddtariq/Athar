@@ -97,6 +97,7 @@ class AppPreferences(private val context: Context) {
         private val AMANAH_AUDIO_QUALITY_KEY = stringPreferencesKey("amanah_audio_quality")
         private val AMANAH_PAUSE_ON_PRAYER_KEY = booleanPreferencesKey("amanah_pause_on_prayer")
         private val AMANAH_BACKGROUND_PLAYBACK_KEY = booleanPreferencesKey("amanah_background_playback")
+        private val AMANAH_PLAYED_SURAHS_KEY = stringPreferencesKey("amanah_played_surahs")
     }
 
     val hasSeenAppAnnouncement: Flow<Boolean> = context.dataStore.data.map {
@@ -117,6 +118,11 @@ class AppPreferences(private val context: Context) {
     }
     val amanahFavorites: Flow<Set<Int>> = context.dataStore.data.map {
         (it[AMANAH_FAVORITES_KEY] ?: emptySet()).mapNotNull { s -> s.toIntOrNull() }.toSet()
+    }
+    val amanahPlayedSurahs: Flow<List<Int>> = context.dataStore.data.map { prefs ->
+        val raw = prefs[AMANAH_PLAYED_SURAHS_KEY] ?: ""
+        if (raw.isBlank()) emptyList()
+        else raw.split(",").mapNotNull { it.trim().toIntOrNull() }
     }
     val amanahLastSurah: Flow<Int> = context.dataStore.data.map {
         it[AMANAH_LAST_SURAH_KEY] ?: 1
@@ -459,6 +465,17 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setAmanahBackgroundPlayback(enabled: Boolean) {
         context.dataStore.edit { it[AMANAH_BACKGROUND_PLAYBACK_KEY] = enabled }
+    }
+
+    suspend fun recordAmanahPlayedSurah(surahNumber: Int) {
+        context.dataStore.edit { prefs ->
+            val raw = prefs[AMANAH_PLAYED_SURAHS_KEY] ?: ""
+            val currentList = if (raw.isBlank()) mutableListOf() else raw.split(",").mapNotNull { it.trim().toIntOrNull() }.toMutableList()
+            currentList.remove(surahNumber)
+            currentList.add(0, surahNumber)
+            val trimmed = currentList.take(20)
+            prefs[AMANAH_PLAYED_SURAHS_KEY] = trimmed.joinToString(",")
+        }
     }
 
     suspend fun setNumberStyle(style: NumberStylePreference) {
