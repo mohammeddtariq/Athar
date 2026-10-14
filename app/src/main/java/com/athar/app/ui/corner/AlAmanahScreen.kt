@@ -2246,6 +2246,9 @@ private fun AmanahAudioOutputSheetContent(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        AlAmanahAudioController.initAudioRoutingListener(context)
+    }
     val outputType = AlAmanahAudioController.getActiveAudioOutputType(context)
     val deviceName = AlAmanahAudioController.getDeviceModelName()
     val connectedBluetooth = AlAmanahAudioController.getConnectedAudioDeviceName(context)
@@ -2303,7 +2306,7 @@ private fun AmanahAudioOutputSheetContent(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        AlAmanahAudioController.setPreferredAudioTarget(AlAmanahAudioController.AudioOutputType.PHONE)
+                        AlAmanahAudioController.setPreferredAudioTarget(context, AlAmanahAudioController.AudioOutputType.PHONE)
                     }
                 )
                 .padding(horizontal = 16.dp, vertical = 14.dp)
@@ -2371,7 +2374,7 @@ private fun AmanahAudioOutputSheetContent(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        AlAmanahAudioController.setPreferredAudioTarget(AlAmanahAudioController.AudioOutputType.BLUETOOTH_OR_HEADSET)
+                        AlAmanahAudioController.setPreferredAudioTarget(context, AlAmanahAudioController.AudioOutputType.BLUETOOTH_OR_HEADSET)
                         if (connectedBluetooth == null) {
                             AlAmanahAudioController.openSystemAudioOutputPicker(context)
                         }

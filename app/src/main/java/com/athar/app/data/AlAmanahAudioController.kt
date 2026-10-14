@@ -2,8 +2,15 @@ package com.athar.app.data
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import java.util.Locale
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -121,6 +128,7 @@ object AlAmanahAudioController {
         startFromVerse: Int? = null
     ) {
         appContext = context.applicationContext
+        initAudioRoutingListener(context)
         val selectedReciter = reciter ?: currentReciter
         currentSurah = surah
         currentReciter = selectedReciter
@@ -192,6 +200,7 @@ object AlAmanahAudioController {
                 player.setOnPreparedListener { mp ->
                     isLoading = false
                     totalDurationMs = mp.duration.toLong().coerceAtLeast(0L)
+                    applyAudioRouting(context)
 
                     if (startFromVerse != null) {
                         chapterTiming?.let { timing ->
@@ -225,8 +234,9 @@ object AlAmanahAudioController {
                     true
                 }
 
-                player.prepareAsync()
                 mediaPlayer = player
+                applyAudioRouting(context)
+                player.prepareAsync()
 
             } catch (_: Exception) {
                 if (!isLocal) {
@@ -267,6 +277,7 @@ object AlAmanahAudioController {
             player.setOnPreparedListener { mp ->
                 isLoading = false
                 totalDurationMs = mp.duration.toLong().coerceAtLeast(0L)
+                applyAudioRouting(context)
                 mp.start()
                 isPlaying = true
                 startSyncLoop(context)
@@ -282,8 +293,9 @@ object AlAmanahAudioController {
                 isPlaying = false
                 true
             }
-            player.prepareAsync()
             mediaPlayer = player
+            applyAudioRouting(context)
+            player.prepareAsync()
         } catch (_: Exception) {
             isLoading = false
             isPlaying = false
@@ -633,52 +645,154 @@ object AlAmanahAudioController {
     }
 
     private var explicitTarget by mutableStateOf<AudioOutputType?>(null)
+    var currentAudioOutputType by mutableStateOf(AudioOutputType.PHONE)
+        private set
+    var connectedAudioDeviceName by mutableStateOf<String?>(null)
+        private set
+    private var isAudioRoutingListenerRegistered = false
+
+    fun initAudioRoutingListener(context: Context) {
+        val appCtx = context.applicationContext
+        appContext = appCtx
+        updateConnectedAudioDevices(appCtx)
+        if (!isAudioRoutingListenerRegistered) {
+            val audioManager = appCtx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+            try {
+                audioManager.registerAudioDeviceCallback(object : AudioDeviceCallback() {
+                    override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
+                        updateConnectedAudioDevices(appCtx)
+                        applyAudioRouting(appCtx)
+                    }
+
+                    override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+                        updateConnectedAudioDevices(appCtx)
+                        applyAudioRouting(appCtx)
+                    }
+                }, Handler(Looper.getMainLooper()))
+                isAudioRoutingListenerRegistered = true
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun isHeadsetOrBluetoothDevice(device: AudioDeviceInfo): Boolean {
+        if (!device.isSink) return false
+        val type = device.type
+        if (type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+            type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+            type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+            type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+            type == AudioDeviceInfo.TYPE_USB_DEVICE
+        ) return true
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (type == AudioDeviceInfo.TYPE_HEARING_AID) return true
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (type == AudioDeviceInfo.TYPE_BLE_HEADSET || type == AudioDeviceInfo.TYPE_BLE_SPEAKER) return true
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (type == AudioDeviceInfo.TYPE_BLE_BROADCAST) return true
+        }
+        if (type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) return true
+        return false
+    }
+
+    fun getConnectedAudioDevice(context: Context): AudioDeviceInfo? {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return null
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        for (device in devices) {
+            if (isHeadsetOrBluetoothDevice(device)) {
+                val name = device.productName?.toString()?.trim()
+                val lower = name?.lowercase(Locale.ROOT) ?: ""
+                if (lower.contains("watch") || lower.contains("band") || lower.contains("fit")) {
+                    continue
+                }
+                return device
+            }
+        }
+        return null
+    }
+
+    fun getBuiltinSpeakerDevice(context: Context): AudioDeviceInfo? {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return null
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        return devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE }
+            ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
+    }
+
+    fun updateConnectedAudioDevices(context: Context) {
+        val connectedDevice = getConnectedAudioDevice(context)
+        if (connectedDevice != null) {
+            val rawName = connectedDevice.productName?.toString()?.trim()
+            connectedAudioDeviceName = if (!rawName.isNullOrBlank() && !rawName.equals("Bluetooth", ignoreCase = true)) {
+                rawName
+            } else {
+                when (connectedDevice.type) {
+                    AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "Wired Headphones"
+                    AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_DEVICE -> "USB Audio"
+                    else -> "Bluetooth Earbuds"
+                }
+            }
+            currentAudioOutputType = explicitTarget ?: AudioOutputType.BLUETOOTH_OR_HEADSET
+        } else {
+            connectedAudioDeviceName = null
+            if (explicitTarget == AudioOutputType.BLUETOOTH_OR_HEADSET) {
+                explicitTarget = null
+            }
+            currentAudioOutputType = AudioOutputType.PHONE
+        }
+    }
+
+    fun setPreferredAudioTarget(context: Context, target: AudioOutputType) {
+        initAudioRoutingListener(context)
+        explicitTarget = target
+        currentAudioOutputType = target
+        applyAudioRouting(context, target)
+    }
 
     fun setPreferredAudioTarget(target: AudioOutputType) {
-        explicitTarget = target
+        val ctx = appContext
+        if (ctx != null) {
+            setPreferredAudioTarget(ctx, target)
+        } else {
+            explicitTarget = target
+            currentAudioOutputType = target
+        }
+    }
+
+    fun applyAudioRouting(context: Context, target: AudioOutputType? = explicitTarget) {
+        val mp = mediaPlayer ?: return
+        try {
+            val targetDevice: AudioDeviceInfo? = when (target) {
+                AudioOutputType.PHONE -> getBuiltinSpeakerDevice(context)
+                AudioOutputType.BLUETOOTH_OR_HEADSET -> getConnectedAudioDevice(context)
+                null -> null
+            }
+
+            val success = mp.setPreferredDevice(targetDevice)
+            if (!success && target == AudioOutputType.BLUETOOTH_OR_HEADSET) {
+                mp.setPreferredDevice(null)
+            }
+            if (mp.isPlaying) {
+                val pos = mp.currentPosition
+                mp.seekTo(pos)
+            }
+        } catch (_: Exception) {}
     }
 
     fun getActiveAudioOutputType(context: Context): AudioOutputType {
-        val connectedDevice = getConnectedAudioDeviceName(context)
-        if (connectedDevice == null) {
-            return AudioOutputType.PHONE
-        }
-        return explicitTarget ?: AudioOutputType.BLUETOOTH_OR_HEADSET
+        initAudioRoutingListener(context)
+        return currentAudioOutputType
     }
 
     fun getDeviceModelName(): String {
-        val model = android.os.Build.MODEL ?: "Phone"
-        return model
+        return Build.MODEL ?: "Phone"
     }
 
     fun getConnectedAudioDeviceName(context: Context): String? {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return null
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-            for (device in devices) {
-                val isMediaAudioDevice = device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                        device.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                        device.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                        device.type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET ||
-                        (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
-                            (device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
-                             device.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER))
-                if (isMediaAudioDevice) {
-                    val name = device.productName?.toString() ?: ""
-                    val lower = name.lowercase(java.util.Locale.ROOT)
-                    // Filter out smartwatches / fitness bands that are not actual audio listening headphones
-                    if (lower.contains("watch") || lower.contains("band") || lower.contains("fit")) {
-                        continue
-                    }
-                    if (name.isNotBlank()) return name
-                }
-            }
-        }
-        @Suppress("DEPRECATION")
-        if (audioManager.isBluetoothA2dpOn) {
-            return "Bluetooth Audio"
-        }
-        return null
+        initAudioRoutingListener(context)
+        return connectedAudioDeviceName
     }
 
     fun openCastSettings(context: Context) {
@@ -698,6 +812,16 @@ object AlAmanahAudioController {
     }
 
     fun openSystemAudioOutputPicker(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val intent = android.content.Intent("android.settings.panel.action.MEDIA_OUTPUT").apply {
+                    putExtra("android.provider.extra.PACKAGE_NAME", context.packageName)
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {}
+        }
         try {
             val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
