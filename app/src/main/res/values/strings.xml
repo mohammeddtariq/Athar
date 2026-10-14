@@ -147,6 +147,8 @@
     <string name="notif_sunrise_title">Sunrise • A Grateful Morning</string>
     <string name="notif_dhuhr_title">Dhuhr • Midday Sanctuary</string>
     <string name="notif_dhuhr_body">Pause the rush of life • Reconnect your heart in quiet devotion before your Creator.</string>
+    <string name="notif_jumaah_title">Jumu\'ah • The Sacred Gathering</string>
+    <string name="notif_jumaah_body">Best of all days • Gather your heart in prayer, send blessings upon the Prophet ﷺ, and seek divine grace.</string>
     <string name="notif_asr_title">Asr • The Middle Prayer</string>
     <string name="notif_asr_body">An oasis of afternoon peace • Center your soul and welcome the blessings of remembrance.</string>
     <string name="notif_maghrib_title">Maghrib • Gratitude at Dusk</string>

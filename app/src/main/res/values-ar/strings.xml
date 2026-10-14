@@ -147,6 +147,8 @@
     <string name="notif_sunrise_title">شروق الشمس • إشراقة يوم جديد</string>
     <string name="notif_dhuhr_title">صلاة الظهر • واحة في منتصف اليوم</string>
     <string name="notif_dhuhr_body">أرح بها فؤادك • قف في زحام يومك وقفة سكينة، وجدد العهد بلقاء ربك.</string>
+    <string name="notif_jumaah_title">صلاة الجمعة • عيد الأسبوع ونور الجمع</string>
+    <string name="notif_jumaah_body">خير يوم طلعت عليه الشمس • بادر إلى بيت الله، وأكثر من الصلاة على الحبيب ﷺ، وعطّر يومك بنور الكهف.</string>
     <string name="notif_asr_title">صلاة العصر • وقفة الصلاة الوسطى</string>
     <string name="notif_asr_body">حافظ على صلاتك • محطة سلام ترتب شتات النفس وتفيض بالبركات.</string>
     <string name="notif_maghrib_title">صلاة المغرب • شكرٌ مع الغروب</string>

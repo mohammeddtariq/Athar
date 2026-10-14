@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
@@ -224,10 +225,15 @@ object PrayerNotifications {
             openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val isFriday = LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY
         val (titleRes, bodyRes) = when (prayerKey) {
             "fajr" -> R.string.notif_fajr_title to R.string.notif_fajr_body
             "sunrise" -> R.string.notif_sunrise_title to R.string.notif_sunrise_body
-            "dhuhr" -> R.string.notif_dhuhr_title to R.string.notif_dhuhr_body
+            "dhuhr" -> if (isFriday) {
+                R.string.notif_jumaah_title to R.string.notif_jumaah_body
+            } else {
+                R.string.notif_dhuhr_title to R.string.notif_dhuhr_body
+            }
             "asr" -> R.string.notif_asr_title to R.string.notif_asr_body
             "maghrib" -> R.string.notif_maghrib_title to R.string.notif_maghrib_body
             "isha" -> R.string.notif_isha_title to R.string.notif_isha_body
