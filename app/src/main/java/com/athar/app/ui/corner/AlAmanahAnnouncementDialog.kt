@@ -268,9 +268,9 @@ fun AlAmanahAnnouncementDialog(
                     // ─── CORE BIO (Simple & Smaller: Restless Mind) ───
                     Text(
                         text = if (isArabic) {
-                            "«أَمَنَةٌ لِلْعَقْلِ الحَائِرِ، وَمَلَاذٌ يُعِيدُ لِبَالِكَ سَلَامَهُ مَعَ كَلَامِ الله»"
+                            "«أَمَنَةٌ لِعَقْلٍ لَا يَهْدَأ؛ يَلْقَى فِيهَا بَالُكَ سَلَامَهُ مَعَ كَلَامِ الله»"
                         } else {
-                            "\"A sanctuary for the restless mind, returning stillness to your soul with the words of Allah.\""
+                            "\"A sanctuary for a restless mind, bringing stillness to your thoughts with the words of Allah.\""
                         },
                         fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
                         fontWeight = FontWeight.Normal,
