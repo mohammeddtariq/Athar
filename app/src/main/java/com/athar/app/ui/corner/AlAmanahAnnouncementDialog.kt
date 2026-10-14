@@ -265,19 +265,19 @@ fun AlAmanahAnnouncementDialog(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // ─── CORE BIO (Poetic: Calms the restless mind through Quran recitation) ───
+                    // ─── CORE BIO (Simple & Smaller: Restless Mind) ───
                     Text(
                         text = if (isArabic) {
-                            "«سَكِينَةٌ إِلَهِيَّةٌ لِلْعَقْلِ الحَائِرِ؛ فَلَا يَهْدَأُ بَالُهُ وَلَا تَسْكُنُ حَيْرَتُهُ إِلَّا بِسَمَاعِ كَلَامِ رَبِّهِ»"
+                            "«أَمَنَةٌ لِلْعَقْلِ الحَائِرِ، وَمَلَاذٌ يُعِيدُ لِبَالِكَ سَلَامَهُ مَعَ كَلَامِ الله»"
                         } else {
-                            "\"The divine tranquility that calms a restless mind, stilling every wandering thought through the recitation of its Lord.\""
+                            "\"A sanctuary for the restless mind, returning stillness to your soul with the words of Allah.\""
                         },
                         fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = if (isArabic) 14.5.sp else 13.sp,
-                        color = AtharPrimaryLight,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = if (isArabic) 12.5.sp else 11.5.sp,
+                        color = AtharPrimaryLight.copy(alpha = 0.90f),
                         textAlign = TextAlign.Center,
-                        lineHeight = if (isArabic) 24.sp else 19.sp
+                        lineHeight = if (isArabic) 20.sp else 16.5.sp
                     )
 
                     Spacer(Modifier.height(22.dp))
