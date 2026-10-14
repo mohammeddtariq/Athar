@@ -348,71 +348,60 @@ private fun TopBar(
                 modifier = Modifier.padding(start = 6.dp)
             )
 
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 1. Settings Pill
+                // 1. After-Prayer Duas Pill
                 Row(
                     modifier = Modifier
-                        .height(30.dp)
-                        .clip(RoundedCornerShape(15.dp))
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(15.dp))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onSettingsClick
-                        )
-                        .padding(horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.Settings,
-                        contentDescription = null,
-                        tint = AtharPrimaryLight,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        stringResource(R.string.nav_settings),
-                        color = AtharTextPrimary,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                // 2. After-Prayer Duas Pill
-                Row(
-                    modifier = Modifier
-                        .height(30.dp)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(15.dp))
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onAfterPrayerClick
                         )
-                        .padding(horizontal = 10.dp),
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_prayer_hands),
                         contentDescription = null,
                         tint = AtharPrimaryLight,
-                        modifier = Modifier.size(13.dp)
+                        modifier = Modifier.size(15.dp)
                     )
-                    Spacer(modifier = Modifier.width(5.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         stringResource(R.string.home_after_prayer_adhkar),
                         color = AtharTextPrimary,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp
+                        fontSize = 11.5.sp
+                    )
+                }
+
+                // 2. Settings Icon Button (Larger, icon only, without label)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onSettingsClick
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = stringResource(R.string.nav_settings),
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
