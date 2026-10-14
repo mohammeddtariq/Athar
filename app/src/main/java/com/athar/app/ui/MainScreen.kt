@@ -442,29 +442,40 @@ fun AtharNavBar(
                     }
                 }
 
-                // Standalone Floating Al-Amanah Action Button (Beside the Dock)
+                // Standalone Floating Al-Amanah Action Button (Beside the Dock - Squircle Style)
                 val isAmanahSelected = isSelected(Screen.Amanah)
-                val amanahButtonHeight = if (isCompact) 48.dp else 52.dp
-                val amanahButtonWidth = if (isCompact) 48.dp else 52.dp
+                val amanahButtonSize = if (isCompact) 52.dp else 58.dp
+                val amanahCornerRadius = if (isCompact) 18.dp else 22.dp
+                val amanahInteraction = remember { MutableInteractionSource() }
+                val isAmanahPressed by amanahInteraction.collectIsPressedAsState()
+                val amanahScale by animateFloatAsState(
+                    targetValue = if (isAmanahPressed) 0.90f else 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "amanahBtnScale"
+                )
 
                 Box(
                     modifier = Modifier
-                        .size(width = amanahButtonWidth, height = amanahButtonHeight)
+                        .scale(amanahScale)
+                        .size(amanahButtonSize)
                         .shadow(
-                            elevation = 18.dp,
-                            shape = RoundedCornerShape(16.dp),
-                            spotColor = Color(0xFFB5DB88).copy(alpha = 0.40f),
-                            ambientColor = Color.Black.copy(alpha = 0.70f)
+                            elevation = 14.dp,
+                            shape = RoundedCornerShape(amanahCornerRadius),
+                            spotColor = Color(0xFFC7EE7B).copy(alpha = 0.45f),
+                            ambientColor = Color.Black.copy(alpha = 0.60f)
                         )
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (isAmanahSelected) Color(0xFFD6F5AE) else Color(0xFFB5DB88))
+                        .clip(RoundedCornerShape(amanahCornerRadius))
+                        .background(if (isAmanahSelected) Color(0xFFD8F89E) else Color(0xFFC7EE7B))
                         .border(
-                            width = 1.2.dp,
-                            color = if (isAmanahSelected) Color.White else Color(0xFFD6F5AE),
-                            shape = RoundedCornerShape(16.dp)
+                            width = 1.dp,
+                            color = if (isAmanahSelected) Color.White.copy(alpha = 0.85f) else Color(0xFFDCFAB0).copy(alpha = 0.50f),
+                            shape = RoundedCornerShape(amanahCornerRadius)
                         )
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = amanahInteraction,
                             indication = null,
                             onClick = { navController.navigateToTab(Screen.Amanah) }
                         ),
@@ -474,7 +485,7 @@ fun AtharNavBar(
                         imageVector = Icons.Rounded.GraphicEq,
                         contentDescription = "Al-Amanah",
                         tint = Color(0xFF141C16),
-                        modifier = Modifier.size(if (isCompact) 22.dp else 24.dp)
+                        modifier = Modifier.size(if (isCompact) 23.dp else 26.dp)
                     )
                 }
             }
