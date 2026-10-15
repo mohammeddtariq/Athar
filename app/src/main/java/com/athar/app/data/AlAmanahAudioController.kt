@@ -763,30 +763,25 @@ object AlAmanahAudioController {
 
     fun applyAudioRouting(context: Context, target: AudioOutputType? = explicitTarget) {
         val mp = mediaPlayer ?: return
-        val targetDevice: AudioDeviceInfo? = when (target) {
-            AudioOutputType.PHONE -> getBuiltinSpeakerDevice(context)
-            AudioOutputType.BLUETOOTH_OR_HEADSET -> getConnectedAudioDevice(context)
-            null -> null
-        }
-        applyPreferredDevice(mp, targetDevice, target)
+        applyPreferredDevice(mp, context, target)
     }
 
-    private fun applyPreferredDevice(mp: MediaPlayer, device: AudioDeviceInfo?, target: AudioOutputType?) {
+    private fun applyPreferredDevice(mp: MediaPlayer, context: Context, target: AudioOutputType?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         try {
-            val success = setPreferredDeviceCompat(mp, device)
-            if (!success && target == AudioOutputType.BLUETOOTH_OR_HEADSET) {
-                setPreferredDeviceCompat(mp, null)
+            // Only the built-in speaker needs to be forced, because the platform
+            // would otherwise keep routing media to the connected Bluetooth sink.
+            // For Bluetooth/headsets we clear the preference and let the platform
+            // route to the currently active output: pinning a specific Bluetooth
+            // sink is unreliable and can leave the audio track in a broken state.
+            val device = if (target == AudioOutputType.PHONE) {
+                getBuiltinSpeakerDevice(context)
+            } else {
+                null
             }
-        } catch (_: Exception) {}
-    }
-
-    private fun setPreferredDeviceCompat(mp: MediaPlayer, device: AudioDeviceInfo?): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (mp.preferredDevice?.id == device?.id) return
             mp.setPreferredDevice(device)
-        } else {
-            false
-        }
+        } catch (_: Exception) {}
     }
 
     fun getActiveAudioOutputType(context: Context): AudioOutputType {
