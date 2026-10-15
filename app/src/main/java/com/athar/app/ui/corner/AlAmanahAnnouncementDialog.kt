@@ -280,6 +280,23 @@ fun AlAmanahAnnouncementDialog(
                         lineHeight = if (isArabic) 20.sp else 16.5.sp
                     )
 
+                    Spacer(Modifier.height(10.dp))
+
+                    // ─── FEATURE DESCRIPTION ───
+                    Text(
+                        text = if (isArabic) {
+                            "مساحةُ استماعٍ هادئةٌ لتلاواتٍ مُختارةٍ من نخبةٍ من القرّاء، مع تتبّعٍ متزامنٍ للآيات، وقوائمَ روحانيّة، وتشغيلٍ في الخلفيّةِ ومؤقّتِ نوم، وإحصاءاتِ استماعٍ لطيفة."
+                        } else {
+                            "A serene listening space with curated recitations by renowned reciters, synchronized verse tracking, spiritual playlists, background playback, a sleep timer and gentle listening insights."
+                        },
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+
                     Spacer(Modifier.height(22.dp))
 
                     // ─── BOTTOM EXPLORE ACTION BUTTON ───
