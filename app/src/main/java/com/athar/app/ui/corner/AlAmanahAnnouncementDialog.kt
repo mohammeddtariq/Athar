@@ -252,9 +252,9 @@ fun AlAmanahAnnouncementDialog(
                     // ─── QURANIC ORIGIN ───
                     Text(
                         text = if (isArabic) {
-                            "﴿ إِذْ يُغَشِّيكُمُ النُّعَاسَ أَمَنَةً مِّنْهُ ﴾ • الأنفال: ١١"
+                            "﴿ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ ﴾ • الرعد: ٢٨"
                         } else {
-                            "\"[Remember] when He caused drowsiness to overcome you as a tranquility from Him.\" • Al-Anfal: 11"
+                            "\"Verily, in the remembrance of Allah do hearts find rest.\" • Ar-Ra'd: 28"
                         },
                         fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
                         fontWeight = FontWeight.Medium,
@@ -265,12 +265,12 @@ fun AlAmanahAnnouncementDialog(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // ─── CORE BIO (Simple & Smaller: Restless Mind) ───
+                    // ─── CORE BIO (Poetic couplet) ───
                     Text(
                         text = if (isArabic) {
-                            "«أَمَنَةٌ لِعَقْلٍ لَا يَهْدَأ؛ يَلْقَى فِيهَا بَالُكَ سَلَامَهُ مَعَ كَلَامِ الله»"
+                            "«أَمَانَة: لِعَقْلٍ لَا يَهْدَأ، يَلْقَى فِيهَا بَيْنَ كُلِّ آيَةٍ سَلَامًا مَعَ كَلَامِ الله»"
                         } else {
-                            "\"A sanctuary for a restless mind, bringing stillness to your thoughts with the words of Allah.\""
+                            "\"Al-Amanah: A sanctuary for a restless mind, bringing stillness between every verse with the words of Allah.\""
                         },
                         fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
                         fontWeight = FontWeight.Normal,
