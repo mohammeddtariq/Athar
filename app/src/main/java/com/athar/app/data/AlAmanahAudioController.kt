@@ -763,22 +763,30 @@ object AlAmanahAudioController {
 
     fun applyAudioRouting(context: Context, target: AudioOutputType? = explicitTarget) {
         val mp = mediaPlayer ?: return
-        try {
-            val targetDevice: AudioDeviceInfo? = when (target) {
-                AudioOutputType.PHONE -> getBuiltinSpeakerDevice(context)
-                AudioOutputType.BLUETOOTH_OR_HEADSET -> getConnectedAudioDevice(context)
-                null -> null
-            }
+        val targetDevice: AudioDeviceInfo? = when (target) {
+            AudioOutputType.PHONE -> getBuiltinSpeakerDevice(context)
+            AudioOutputType.BLUETOOTH_OR_HEADSET -> getConnectedAudioDevice(context)
+            null -> null
+        }
+        applyPreferredDevice(mp, targetDevice, target)
+    }
 
-            val success = mp.setPreferredDevice(targetDevice)
+    private fun applyPreferredDevice(mp: MediaPlayer, device: AudioDeviceInfo?, target: AudioOutputType?) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
+        try {
+            val success = setPreferredDeviceCompat(mp, device)
             if (!success && target == AudioOutputType.BLUETOOTH_OR_HEADSET) {
-                mp.setPreferredDevice(null)
-            }
-            if (mp.isPlaying) {
-                val pos = mp.currentPosition
-                mp.seekTo(pos)
+                setPreferredDeviceCompat(mp, null)
             }
         } catch (_: Exception) {}
+    }
+
+    private fun setPreferredDeviceCompat(mp: MediaPlayer, device: AudioDeviceInfo?): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mp.setPreferredDevice(device)
+        } else {
+            false
+        }
     }
 
     fun getActiveAudioOutputType(context: Context): AudioOutputType {
