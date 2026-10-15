@@ -125,7 +125,10 @@ object AlAmanahAudioController {
         context: Context,
         surah: SurahMeta,
         reciter: QuranReciter? = null,
-        startFromVerse: Int? = null
+        startFromVerse: Int? = null,
+        startPositionMs: Long? = null,
+        autoPlay: Boolean = true,
+        recordHistory: Boolean = true
     ) {
         appContext = context.applicationContext
         initAudioRoutingListener(context)
@@ -136,10 +139,12 @@ object AlAmanahAudioController {
         isPlaying = false
 
         // Record playback and add surah to user's real listening history
-        scope.launch(Dispatchers.IO) {
-            val prefs = AppPreferences(context.applicationContext)
-            prefs.setAmanahLastPlayback(surah.number, selectedReciter.id)
-            prefs.recordAmanahPlayedSurah(surah.number)
+        if (recordHistory) {
+            scope.launch(Dispatchers.IO) {
+                val prefs = AppPreferences(context.applicationContext)
+                prefs.setAmanahLastPlayback(surah.number, selectedReciter.id)
+                prefs.recordAmanahPlayedSurah(surah.number)
+            }
         }
 
         // Release existing player without killing the service
@@ -202,19 +207,25 @@ object AlAmanahAudioController {
                     totalDurationMs = mp.duration.toLong().coerceAtLeast(0L)
                     applyAudioRouting(context)
 
-                    if (startFromVerse != null) {
-                        chapterTiming?.let { timing ->
-                            val verseTiming = timing.verses.firstOrNull { it.verseNumber == startFromVerse }
-                            if (verseTiming != null) {
-                                mp.seekTo(verseTiming.startMs.toInt())
-                            }
-                        }
+                    val seekTargetMs: Int? = when {
+                        startPositionMs != null -> startPositionMs.toInt()
+                        startFromVerse != null -> chapterTiming?.verses
+                            ?.firstOrNull { it.verseNumber == startFromVerse }
+                            ?.startMs?.toInt()
+                        else -> null
+                    }
+                    if (seekTargetMs != null) {
+                        try {
+                            mp.seekTo(seekTargetMs)
+                        } catch (_: Exception) {}
                     }
 
-                    mp.start()
-                    isPlaying = true
-                    startSyncLoop(context)
-                    AlAmanahAudioService.startOrUpdate(context)
+                    if (autoPlay) {
+                        mp.start()
+                        isPlaying = true
+                        startSyncLoop(context)
+                        AlAmanahAudioService.startOrUpdate(context)
+                    }
                 }
 
                 player.setOnCompletionListener {
@@ -746,9 +757,42 @@ object AlAmanahAudioController {
 
     fun setPreferredAudioTarget(context: Context, target: AudioOutputType) {
         initAudioRoutingListener(context)
+        val player = mediaPlayer
+        val expectedDevice = if (target == AudioOutputType.PHONE) getBuiltinSpeakerDevice(context) else null
+        val alreadyActive = currentAudioOutputType == target && isPreferredDeviceSet(player, expectedDevice)
         explicitTarget = target
         currentAudioOutputType = target
-        applyAudioRouting(context, target)
+        if (alreadyActive) return
+
+        // A live MediaPlayer does not reliably re-route when only setPreferredDevice
+        // is called, so rebuild the output at the current position: the preferred
+        // device is then applied before prepare, which is the sequence the platform
+        // honors on every Android version we support.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+            player != null && (isPlaying || currentPositionMs > 0L)
+        ) {
+            val wasPlaying = isPlaying
+            val position = runCatching { player.currentPosition.toLong() }.getOrDefault(currentPositionMs)
+            playSurah(
+                context = context,
+                surah = currentSurah,
+                reciter = currentReciter,
+                startPositionMs = position,
+                autoPlay = wasPlaying,
+                recordHistory = false
+            )
+        } else {
+            applyAudioRouting(context, target)
+        }
+    }
+
+    private fun isPreferredDeviceSet(player: MediaPlayer?, device: AudioDeviceInfo?): Boolean {
+        if (player == null) return false
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            player.preferredDevice?.id == device?.id
+        } else {
+            false
+        }
     }
 
     fun setPreferredAudioTarget(target: AudioOutputType) {
