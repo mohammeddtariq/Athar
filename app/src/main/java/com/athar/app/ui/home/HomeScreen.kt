@@ -10,7 +10,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +50,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Autorenew
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
@@ -66,7 +69,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -124,6 +129,8 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.cos
+import kotlin.math.sin
 
 data class PrayerRow(val key: String, val nameResId: Int, val time: LocalTime, val isNext: Boolean = false)
 
@@ -822,6 +829,16 @@ fun AfterPrayerDuaDialog(
 
     var counts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     val pagerState = rememberPagerState(pageCount = { duas.size })
+    val allDone = duas.isNotEmpty() && duas.all { (counts[it.id] ?: 0) >= it.repeat }
+    var celebrationDismissed by remember(duas) { mutableStateOf(false) }
+
+    LaunchedEffect(allDone) {
+        if (allDone) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        } else {
+            celebrationDismissed = false
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1302,6 +1319,153 @@ fun AfterPrayerDuaDialog(
                     }
                 }
             }
+
+            // ─── COMPLETION CELEBRATION ───
+            AnimatedVisibility(
+                visible = allDone && !celebrationDismissed,
+                enter = fadeIn(tween(350)),
+                exit = fadeOut(tween(250)),
+                modifier = Modifier.matchParentSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(AtharBackground.copy(alpha = 0.94f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CelebrationSparkles(modifier = Modifier.matchParentSize())
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .clip(CircleShape)
+                                .background(AtharPrimary.copy(alpha = 0.16f))
+                                .border(1.5.dp, AtharPrimaryLight.copy(alpha = 0.7f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = AtharPrimaryLight,
+                                modifier = Modifier.size(42.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Text(
+                            text = if (isArabic) "تقبّل الله" else "May Allah accept",
+                            fontFamily = ThmanyahSerifDisplay,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 26.sp,
+                            color = AtharTextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = if (isArabic) {
+                                "أتممت أذكار ما بعد الصلاة\nجعلها الله في ميزان حسناتك"
+                            } else {
+                                "You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds."
+                            },
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(26.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(AtharPrimary)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { celebrationDismissed = true }
+                                )
+                                .padding(horizontal = 32.dp, vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isArabic) "الحمد لله" else "Alhamdulillah",
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = AtharTextOnPrimary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CelebrationSparkles(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "completionSparkles")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 2400,
+                easing = androidx.compose.animation.core.LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sparklePhase"
+    )
+
+    val gold = Color(0xFFE6D79A)
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height * 0.42f)
+        val unit = size.minDimension
+
+        repeat(20) { i ->
+            val seed = (i * 0.61803398f) % 1f
+            val progress = (phase + seed) % 1f
+            val direction = if (i % 2 == 0) 1f else -1f
+            val angle = seed * 6.2831855f + progress * 0.9f * direction
+            val radius = unit * (0.16f + (i % 5) * 0.055f) + progress * unit * 0.08f
+            val x = center.x + cos(angle) * radius
+            val y = center.y + sin(angle) * radius * 0.62f
+            val alpha = ((1f - progress) * 0.85f).coerceIn(0f, 1f)
+            val color = if (i % 3 == 0) gold else AtharPrimaryLight
+            val length = 3.5f + (i % 4) * 1.6f
+            val sparkleCenter = Offset(x, y)
+
+            drawCircle(
+                color = color,
+                radius = 1.6f + (i % 3),
+                center = sparkleCenter,
+                alpha = alpha
+            )
+            drawLine(
+                color = color,
+                start = Offset(x - length, y),
+                end = Offset(x + length, y),
+                strokeWidth = 1.1f,
+                alpha = alpha
+            )
+            drawLine(
+                color = color,
+                start = Offset(x, y - length),
+                end = Offset(x, y + length),
+                strokeWidth = 1.1f,
+                alpha = alpha
+            )
         }
     }
 }
