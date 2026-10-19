@@ -42,6 +42,7 @@ class AppPreferences(private val context: Context) {
         // Notifications
         private val NOTIF_MASTER_KEY = booleanPreferencesKey("notif_master")
         private val NOTIF_MASTER_MODE_KEY = stringPreferencesKey("notif_master_mode")
+        private val NOTIF_OFFSET_MIN_KEY = intPreferencesKey("notif_offset_minutes")
         private val NOTIF_PREFIX = "notif_prayer_"
         private val NOTIF_MODE_PREFIX = "notif_mode_"
 
@@ -261,6 +262,14 @@ class AppPreferences(private val context: Context) {
         }
     }
 
+    /**
+     * Per-minute adjustment applied to every prayer reminder alarm.
+     * A positive value delays the reminder, a negative value advances it.
+     */
+    val prayerNotificationOffsetMinutes: Flow<Int> = context.dataStore.data.map {
+        (it[NOTIF_OFFSET_MIN_KEY] ?: 0).coerceIn(-30, 30)
+    }
+
     fun prayerNotificationMode(prayerKey: String): Flow<PrayerNotifMode> =
         context.dataStore.data.map {
             val modeStr = it[stringPreferencesKey("$NOTIF_MODE_PREFIX$prayerKey")]
@@ -358,6 +367,10 @@ class AppPreferences(private val context: Context) {
             it[stringPreferencesKey("$NOTIF_MODE_PREFIX$prayerKey")] = mode.id
             it[booleanPreferencesKey("$NOTIF_PREFIX$prayerKey")] = (mode != PrayerNotifMode.OFF)
         }
+    }
+
+    suspend fun setPrayerNotificationOffsetMinutes(minutes: Int) {
+        context.dataStore.edit { it[NOTIF_OFFSET_MIN_KEY] = minutes.coerceIn(-30, 30) }
     }
 
     suspend fun setNowBarLiveActivityEnabled(enabled: Boolean) {

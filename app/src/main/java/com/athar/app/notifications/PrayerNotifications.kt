@@ -108,6 +108,7 @@ object PrayerNotifications {
         val lng = prefs.longitude.first() ?: return@withContext
         val method = CalcMethod.fromId(prefs.calcMethodId.first())
         val madhab = MadhabOption.fromId(prefs.madhabId.first())
+        val offsetMs = prefs.prayerNotificationOffsetMinutes.first() * 60_000L
 
         val todayDate = LocalDate.now()
         val tomorrowDate = todayDate.plusDays(1)
@@ -161,11 +162,11 @@ object PrayerNotifications {
                 else -> tomorrow.fajr
             }
 
-            val todayTriggerMs = prayerDateToday(todayTime, tomorrow = false).time
+            val todayTriggerMs = prayerDateToday(todayTime, tomorrow = false).time + offsetMs
             val triggerAt = if (todayTriggerMs > nowMs + 1000L) {
                 todayTriggerMs
             } else {
-                prayerDateToday(tomorrowTime, tomorrow = true).time
+                prayerDateToday(tomorrowTime, tomorrow = true).time + offsetMs
             }
 
             try {

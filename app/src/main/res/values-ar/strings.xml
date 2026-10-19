@@ -127,6 +127,11 @@
     <string name="settings_madhab">المذهب</string>
     <string name="settings_notifications">تنبيهات الصلاة</string>
     <string name="settings_notifications_sub">ذكّرني عند دخول وقت الصلاة</string>
+    <string name="settings_notif_offset">تعديل توقيت التنبيه</string>
+    <string name="settings_notif_offset_sub">اضبط توقيت تنبيه الصلاة بالدقائق. القيمة الموجبة تؤخّر والسالبة تُقدّم.</string>
+    <string name="settings_notif_offset_value">%1$s دقيقة</string>
+    <string name="settings_notif_offset_decrease">تقديم التنبيه</string>
+    <string name="settings_notif_offset_increase">تأخير التنبيه</string>
     <string name="settings_about">عن أَثَر</string>
     <string name="settings_about_sub">مبني بمكتبات مفتوحة — انظر الشكر والتقدير</string>
     <string name="settings_github">أَثَر على GitHub</string>

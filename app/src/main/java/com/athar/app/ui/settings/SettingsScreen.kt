@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -40,12 +41,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.athar.app.data.PrayerNotifMode
@@ -578,6 +581,19 @@ fun SettingsScreen(
                         Column {
                             Spacer(Modifier.height(4.dp))
                             PrayerToggleList(prefs = prefs)
+                            Spacer(Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(AtharCardBorder.copy(alpha = 0.55f))
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            PrayerNotificationOffsetControl(
+                                prefs = prefs,
+                                numberStyle = numberStyle,
+                                isArabic = language == "ar"
+                            )
                         }
                     }
 
@@ -1729,6 +1745,130 @@ private fun PrayerToggleList(prefs: AppPreferences) {
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun PrayerNotificationOffsetControl(
+    prefs: AppPreferences,
+    numberStyle: NumberStylePreference,
+    isArabic: Boolean
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val offset by prefs.prayerNotificationOffsetMinutes.collectAsState(initial = 0)
+
+    fun update(next: Int) {
+        val clamped = next.coerceIn(-30, 30)
+        if (clamped == offset) return
+        scope.launch {
+            prefs.setPrayerNotificationOffsetMinutes(clamped)
+            PrayerNotifications.scheduleNext(context)
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.settings_notif_offset),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = AtharTextPrimary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                stringResource(R.string.settings_notif_offset_sub),
+                fontFamily = ThmanyahSans,
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
+                color = AtharTextSecondary
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OffsetStepButton(
+                icon = Icons.Rounded.Remove,
+                contentDescription = stringResource(R.string.settings_notif_offset_decrease),
+                enabled = offset > -30,
+                onClick = { update(offset - 1) }
+            )
+
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 62.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AtharBackground.copy(alpha = 0.5f))
+                    .border(1.dp, AtharCardBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val display = if (offset > 0) "+$offset" else offset.toString()
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        text = stringResource(
+                            R.string.settings_notif_offset_value,
+                            formatDigits(display, numberStyle)
+                        ),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                        color = if (offset == 0) AtharTextSecondary else AtharPrimaryLight,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            OffsetStepButton(
+                icon = Icons.Rounded.Add,
+                contentDescription = stringResource(R.string.settings_notif_offset_increase),
+                enabled = offset < 30,
+                onClick = { update(offset + 1) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OffsetStepButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(if (enabled) AtharPrimary.copy(alpha = 0.18f) else AtharCardSurface.copy(alpha = 0.4f))
+            .border(
+                1.dp,
+                if (enabled) AtharPrimary.copy(alpha = 0.5f) else AtharCardBorder.copy(alpha = 0.4f),
+                CircleShape
+            )
+            .clickable(
+                enabled = enabled,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (enabled) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.4f),
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 

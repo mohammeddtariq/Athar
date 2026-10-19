@@ -127,6 +127,11 @@
     <string name="settings_madhab">Madhab</string>
     <string name="settings_notifications">Prayer notifications</string>
     <string name="settings_notifications_sub">Remind me at prayer time</string>
+    <string name="settings_notif_offset">Prayer reminder adjustment</string>
+    <string name="settings_notif_offset_sub">Fine-tune each prayer reminder. Positive values delay, negative values advance.</string>
+    <string name="settings_notif_offset_value">%1$s min</string>
+    <string name="settings_notif_offset_decrease">Advance reminder</string>
+    <string name="settings_notif_offset_increase">Delay reminder</string>
     <string name="settings_about">About Athar</string>
     <string name="settings_about_sub">Built with open libraries — see credits</string>
     <string name="settings_github">Athar on GitHub</string>
