@@ -86,6 +86,9 @@ class AppPreferences(private val context: Context) {
         private val APP_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("app_announcement_seen")
         private val AMANAH_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("amanah_announcement_seen")
 
+        // After Prayer Adhkar
+        private val AFTER_PRAYER_AUTO_ADVANCE_KEY = booleanPreferencesKey("after_prayer_auto_advance")
+
         // Al-Amanah Sanctuary Preferences
         private val AMANAH_120HZ_KEY = booleanPreferencesKey("amanah_120hz_enabled")
         private val AMANAH_DAILY_GOAL_MIN_KEY = intPreferencesKey("amanah_daily_goal_minutes")
@@ -109,6 +112,11 @@ class AppPreferences(private val context: Context) {
 
     val hasSeenAmanahAnnouncement: Flow<Boolean> = context.dataStore.data.map {
         it[AMANAH_ANNOUNCEMENT_SEEN_KEY] ?: false
+    }
+
+    /** Whether the after-prayer counter automatically moves to the next dhikr on completion. */
+    val afterPrayerAutoAdvance: Flow<Boolean> = context.dataStore.data.map {
+        it[AFTER_PRAYER_AUTO_ADVANCE_KEY] ?: true
     }
 
     val amanahHighRefreshRate: Flow<Boolean> = context.dataStore.data.map {
@@ -371,6 +379,10 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setPrayerNotificationOffsetMinutes(minutes: Int) {
         context.dataStore.edit { it[NOTIF_OFFSET_MIN_KEY] = minutes.coerceIn(-30, 30) }
+    }
+
+    suspend fun setAfterPrayerAutoAdvance(enabled: Boolean) {
+        context.dataStore.edit { it[AFTER_PRAYER_AUTO_ADVANCE_KEY] = enabled }
     }
 
     suspend fun setNowBarLiveActivityEnabled(enabled: Boolean) {

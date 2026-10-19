@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
@@ -778,6 +779,9 @@ fun AfterPrayerDuaDialog(
     val isArabic = selectedLanguage == "ar"
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val prefs = remember { AppPreferences(context.applicationContext) }
+    val autoAdvance by prefs.afterPrayerAutoAdvance.collectAsState(initial = true)
 
     val (prayerTitleAr, prayerTitleEn, duas) = remember(nextKey, isFriday) {
         when (nextKey) {
@@ -880,7 +884,33 @@ fun AfterPrayerDuaDialog(
                             .padding(horizontal = 8.dp)
                     )
 
-                    Spacer(Modifier.size(36.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (autoAdvance) AtharPrimary.copy(alpha = 0.18f) else AtharCardSurface)
+                            .border(
+                                1.dp,
+                                if (autoAdvance) AtharPrimary.copy(alpha = 0.55f) else AtharCardBorder,
+                                CircleShape
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    scope.launch { prefs.setAfterPrayerAutoAdvance(!autoAdvance) }
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.Autorenew,
+                            contentDescription = if (isArabic) "الإكمال التلقائي" else "Auto-advance",
+                            tint = if (autoAdvance) AtharPrimaryLight else AtharTextSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -928,6 +958,14 @@ fun AfterPrayerDuaDialog(
                                             if (nextCount >= target) HapticFeedbackType.LongPress
                                             else HapticFeedbackType.TextHandleMove
                                         )
+                                        if (nextCount >= target && autoAdvance && page < duas.lastIndex) {
+                                            scope.launch {
+                                                delay(480)
+                                                if (pagerState.currentPage == page) {
+                                                    pagerState.animateScrollToPage(page + 1)
+                                                }
+                                            }
+                                        }
                                     }
                                 },
                                 onLongClick = {
