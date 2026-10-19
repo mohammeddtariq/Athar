@@ -96,6 +96,7 @@ import com.athar.app.data.findNextPrayer
 import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.AtharAnimatedLogo
 import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -1040,15 +1041,18 @@ fun AfterPrayerDuaDialog(
 
                                 Spacer(Modifier.height(8.dp))
 
-                                Text(
-                                    text = dua.translation,
-                                    fontFamily = ThmanyahSans,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 12.sp,
-                                    lineHeight = 17.sp,
-                                    color = AtharTextSecondary,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                LocalizedTextDirection(dua.translation) {
+                                    Text(
+                                        text = dua.translation,
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 12.sp,
+                                        lineHeight = 17.sp,
+                                        color = AtharTextSecondary,
+                                        textAlign = TextAlign.Start,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
 
                                 val noteText = if (isArabic) dua.noteAr ?: dua.noteEn else dua.noteEn ?: dua.noteAr
                                 if (!noteText.isNullOrBlank()) {
@@ -1075,15 +1079,18 @@ fun AfterPrayerDuaDialog(
                                                 tint = AtharPrimaryLight,
                                                 modifier = Modifier.size(13.dp)
                                             )
-                                            Text(
-                                                text = noteText,
-                                                fontFamily = ThmanyahSans,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 11.sp,
-                                                lineHeight = 16.sp,
-                                                color = AtharTextPrimary,
-                                                modifier = Modifier.weight(1f)
-                                            )
+                                            LocalizedTextDirection(noteText) {
+                                                Text(
+                                                    text = noteText,
+                                                    fontFamily = ThmanyahSans,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 11.sp,
+                                                    lineHeight = 16.sp,
+                                                    color = AtharTextPrimary,
+                                                    textAlign = TextAlign.Start,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
                                         }
                                     }
                                 }

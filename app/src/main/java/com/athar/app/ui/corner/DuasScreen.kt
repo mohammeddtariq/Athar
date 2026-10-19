@@ -69,6 +69,7 @@ import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
+import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -632,15 +633,18 @@ private fun DuaItemCard(
             Spacer(Modifier.height(10.dp))
 
             // English translation
-            Text(
-                text = dua.translation,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Medium,
-                fontSize = 12.5.sp,
-                lineHeight = 18.sp,
-                color = AtharTextSecondary,
-                modifier = Modifier.fillMaxWidth()
-            )
+            LocalizedTextDirection(dua.translation) {
+                Text(
+                    text = dua.translation,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.5.sp,
+                    lineHeight = 18.sp,
+                    color = AtharTextSecondary,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // In-card Hadith Guidelines / Virtue note (for After Prayer & specific duas)
             val noteText = if (isArabic) dua.noteAr ?: dua.noteEn else dua.noteEn ?: dua.noteAr
@@ -676,15 +680,18 @@ private fun DuaItemCard(
                                 modifier = Modifier.size(13.dp)
                             )
                         }
-                        Text(
-                            text = noteText,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.5.sp,
-                            lineHeight = 16.5.sp,
-                            color = AtharTextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
+                        LocalizedTextDirection(noteText) {
+                            Text(
+                                text = noteText,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.5.sp,
+                                lineHeight = 16.5.sp,
+                                color = AtharTextPrimary,
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
