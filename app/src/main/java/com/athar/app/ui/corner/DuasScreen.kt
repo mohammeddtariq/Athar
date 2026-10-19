@@ -548,13 +548,6 @@ private fun DuaItemCard(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 5.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(AtharCardSurface.copy(alpha = 0.88f))
-            .border(
-                width = 1.dp,
-                color = if (isDone) AtharPrimary.copy(alpha = 0.65f) else AtharCardBorder,
-                shape = RoundedCornerShape(18.dp)
-            )
             .then(
                 if (isDone) {
                     Modifier.shadow(
@@ -563,6 +556,13 @@ private fun DuaItemCard(
                         spotColor = AtharPrimaryLight.copy(alpha = 0.25f)
                     )
                 } else Modifier
+            )
+            .clip(RoundedCornerShape(18.dp))
+            .background(AtharCardSurface.copy(alpha = 0.88f))
+            .border(
+                width = 1.dp,
+                color = if (isDone) AtharPrimary.copy(alpha = 0.65f) else AtharCardBorder,
+                shape = RoundedCornerShape(18.dp)
             )
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },

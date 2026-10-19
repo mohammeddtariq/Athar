@@ -901,13 +901,6 @@ fun AfterPrayerDuaDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 4.dp, vertical = 4.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(AtharCardSurface.copy(alpha = 0.95f))
-                            .border(
-                                width = 1.dp,
-                                color = if (isDone) AtharPrimary.copy(alpha = 0.65f) else AtharCardBorder,
-                                shape = RoundedCornerShape(20.dp)
-                            )
                             .then(
                                 if (isDone) {
                                     Modifier.shadow(
@@ -916,6 +909,13 @@ fun AfterPrayerDuaDialog(
                                         spotColor = AtharPrimaryLight.copy(alpha = 0.25f)
                                     )
                                 } else Modifier
+                            )
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(AtharCardSurface.copy(alpha = 0.95f))
+                            .border(
+                                width = 1.dp,
+                                color = if (isDone) AtharPrimary.copy(alpha = 0.65f) else AtharCardBorder,
+                                shape = RoundedCornerShape(20.dp)
                             )
                             .combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
