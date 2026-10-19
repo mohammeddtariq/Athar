@@ -330,7 +330,8 @@ fun QuranScreen(
     onBack: () -> Unit = {},
     onReadingModeChanged: (Boolean) -> Unit = {},
     openDirayahDirectly: Boolean = false,
-    onDirayahDirectlyConsumed: () -> Unit = {}
+    onDirayahDirectlyConsumed: () -> Unit = {},
+    isNavBarVisible: Boolean = true
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -521,13 +522,13 @@ fun QuranScreen(
                 if (lastSurah != null && lastReadPageNum != null && !isLastReadDismissed && searchQuery.isBlank()) {
                     val displayName = if (isArabic) "سورة ${lastSurah.arabicName}" else "Surah ${lastSurah.englishName}"
                     AnimatedVisibility(
-                        visible = true,
+                        visible = isNavBarVisible,
                         enter = fadeIn(tween(250)) + slideInVertically(spring(dampingRatio = 0.85f, stiffness = 350f)) { it },
                         exit = fadeOut(tween(200)) + slideOutVertically(spring(dampingRatio = 0.85f, stiffness = 350f)) { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(bottom = 88.dp)
+                            .padding(bottom = 104.dp)
                     ) {
                         LastReadFloatingCard(
                             surahName = displayName,

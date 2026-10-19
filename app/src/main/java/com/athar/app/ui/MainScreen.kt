@@ -274,7 +274,8 @@ fun MainScreen(
                     onBack = { navController.navigateToTab(Screen.Home) },
                     onReadingModeChanged = { isReading -> isQuranReading = isReading },
                     openDirayahDirectly = openDirayahDirectly,
-                    onDirayahDirectlyConsumed = { openDirayahDirectly = false }
+                    onDirayahDirectlyConsumed = { openDirayahDirectly = false },
+                    isNavBarVisible = isNavBarVisible
                 )
             }
             composable(Screen.Duas.route) {
