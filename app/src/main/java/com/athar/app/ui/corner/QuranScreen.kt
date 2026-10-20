@@ -136,6 +136,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -1074,16 +1075,17 @@ private fun SurahHeaderBanner(
     surahNumber: Int,
     colors: QuranReaderColors,
     themeMode: QuranThemeMode = QuranThemeMode.AMOLED,
+    fontScale: Float = 1f,
     modifier: Modifier = Modifier
 ) {
-    // The frame supplied with the Mushaf artwork is deliberately a compact,
-    // self-contained heading. Letting it fill the reader width distorts both the
-    // ornament and the calligraphy, especially on large phones.
+    // The banner spans the full width of the mushaf page: a wide ornamental
+    // frame with the surah's calligraphic title centered inside it.
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        val bannerWidth = minOf(maxWidth - 24.dp, 300.dp)
+        val bannerWidth = minOf(maxWidth, 540.dp)
+        val frameHeight = bannerWidth / (687f / 79f)
         Box(
             modifier = Modifier
                 .width(bannerWidth)
@@ -1107,18 +1109,47 @@ private fun SurahHeaderBanner(
                 text = QuranRepository.getSurahFullTitleGlyphs(surahNumber),
                 fontFamily = QuranSurahNames,
                 fontWeight = FontWeight.Normal,
-                fontSize = 21.sp,
-                lineHeight = 21.sp,
+                fontSize = (frameHeight.value * 0.82f * fontScale).sp,
+                lineHeight = (frameHeight.value * 0.95f * fontScale).sp,
                 color = if (colors.isLight) Color(0xFF1A1D18) else Color.White,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
+                softWrap = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 72.dp)
-                    .offset(y = (-1).dp)
+                    .padding(horizontal = bannerWidth * 0.14f)
             )
         }
     }
+}
+
+@Composable
+private fun rememberAyahInlineContent(
+    verseNumbers: List<Int>,
+    scale: Float,
+    colors: QuranReaderColors,
+    activeVerseNumber: Int?,
+    isPlaying: Boolean
+): Map<String, InlineTextContent> = remember(verseNumbers, scale, colors.ayahMarker, activeVerseNumber, isPlaying) {
+    val map = mutableMapOf<String, InlineTextContent>()
+    val sizeSp = (22 * scale).sp
+    for (number in verseNumbers) {
+        val isThisVerseActive = isPlaying && (number == activeVerseNumber)
+        map["ayah_$number"] = InlineTextContent(
+            Placeholder(
+                width = sizeSp,
+                height = sizeSp,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+            )
+        ) {
+            AyahEndMedallion(
+                number = number,
+                fontScale = scale,
+                color = if (isThisVerseActive) (if (colors.isLight) AtharPrimary else Color(0xFFC9D8B4)) else colors.ayahMarker
+            )
+        }
+    }
+    map
 }
 
 private val QURAN_STOP_MARK_REGEX = Regex("^[\\u0615-\\u061A\\u06D6-\\u06ED\\uF600-\\uF8FF\\s]+$")
@@ -1182,26 +1213,77 @@ private fun UthmanicTextMushafPageCard(
 
     val highlightBg = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else AtharPrimaryLight.copy(alpha = 0.26f)
 
-    val inlineContent = remember(chunk.verses, fontScale, colors.ayahMarker, activeVerseNumber, isPlaying) {
-        val map = mutableMapOf<String, InlineTextContent>()
-        val sizeSp = (22 * fontScale).sp
-        for (v in chunk.verses) {
-            val isThisVerseActive = isPlaying && (v.number == activeVerseNumber)
-            map["ayah_${v.number}"] = InlineTextContent(
-                Placeholder(
-                    width = sizeSp,
-                    height = sizeSp,
-                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                )
-            ) {
-                AyahEndMedallion(
-                    number = v.number,
-                    fontScale = fontScale,
-                    color = if (isThisVerseActive) (if (colors.isLight) AtharPrimary else Color(0xFFC9D8B4)) else colors.ayahMarker
-                )
+    val chunkVerseNumbers = remember(chunk.verses) { chunk.verses.map { it.number } }
+
+    val inlineContent = rememberAyahInlineContent(
+        verseNumbers = chunkVerseNumbers,
+        scale = fontScale,
+        colors = colors,
+        activeVerseNumber = activeVerseNumber,
+        isPlaying = isPlaying
+    )
+
+    // Every verse visible on the page (the page may also show the tail of a
+    // previous surah), so its ornate end medallion renders like the print.
+    val pageVerseNumbers = remember(pageLines, chunkVerseNumbers) {
+        if (pageLines == null) {
+            chunkVerseNumbers
+        } else {
+            (pageLines.lines.asSequence().flatten().map { it.verse }.toList() + chunkVerseNumbers)
+                .distinct()
+                .sorted()
+        }
+    }
+
+    // Slots reserved by the mushaf for a surah header: the empty line(s) right
+    // before the first words of a surah. Two reserved lines hold the ornamental
+    // banner followed by the bismillah line; a single reserved line at the top
+    // of a page holds the banner only for Al-Fatiha and At-Tawbah (whose print
+    // draws the banner line but no bismillah) and the bismillah line for every
+    // other surah, whose print puts the banner in the page margin instead.
+    // Value: (isBanner, surahNumber); second value: surah whose banner is drawn
+    // above the line column (the marginal banner).
+    val headerInfo = remember(pageLines) {
+        val map = HashMap<Int, Pair<Boolean, Int>>()
+        var topBanner: Int? = null
+        if (pageLines != null) {
+            val run = mutableListOf<Int>()
+            var surahIdx = 0
+            for ((slotIdx, tokens) in pageLines.lines.withIndex()) {
+                if (tokens.isEmpty()) {
+                    run.add(slotIdx)
+                    continue
+                }
+                val startsSurah = tokens.firstOrNull { !it.isEndMarker }?.verse == 1
+                if (startsSurah && run.isNotEmpty()) {
+                    val surahNum = pageLines.suwar.getOrNull(surahIdx)
+                    if (surahNum != null) {
+                        surahIdx++
+                        when {
+                            run.size >= 2 -> {
+                                map[run[run.size - 2]] = true to surahNum
+                                if (surahNum != 1 && surahNum != 9) {
+                                    map[run.last()] = false to surahNum
+                                }
+                            }
+                            run.first() == 0 && surahNum != 1 && surahNum != 9 -> {
+                                map[run.last()] = false to surahNum
+                                topBanner = surahNum
+                            }
+                            else -> map[run.last()] = true to surahNum
+                        }
+                    }
+                }
+                run.clear()
             }
         }
-        map
+        map to topBanner
+    }
+    val headerSlots = headerInfo.first
+    val topBannerSurah = headerInfo.second
+
+    val bismillahSurahOnPage = remember(headerSlots) {
+        headerSlots.values.firstOrNull { !it.first }?.second
     }
 
     /**
@@ -1231,6 +1313,8 @@ private fun UthmanicTextMushafPageCard(
             var trackOffset = -1
             when {
                 !isPlaying -> builder.append(token)
+                // Foreign verse (previous surah's tail on this page): plain text.
+                wIdx == -2 -> builder.append(token)
                 wIdx < 0 -> builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.40f))) {
                     builder.append(token)
                 }
@@ -1312,23 +1396,30 @@ private fun UthmanicTextMushafPageCard(
                 for (tk in tokens) {
                     when {
                         tk.isEndMarker -> {
-                            if (tk.verse !in chunkVerseNumbers) continue
                             if (builder.length > 0) builder.append("\u202F")
-                            val startV = openStarts[tk.verse] ?: builder.length
+                            val startV = openStarts[tk.verse]
                             builder.appendInlineContent("ayah_${tk.verse}", " (${tk.verse}) ")
-                            ranges.add(tk.verse to (startV until builder.length))
-                            closed.add(tk.verse)
+                            if (tk.verse in chunkVerseNumbers) {
+                                ranges.add(tk.verse to ((startV ?: (builder.length - 1)) until builder.length))
+                                closed.add(tk.verse)
+                            }
                         }
                         tk.text.isBlank() -> Unit
                         else -> {
                             if (builder.length > 0) builder.append(" ")
-                            openStarts.putIfAbsent(tk.verse, builder.length)
-                            val wIdx = (wordIdxByVerse[tk.verse] ?: 0) + 1
-                            wordIdxByVerse[tk.verse] = wIdx
+                            val isForeign = tk.verse !in chunkVerseNumbers
+                            if (!isForeign) {
+                                openStarts.putIfAbsent(tk.verse, builder.length)
+                            }
+                            val wIdx = if (isForeign) -2 else {
+                                val next = (wordIdxByVerse[tk.verse] ?: 0) + 1
+                                wordIdxByVerse[tk.verse] = next
+                                next
+                            }
                             val styledAt = styledWordToken(
                                 builder,
                                 tk.text,
-                                if (isPlaying && tk.verse == activeVerseNumber) wIdx else if (isPlaying) -1 else wIdx
+                                if (!isForeign && isPlaying && tk.verse == activeVerseNumber) wIdx else if (!isForeign && isPlaying) -1 else wIdx
                             )
                             if (styledAt >= 0) activeOffset = styledAt
                         }
@@ -1347,21 +1438,21 @@ private fun UthmanicTextMushafPageCard(
     }
 
     val pageContent = @Composable {
-        val isBismillahActive = isPlaying && showBismillahLine &&
+        val isBismillahActive = isPlaying &&
+            (if (pageLines == null) showBismillahLine else bismillahSurahOnPage == surah.number) &&
             (activeVerseNumber == 0 || (activeVerseNumber == null && currentPlaybackMs < 6000L))
         val hasActiveVerse = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
         var fallbackLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
         val slotLayouts = remember(pageLines) { arrayOfNulls<TextLayoutResult>(pageLines?.lines?.size ?: 0) }
         val slotTops = remember(pageLines) { FloatArray(pageLines?.lines?.size ?: 0) }
         val density = LocalDensity.current
-        val slotPitchDp = with(density) { (44 * fontScale).sp.toDp() }
-        val emptySlotDp = with(density) { (32 * fontScale).sp.toDp() }
+        val textMeasurer = rememberTextMeasurer()
 
         // While the bismillah ornament is "playing" (before verse 1 audio starts),
-        // keep reporting its centre so auto-scroll highlights it.
-        LaunchedEffect(isBismillahActive, bismillahCenterY) {
-            if (isBismillahActive && bismillahCenterY >= 0f) {
-                onActiveWordPosition(bismillahCenterY)
+        // keep reporting its centre so auto-scroll highlights it (slot layout only).
+        LaunchedEffect(isBismillahActive, bismillahCenterY, contentTopOffsetPx) {
+            if (pageLines != null && isBismillahActive && bismillahCenterY >= 0f) {
+                onActiveWordPosition(contentTopOffsetPx + bismillahCenterY)
             }
         }
 
@@ -1369,162 +1460,287 @@ private fun UthmanicTextMushafPageCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isFirstPageOfSurah) {
-                SurahHeaderBanner(
-                    surahNumber = surah.number,
-                    colors = colors,
-                    themeMode = themeMode,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                if (showBismillahLine) {
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 6.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isBismillahActive) highlightBg else Color.Transparent)
-                            .padding(horizontal = 20.dp, vertical = 2.dp)
-                            .onGloballyPositioned { coords ->
-                                bismillahCenterY = coords.positionInParent().y + coords.size.height / 2f
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "\uFDFD",
-                            fontFamily = QuranBismillah,
-                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = (42 * fontScale).sp,
-                            color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (onFontScaleChange != null) {
-                            Modifier.pointerInput(fontScale) {
-                                detectTransformGestures { _, _, zoom, _ ->
-                                    if (zoom != 1f) {
-                                        val newScale = (fontScale * zoom).coerceIn(0.70f, 2.0f)
-                                        onFontScaleChange(newScale)
-                                    }
-                                }
-                            }
-                        } else Modifier
-                    )
-                    .onGloballyPositioned { coords ->
-                        contentTopOffsetPx = coords.positionInParent().y
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = if (pageLines != null) 2.dp else 0.dp)
-                ) {
-                    if (pageLines != null) {
-                        pageLines.lines.forEachIndexed { slotIdx, tokens ->
-                            // Header lines 1/2 are consumed by the banner / ornament above.
-                            if (isFirstPageOfSurah && slotIdx == 0) return@forEachIndexed
-                            if (showBismillahLine && slotIdx == 1) return@forEachIndexed
-                            val model = slotModels.getOrNull(slotIdx)
-                            when {
-                                tokens.isEmpty() -> Spacer(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(emptySlotDp)
-                                )
-                                model != null -> Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(slotPitchDp)
-                                        .onGloballyPositioned { coords ->
-                                            slotTops[slotIdx] = coords.positionInParent().y
-                                        }
-                                        .pointerInput(model.verseRanges) {
-                                            detectTapGestures { tapOffset ->
-                                                val layout = slotLayouts[slotIdx] ?: return@detectTapGestures
-                                                val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
-                                                val targetVerse = model.verseRanges.find { tappedCharOffset in it.second }?.first
-                                                if (targetVerse != null && onAyahClick != null) {
-                                                    onAyahClick(targetVerse)
-                                                }
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = model.annotated,
-                                        inlineContent = inlineContent,
-                                        fontFamily = QuranUthmanicHafs,
-                                        fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                                        fontSize = (21 * fontScale).sp,
-                                        lineHeight = (44 * fontScale).sp,
-                                        color = colors.text,
-                                        textAlign = TextAlign.Justify,
-                                        style = TextStyle(textDirection = TextDirection.Rtl),
-                                        onTextLayout = { layoutResult ->
-                                            slotLayouts[slotIdx] = layoutResult
-                                            if (hasActiveVerse && model.activeWordOffset >= 0 &&
-                                                model.activeWordOffset < layoutResult.layoutInput.text.length
-                                            ) {
-                                                val line = layoutResult.getLineForOffset(model.activeWordOffset)
-                                                val lineTop = layoutResult.getLineTop(line)
-                                                val lineBottom = layoutResult.getLineBottom(line)
-                                                val wordCenterY = (lineTop + lineBottom) / 2f
-                                                onActiveWordPosition(contentTopOffsetPx + slotTops[slotIdx] + wordCenterY)
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
+            val contentModifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onFontScaleChange != null) {
+                        Modifier.pointerInput(fontScale) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                if (zoom != 1f) {
+                                    val newScale = (fontScale * zoom).coerceIn(0.70f, 2.0f)
+                                    onFontScaleChange(newScale)
                                 }
                             }
                         }
-                    } else {
-                        // Assets missing: natural flowing paragraph fallback.
-                        val fallback = slotModels.firstOrNull()
-                        if (fallback != null) {
+                    } else Modifier
+                )
+                .onGloballyPositioned { coords ->
+                    contentTopOffsetPx = coords.positionInParent().y
+                }
+
+            if (pageLines == null) {
+                // Assets missing: previous header + natural flowing paragraph.
+                if (isFirstPageOfSurah) {
+                    SurahHeaderBanner(
+                        surahNumber = surah.number,
+                        colors = colors,
+                        themeMode = themeMode,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    if (showBismillahLine) {
+                        Box(
+                            modifier = Modifier
+                                .padding(vertical = 6.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isBismillahActive) highlightBg else Color.Transparent)
+                                .padding(horizontal = 20.dp, vertical = 2.dp)
+                                .onGloballyPositioned { coords ->
+                                    bismillahCenterY = coords.positionInParent().y + coords.size.height / 2f
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = fallback.annotated,
-                                inlineContent = inlineContent,
+                                text = "\uFDFD",
+                                fontFamily = QuranBismillah,
+                                fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = (34 * fontScale).sp,
+                                lineHeight = (52 * fontScale).sp,
+                                color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+
+                Box(
+                    modifier = contentModifier,
+                    contentAlignment = Alignment.Center
+                ) {
+                    val fallback = slotModels.firstOrNull()
+                    if (fallback != null) {
+                        Text(
+                            text = fallback.annotated,
+                            inlineContent = inlineContent,
+                            fontFamily = QuranUthmanicHafs,
+                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = (21 * fontScale).sp,
+                            lineHeight = (44 * fontScale).sp,
+                            color = colors.text,
+                            textAlign = TextAlign.Justify,
+                            style = TextStyle(textDirection = TextDirection.Rtl),
+                            onTextLayout = { layoutResult ->
+                                fallbackLayout = layoutResult
+                                if (isBismillahActive && bismillahCenterY >= 0) {
+                                    onActiveWordPosition(bismillahCenterY)
+                                } else if (hasActiveVerse && fallback.activeWordOffset >= 0 && fallback.activeWordOffset < layoutResult.layoutInput.text.length) {
+                                    val line = layoutResult.getLineForOffset(fallback.activeWordOffset)
+                                    val lineTop = layoutResult.getLineTop(line)
+                                    val lineBottom = layoutResult.getLineBottom(line)
+                                    val wordCenterY = (lineTop + lineBottom) / 2f
+                                    onActiveWordPosition(contentTopOffsetPx + wordCenterY)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(fallback.verseRanges) {
+                                    detectTapGestures { tapOffset ->
+                                        val layout = fallbackLayout ?: return@detectTapGestures
+                                        val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                                        val targetVerse = fallback.verseRanges.find { tappedCharOffset in it.second }?.first
+                                            ?: chunk.verses.firstOrNull()?.number
+                                        if (targetVerse != null && onAyahClick != null) {
+                                            onAyahClick(targetVerse)
+                                        }
+                                    }
+                                }
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = contentModifier,
+                    contentAlignment = Alignment.Center
+                ) {
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val availWidthPx = with(density) { (maxWidth - 4.dp).toPx() }
+
+                        // Fit the whole page uniformly: measure every slot at the
+                        // requested size and shrink all lines together just enough
+                        // so the longest one fits the page width (mushaf parity).
+                        val fittedScale = remember(slotModels, fontScale, fontBold, availWidthPx) {
+                            val measuredStyle = TextStyle(
                                 fontFamily = QuranUthmanicHafs,
                                 fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = (21 * fontScale).sp,
-                                lineHeight = (44 * fontScale).sp,
-                                color = colors.text,
-                                textAlign = TextAlign.Justify,
-                                style = TextStyle(textDirection = TextDirection.Rtl),
-                                onTextLayout = { layoutResult ->
-                                    fallbackLayout = layoutResult
-                                    if (isBismillahActive && bismillahCenterY >= 0) {
-                                        onActiveWordPosition(bismillahCenterY)
-                                    } else if (hasActiveVerse && fallback.activeWordOffset >= 0 && fallback.activeWordOffset < layoutResult.layoutInput.text.length) {
-                                        val line = layoutResult.getLineForOffset(fallback.activeWordOffset)
-                                        val lineTop = layoutResult.getLineTop(line)
-                                        val lineBottom = layoutResult.getLineBottom(line)
-                                        val wordCenterY = (lineTop + lineBottom) / 2f
-                                        onActiveWordPosition(contentTopOffsetPx + wordCenterY)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .pointerInput(fallback.verseRanges) {
-                                        detectTapGestures { tapOffset ->
-                                            val layout = fallbackLayout ?: return@detectTapGestures
-                                            val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
-                                            val targetVerse = fallback.verseRanges.find { tappedCharOffset in it.second }?.first
-                                                ?: chunk.verses.firstOrNull()?.number
-                                            if (targetVerse != null && onAyahClick != null) {
-                                                onAyahClick(targetVerse)
-                                            }
-                                        }
-                                    }
+                                textDirection = TextDirection.Rtl
                             )
+                            val medallionSp = (22 * fontScale).sp
+                            var ratio = 1f
+                            for (model in slotModels) {
+                                if (model.annotated.isEmpty()) continue
+                                val placeholders = model.annotated
+                                    .getStringAnnotations("androidx.compose.ui.text.inlineContent", 0, model.annotated.length)
+                                    .map { ann ->
+                                        androidx.compose.ui.text.AnnotatedString.Range(
+                                            Placeholder(
+                                                width = medallionSp,
+                                                height = medallionSp,
+                                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                            ),
+                                            ann.start,
+                                            ann.end
+                                        )
+                                    }
+                                val measured = textMeasurer.measure(
+                                    text = model.annotated,
+                                    placeholders = placeholders,
+                                    style = measuredStyle,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                                if (measured.size.width > 0) {
+                                    val r = availWidthPx / measured.size.width.toFloat()
+                                    if (r < ratio) ratio = r
+                                }
+                            }
+                            fontScale * ratio.coerceAtLeast(0.45f)
+                        }
+
+                        val slotPitchDp = with(density) { (44 * fittedScale).sp.toDp() }
+                        val emptySlotDp = with(density) { (32 * fittedScale).sp.toDp() }
+
+                        val slotInlineContent = rememberAyahInlineContent(
+                            verseNumbers = pageVerseNumbers,
+                            scale = fittedScale,
+                            colors = colors,
+                            activeVerseNumber = activeVerseNumber,
+                            isPlaying = isPlaying
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp)
+                        ) {
+                            if (topBannerSurah != null) {
+                                SurahHeaderBanner(
+                                    surahNumber = topBannerSurah,
+                                    colors = colors,
+                                    themeMode = themeMode,
+                                    fontScale = fittedScale,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 2.dp)
+                                )
+                            }
+                            pageLines.lines.forEachIndexed { slotIdx, tokens ->
+                                val model = slotModels.getOrNull(slotIdx)
+                                val header = headerSlots[slotIdx]
+                                when {
+                                    // The mushaf reserves empty header lines wherever a
+                                    // surah begins: banner first, then the bismillah line.
+                                    header != null && header.first -> Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = slotPitchDp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        SurahHeaderBanner(
+                                            surahNumber = header.second,
+                                            colors = colors,
+                                            themeMode = themeMode,
+                                            fontScale = fittedScale,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    header != null -> Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(slotPitchDp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isBismillahActive) highlightBg else Color.Transparent)
+                                            .onGloballyPositioned { coords ->
+                                                bismillahCenterY = coords.positionInParent().y + coords.size.height / 2f
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "\uFDFD",
+                                            fontFamily = QuranBismillah,
+                                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = (30 * fittedScale).sp,
+                                            lineHeight = (42 * fittedScale).sp,
+                                            color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    tokens.isEmpty() -> Spacer(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(emptySlotDp)
+                                    )
+                                    model != null -> Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(slotPitchDp)
+                                            .onGloballyPositioned { coords ->
+                                                slotTops[slotIdx] = coords.positionInParent().y
+                                            }
+                                            .pointerInput(model.verseRanges) {
+                                                detectTapGestures { tapOffset ->
+                                                    val layout = slotLayouts[slotIdx] ?: return@detectTapGestures
+                                                    val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                                                    val targetVerse = model.verseRanges.find { tappedCharOffset in it.second }?.first
+                                                    if (targetVerse != null && onAyahClick != null) {
+                                                        onAyahClick(targetVerse)
+                                                    }
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = model.annotated,
+                                            inlineContent = slotInlineContent,
+                                            fontFamily = QuranUthmanicHafs,
+                                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = (21 * fittedScale).sp,
+                                            lineHeight = (44 * fittedScale).sp,
+                                            color = colors.text,
+                                            textAlign = TextAlign.Justify,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            style = TextStyle(
+                                                textDirection = TextDirection.Rtl,
+                                                shadow = if (fontBold) Shadow(
+                                                    color = colors.text.copy(alpha = 0.5f),
+                                                    offset = Offset(0.35f, 0.35f),
+                                                    blurRadius = 0.5f
+                                                ) else null
+                                            ),
+                                            onTextLayout = { layoutResult ->
+                                                slotLayouts[slotIdx] = layoutResult
+                                                if (hasActiveVerse && model.activeWordOffset >= 0 &&
+                                                    model.activeWordOffset < layoutResult.layoutInput.text.length
+                                                ) {
+                                                    val line = layoutResult.getLineForOffset(model.activeWordOffset)
+                                                    val lineTop = layoutResult.getLineTop(line)
+                                                    val lineBottom = layoutResult.getLineBottom(line)
+                                                    val wordCenterY = (lineTop + lineBottom) / 2f
+                                                    onActiveWordPosition(contentTopOffsetPx + slotTops[slotIdx] + wordCenterY)
+                                                }
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

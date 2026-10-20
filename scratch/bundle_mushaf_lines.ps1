@@ -29,7 +29,14 @@ for ($p = $From; $p -le $To; $p++) {
     try {
         $page = Get-Page $p
         $lines = @{}
+        $suwar = [System.Collections.Generic.List[int]]::new()
         foreach ($verse in $page.verses) {
+            if ([int]$verse.verse_number -eq 1) {
+                $key = [string]$verse.verse_key
+                if ($key -and $key.Contains(":")) {
+                    $suwar.Add([int]($key.Split(":")[0]))
+                }
+            }
             foreach ($w in ($verse.words | Where-Object { $_.char_type_name -eq "word" -or $_.char_type_name -eq "end" })) {
                 $ln = [int]$w.line_number
                 if ($ln -lt 1) { $ln = 1 }
@@ -60,7 +67,11 @@ for ($p = $From; $p -le $To; $p++) {
                 [void]$sb.Append('[]')
             }
         }
-        [void]$sb.Append(']}')
+        [void]$sb.Append(']')
+        if ($suwar.Count -gt 0) {
+            [void]$sb.Append(',"sw":[').Append(($suwar -join ',')).Append(']')
+        }
+        [void]$sb.Append('}')
         $json = $sb.ToString()
         [System.IO.File]::WriteAllText($file, $json, $utf8)
         $ok++

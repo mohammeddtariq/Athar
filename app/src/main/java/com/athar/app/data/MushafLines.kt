@@ -17,10 +17,12 @@ data class MushafToken(
 /**
  * Authentically typeset line segmentation of a Madani Mushaf page (1..604).
  * [lines] is indexed by slot: lines[0] == mushaf line 1 ... lines[14] == mushaf line 15.
+ * [suwar] lists the surah numbers whose banner starts on this page, in slot order.
  */
 class MushafPageLines(
     val page: Int,
-    val lines: List<List<MushafToken>>
+    val lines: List<List<MushafToken>>,
+    val suwar: List<Int> = emptyList()
 )
 
 /**
@@ -61,7 +63,13 @@ object MushafLineRepository {
                 }
                 lines.add(tokens)
             }
-            MushafPageLines(page, lines)
+            val suwar = ArrayList<Int>()
+            json.optJSONArray("sw")?.let { swArr ->
+                for (i in 0 until swArr.length()) {
+                    suwar.add(swArr.getInt(i))
+                }
+            }
+            MushafPageLines(page, lines, suwar)
         }.getOrNull()
 
         cache.put(page, parsed)
