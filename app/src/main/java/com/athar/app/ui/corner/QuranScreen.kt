@@ -152,6 +152,9 @@ import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
+import com.athar.app.data.MushafLineRepository
+import com.athar.app.data.MushafPageLines
+import com.athar.app.data.MushafToken
 import com.athar.app.data.QuranPageChunk
 import com.athar.app.data.QuranPages
 import com.athar.app.data.QuranReciter
@@ -1160,7 +1163,8 @@ private fun UthmanicTextMushafPageCard(
 ) {
     val isArabic = remember { Locale.getDefault().language == "ar" }
     val isFirstPageOfSurah = chunk.verses.any { it.number == 1 }
-    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val context = LocalContext.current
+    val pageLines = remember(chunk.pageNumber) { MushafLineRepository.load(context, chunk.pageNumber) }
     var contentTopOffsetPx by remember { mutableFloatStateOf(0f) }
     var bismillahCenterY by remember { mutableFloatStateOf(-1f) }
 
@@ -1200,7 +1204,18 @@ private fun UthmanicTextMushafPageCard(
         map
     }
 
-    val (annotatedText, activeWordCharOffset, verseCharRanges) = remember(
+    /**
+     * Precomputed renderable model of one mushaf slot (line) of the page.
+     * [activeWordOffset] >= 0 only for the slot that currently holds the active word.
+     */
+    data class MushafSlotModel(
+        val annotated: androidx.compose.ui.text.AnnotatedString,
+        val activeWordOffset: Int,
+        val verseRanges: List<Pair<Int, IntRange>>
+    )
+
+    val slotModels = remember(
+        pageLines,
         chunk.verses,
         isPlaying,
         activeVerseNumber,
@@ -1208,95 +1223,147 @@ private fun UthmanicTextMushafPageCard(
         colors.text,
         colors.isLight
     ) {
-        var charOffset = -1
-        val ranges = mutableListOf<Pair<Int, IntRange>>()
-        val builder = androidx.compose.ui.text.AnnotatedString.Builder()
+        val currentWIdx = activeWordIndex ?: 0
+        val highlightColor = if (colors.isLight) Color(0xFF163212) else Color(0xFFFFFFFF)
+        val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.16f)
 
-        for (vIdx in chunk.verses.indices) {
-            val verse = chunk.verses[vIdx]
-            val vStart = builder.length
-            val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
-
-            if (!isPlaying) {
-                builder.append(verse.text)
-            } else if (!isThisVerseActive) {
-                builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.40f))) {
-                    builder.append(verse.text)
+        fun styledWordToken(builder: androidx.compose.ui.text.AnnotatedString.Builder, token: String, wIdx: Int): Int {
+            var trackOffset = -1
+            when {
+                !isPlaying -> builder.append(token)
+                wIdx < 0 -> builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.40f))) {
+                    builder.append(token)
                 }
-            } else {
-                val tokens = parseVerseTokens(verse.text)
-                val currentWIdx = activeWordIndex ?: 0
-                val highlightColor = if (colors.isLight) Color(0xFF163212) else Color(0xFFFFFFFF)
-                val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.16f)
-
-                for (w in tokens.indices) {
-                    val tokenItem = tokens[w]
-                    if (tokenItem.isStopMark) {
-                        builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.65f))) {
-                            builder.append(tokenItem.token)
-                        }
-                    } else {
-                        val word1Based = tokenItem.wordIndex
-                        when {
-                            word1Based == currentWIdx -> {
-                                charOffset = builder.length
-                                builder.withStyle(
-                                    SpanStyle(
-                                        color = highlightColor,
-                                        fontWeight = FontWeight.Bold,
-                                        background = bgHighlight,
-                                        shadow = if (!colors.isLight) Shadow(
-                                            color = Color.Black.copy(alpha = 0.75f),
-                                            offset = Offset(0f, 1f),
-                                            blurRadius = 2f
-                                        ) else null
-                                    )
-                                ) {
-                                    builder.append(tokenItem.token)
-                                }
-                            }
-                            word1Based < currentWIdx -> {
-                                builder.withStyle(
-                                    SpanStyle(
-                                        color = colors.text,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                ) {
-                                    builder.append(tokenItem.token)
-                                }
-                            }
-                            else -> {
-                                builder.withStyle(
-                                    SpanStyle(
-                                        color = colors.text.copy(alpha = 0.70f),
-                                        fontWeight = FontWeight.Normal
-                                    )
-                                ) {
-                                    builder.append(tokenItem.token)
-                                }
-                            }
-                        }
-                    }
-                    if (w < tokens.lastIndex) {
-                        builder.append(" ")
+                wIdx == currentWIdx -> {
+                    trackOffset = builder.length
+                    builder.withStyle(
+                        SpanStyle(
+                            color = highlightColor,
+                            fontWeight = FontWeight.Bold,
+                            background = bgHighlight,
+                            shadow = if (!colors.isLight) Shadow(
+                                color = Color.Black.copy(alpha = 0.75f),
+                                offset = Offset(0f, 1f),
+                                blurRadius = 2f
+                            ) else null
+                        )
+                    ) {
+                        builder.append(token)
                     }
                 }
+                wIdx < currentWIdx -> builder.withStyle(
+                    SpanStyle(color = colors.text, fontWeight = FontWeight.SemiBold)
+                ) {
+                    builder.append(token)
+                }
+                else -> builder.withStyle(
+                    SpanStyle(color = colors.text, fontWeight = FontWeight.Normal)
+                ) {
+                    builder.append(token)
+                }
             }
-
-            builder.append("\u202F")
-            builder.appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
-            val vEnd = builder.length
-            ranges.add(verse.number to (vStart until vEnd))
-            if (vIdx < chunk.verses.lastIndex) {
-                builder.append(" ")
-            }
+            return trackOffset
         }
-        Triple(builder.toAnnotatedString(), charOffset, ranges)
+
+        if (pageLines == null) {
+            // Fallback: natural flowing paragraph across all verses (assets missing).
+            var charOffset = -1
+            val ranges = mutableListOf<Pair<Int, IntRange>>()
+            val builder = androidx.compose.ui.text.AnnotatedString.Builder()
+
+            for (vIdx in chunk.verses.indices) {
+                val verse = chunk.verses[vIdx]
+                val vStart = builder.length
+
+                var wIdx = 0
+                for (tokenStr in verse.text.split(' ')) {
+                    if (tokenStr.isBlank()) continue
+                    if (wIdx > 0) builder.append(" ")
+                    val styledAt = styledWordToken(
+                        builder,
+                        tokenStr,
+                        if (isPlaying && verse.number == activeVerseNumber) (wIdx + 1) else if (isPlaying) -1 else wIdx
+                    )
+                    if (styledAt >= 0) charOffset = styledAt
+                    wIdx++
+                }
+
+                builder.append("\u202F")
+                builder.appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
+                val vEnd = builder.length
+                ranges.add(verse.number to (vStart until vEnd))
+                if (vIdx < chunk.verses.lastIndex) {
+                    builder.append(" ")
+                }
+            }
+            listOf(MushafSlotModel(builder.toAnnotatedString(), charOffset, ranges))
+        } else {
+            val chunkVerseNumbers = chunk.verses.map { it.number }.toHashSet()
+            val models = ArrayList<MushafSlotModel>(pageLines.lines.size)
+            val wordIdxByVerse = HashMap<Int, Int>()
+
+            for ((slotIdx, tokens) in pageLines.lines.withIndex()) {
+                val builder = androidx.compose.ui.text.AnnotatedString.Builder()
+                val ranges = mutableListOf<Pair<Int, IntRange>>()
+                val openStarts = HashMap<Int, Int>()
+                val closed = HashSet<Int>()
+                var activeOffset = -1
+
+                for (tk in tokens) {
+                    when {
+                        tk.isEndMarker -> {
+                            if (tk.verse !in chunkVerseNumbers) continue
+                            if (builder.length > 0) builder.append("\u202F")
+                            val startV = openStarts[tk.verse] ?: builder.length
+                            builder.appendInlineContent("ayah_${tk.verse}", " (${tk.verse}) ")
+                            ranges.add(tk.verse to (startV until builder.length))
+                            closed.add(tk.verse)
+                        }
+                        tk.text.isBlank() -> Unit
+                        else -> {
+                            if (builder.length > 0) builder.append(" ")
+                            openStarts.putIfAbsent(tk.verse, builder.length)
+                            val wIdx = (wordIdxByVerse[tk.verse] ?: 0) + 1
+                            wordIdxByVerse[tk.verse] = wIdx
+                            val styledAt = styledWordToken(
+                                builder,
+                                tk.text,
+                                if (isPlaying && tk.verse == activeVerseNumber) wIdx else if (isPlaying) -1 else wIdx
+                            )
+                            if (styledAt >= 0) activeOffset = styledAt
+                        }
+                    }
+                }
+
+                for ((verse, startV) in openStarts) {
+                    if (verse !in closed && builder.length > startV) {
+                        ranges.add(verse to (startV until builder.length))
+                    }
+                }
+                models.add(MushafSlotModel(builder.toAnnotatedString(), activeOffset, ranges))
+            }
+            models
+        }
     }
 
     val pageContent = @Composable {
         val isBismillahActive = isPlaying && showBismillahLine &&
             (activeVerseNumber == 0 || (activeVerseNumber == null && currentPlaybackMs < 6000L))
+        val hasActiveVerse = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
+        var fallbackLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+        val slotLayouts = remember(pageLines) { arrayOfNulls<TextLayoutResult>(pageLines?.lines?.size ?: 0) }
+        val slotTops = remember(pageLines) { FloatArray(pageLines?.lines?.size ?: 0) }
+        val density = LocalDensity.current
+        val slotPitchDp = with(density) { (44 * fontScale).sp.toDp() }
+        val emptySlotDp = with(density) { (32 * fontScale).sp.toDp() }
+
+        // While the bismillah ornament is "playing" (before verse 1 audio starts),
+        // keep reporting its centre so auto-scroll highlights it.
+        LaunchedEffect(isBismillahActive, bismillahCenterY) {
+            if (isBismillahActive && bismillahCenterY >= 0f) {
+                onActiveWordPosition(bismillahCenterY)
+            }
+        }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1335,7 +1402,6 @@ private fun UthmanicTextMushafPageCard(
                 }
             }
 
-            val hasActiveVerse = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1353,51 +1419,115 @@ private fun UthmanicTextMushafPageCard(
                     )
                     .onGloballyPositioned { coords ->
                         contentTopOffsetPx = coords.positionInParent().y
-                    }
-                    .pointerInput(chunk.verses, verseCharRanges) {
-                        detectTapGestures { tapOffset ->
-                            val layout = textLayoutResult ?: return@detectTapGestures
-                            val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
-                            val targetVerse = verseCharRanges.find { tappedCharOffset in it.second }?.first
-                                ?: chunk.verses.firstOrNull()?.number
-                            if (targetVerse != null && onAyahClick != null) {
-                                onAyahClick(targetVerse)
-                            }
-                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = annotatedText,
-                    inlineContent = inlineContent,
-                    fontFamily = QuranUthmanicHafs,
-                    fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = (21 * fontScale).sp,
-                    lineHeight = (44 * fontScale).sp,
-                    color = colors.text,
-                    textAlign = TextAlign.Justify,
-                    style = TextStyle(
-                        textDirection = TextDirection.Rtl,
-                        shadow = if (fontBold) Shadow(
-                            color = colors.text.copy(alpha = 0.5f),
-                            offset = Offset(0.35f, 0.35f),
-                            blurRadius = 0.5f
-                        ) else null
-                    ),
-                    onTextLayout = { layoutResult ->
-                        textLayoutResult = layoutResult
-                        if (isBismillahActive && bismillahCenterY >= 0) {
-                            onActiveWordPosition(bismillahCenterY)
-                        } else if (hasActiveVerse && activeWordCharOffset >= 0 && activeWordCharOffset < layoutResult.layoutInput.text.length) {
-                            val line = layoutResult.getLineForOffset(activeWordCharOffset)
-                            val lineTop = layoutResult.getLineTop(line)
-                            val lineBottom = layoutResult.getLineBottom(line)
-                            val wordCenterY = (lineTop + lineBottom) / 2f
-                            onActiveWordPosition(contentTopOffsetPx + wordCenterY)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = if (pageLines != null) 2.dp else 0.dp)
+                ) {
+                    if (pageLines != null) {
+                        pageLines.lines.forEachIndexed { slotIdx, tokens ->
+                            // Header lines 1/2 are consumed by the banner / ornament above.
+                            if (isFirstPageOfSurah && slotIdx == 0) return@forEachIndexed
+                            if (showBismillahLine && slotIdx == 1) return@forEachIndexed
+                            val model = slotModels.getOrNull(slotIdx)
+                            when {
+                                tokens.isEmpty() -> Spacer(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(emptySlotDp)
+                                )
+                                model != null -> Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(slotPitchDp)
+                                        .onGloballyPositioned { coords ->
+                                            slotTops[slotIdx] = coords.positionInParent().y
+                                        }
+                                        .pointerInput(model.verseRanges) {
+                                            detectTapGestures { tapOffset ->
+                                                val layout = slotLayouts[slotIdx] ?: return@detectTapGestures
+                                                val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                                                val targetVerse = model.verseRanges.find { tappedCharOffset in it.second }?.first
+                                                if (targetVerse != null && onAyahClick != null) {
+                                                    onAyahClick(targetVerse)
+                                                }
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = model.annotated,
+                                        inlineContent = inlineContent,
+                                        fontFamily = QuranUthmanicHafs,
+                                        fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = (21 * fontScale).sp,
+                                        lineHeight = (44 * fontScale).sp,
+                                        color = colors.text,
+                                        textAlign = TextAlign.Justify,
+                                        style = TextStyle(textDirection = TextDirection.Rtl),
+                                        onTextLayout = { layoutResult ->
+                                            slotLayouts[slotIdx] = layoutResult
+                                            if (hasActiveVerse && model.activeWordOffset >= 0 &&
+                                                model.activeWordOffset < layoutResult.layoutInput.text.length
+                                            ) {
+                                                val line = layoutResult.getLineForOffset(model.activeWordOffset)
+                                                val lineTop = layoutResult.getLineTop(line)
+                                                val lineBottom = layoutResult.getLineBottom(line)
+                                                val wordCenterY = (lineTop + lineBottom) / 2f
+                                                onActiveWordPosition(contentTopOffsetPx + slotTops[slotIdx] + wordCenterY)
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    } else {
+                        // Assets missing: natural flowing paragraph fallback.
+                        val fallback = slotModels.firstOrNull()
+                        if (fallback != null) {
+                            Text(
+                                text = fallback.annotated,
+                                inlineContent = inlineContent,
+                                fontFamily = QuranUthmanicHafs,
+                                fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = (21 * fontScale).sp,
+                                lineHeight = (44 * fontScale).sp,
+                                color = colors.text,
+                                textAlign = TextAlign.Justify,
+                                style = TextStyle(textDirection = TextDirection.Rtl),
+                                onTextLayout = { layoutResult ->
+                                    fallbackLayout = layoutResult
+                                    if (isBismillahActive && bismillahCenterY >= 0) {
+                                        onActiveWordPosition(bismillahCenterY)
+                                    } else if (hasActiveVerse && fallback.activeWordOffset >= 0 && fallback.activeWordOffset < layoutResult.layoutInput.text.length) {
+                                        val line = layoutResult.getLineForOffset(fallback.activeWordOffset)
+                                        val lineTop = layoutResult.getLineTop(line)
+                                        val lineBottom = layoutResult.getLineBottom(line)
+                                        val wordCenterY = (lineTop + lineBottom) / 2f
+                                        onActiveWordPosition(contentTopOffsetPx + wordCenterY)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .pointerInput(fallback.verseRanges) {
+                                        detectTapGestures { tapOffset ->
+                                            val layout = fallbackLayout ?: return@detectTapGestures
+                                            val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                                            val targetVerse = fallback.verseRanges.find { tappedCharOffset in it.second }?.first
+                                                ?: chunk.verses.firstOrNull()?.number
+                                            if (targetVerse != null && onAyahClick != null) {
+                                                onAyahClick(targetVerse)
+                                            }
+                                        }
+                                    }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
