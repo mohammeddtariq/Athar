@@ -1,16 +1,11 @@
 package com.athar.app.ui.corner
 
-import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import android.graphics.Picture
-import android.graphics.RectF
-import android.util.LruCache
-import com.caverock.androidsvg.SVG
 import java.util.Locale
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
@@ -1145,296 +1140,8 @@ fun parseVerseTokens(text: String): List<QuranVerseToken> {
     }
 }
 
-data class MedinaWordBounds(
-    val line: Int,
-    val minX: Float,
-    val maxX: Float
-)
-
-data class MedinaMushafPageData(
-    val picture: Picture,
-    val vbX: Float,
-    val vbY: Float,
-    val vbWidth: Float,
-    val vbHeight: Float,
-    val innerTop: Float,
-    val innerBottom: Float,
-    val innerLeft: Float,
-    val innerRight: Float,
-    val lineAyahs: Map<Int, List<Int>>,
-    val lineDividers: Map<Int, List<Pair<Int, Float>>>,
-    val verseWords: Map<Long, MedinaWordBounds>,
-    val bismillahLine: Int? = null,
-    val surahBannerLines: List<Int> = emptyList()
-)
-
-private val medinaMushafPageCache = LruCache<String, MedinaMushafPageData>(24)
-
-private data class ParsedWordItem(
-    val line: Int,
-    val hafs: String,
-    val minX: Float,
-    val maxX: Float
-)
-
-private val MEDINA_WAQF_CHARS = setOf("ۚ", "ۗ", "ۖ", "ۘ", "ۙ", "ۛ", "ۜ", "۞")
-private val MEDINA_TASHKEEL_REGEX = Regex("""[\u064B-\u065F\u0670\u06D6-\u06ED\u0610-\u061A]""")
-
-private fun isMedinaPrefixWord(hafs: String): Boolean {
-    if (hafs in MEDINA_WAQF_CHARS) return false
-    val bare = hafs.replace(MEDINA_TASHKEEL_REGEX, "")
-    return bare == "و" || bare == "ف" || bare == "يا" || bare == "ها"
-}
-
-private fun parseMedinaMushafSvg(
-    context: Context,
-    pageNumber: Int,
-    surahNumber: Int,
-    ink: String,
-    markerInk: String,
-    strokeWidth: String
-): MedinaMushafPageData? {
-    val pageFileName = String.format(Locale.US, "%03d.svg", pageNumber)
-    val cacheKey = "${pageFileName}_${surahNumber}_${ink}_${markerInk}_${strokeWidth}"
-    medinaMushafPageCache.get(cacheKey)?.let { return it }
-
-    try {
-        val rawSvg = context.assets.open("mushaf/$pageFileName").bufferedReader().use { it.readText() }
-        val cleanSvg = rawSvg.trimStart('\uFEFF')
-
-        val rectMatcher = Regex("""<g\s+id="md-page-inner"\s+data-rect="([^"]+)"""")
-        val rectMatch = rectMatcher.find(cleanSvg) ?: return null
-        val rectCoords = rectMatch.groupValues[1].split(",").mapNotNull { it.trim().toFloatOrNull() }
-        if (rectCoords.size < 4) return null
-        val innerLeft = rectCoords[0]
-        val innerTop = rectCoords[1]
-        val innerRight = rectCoords[2]
-        val innerBottom = rectCoords[3]
-        val width = innerRight - innerLeft
-        val height = innerBottom - innerTop
-
-        // Line detection and surah attribution (1..15)
-        val lineSurahMap = mutableMapOf<Int, Int>()
-        val lineTypeMap = mutableMapOf<Int, String>()
-        val lineRegex = Regex("""<g\s+id="md-line-(\d+)"([^>]*)>""")
-        val lineMatches = lineRegex.findAll(cleanSvg).toList()
-
-        for (idx in lineMatches.indices) {
-            val lm = lineMatches[idx]
-            val lNum = lm.groupValues[1].toIntOrNull() ?: (idx + 1)
-            val attrs = lm.groupValues[2]
-            val startIdx = lm.range.last + 1
-            val endIdx = if (idx + 1 < lineMatches.size) lineMatches[idx + 1].range.first else cleanSvg.length
-            val chunkBody = cleanSvg.substring(startIdx, endIdx)
-
-            val surahsOnLine = Regex("""data-surah="(\d+)"""").findAll(chunkBody)
-                .mapNotNull { it.groupValues[1].toIntOrNull() }
-                .distinct()
-                .toList()
-
-            when {
-                attrs.contains("surah-name") || chunkBody.contains("""data-type="surah-name"""") -> {
-                    lineTypeMap[lNum] = "banner"
-                }
-                attrs.contains("bismillah") || chunkBody.contains("""data-type="bismillah"""") -> {
-                    lineTypeMap[lNum] = "bismillah"
-                }
-                surahsOnLine.isNotEmpty() -> {
-                    lineTypeMap[lNum] = "text"
-                    lineSurahMap[lNum] = surahsOnLine.first()
-                }
-                else -> {
-                    lineTypeMap[lNum] = "empty"
-                }
-            }
-        }
-
-        // Propagate surah backwards to preceding banner and bismillah lines
-        for (l in 1..15) {
-            if (lineTypeMap[l] == "banner" || lineTypeMap[l] == "bismillah") {
-                for (nl in (l + 1)..15) {
-                    val nextS = lineSurahMap[nl]
-                    if (nextS != null) {
-                        lineSurahMap[l] = nextS
-                        break
-                    }
-                }
-            }
-        }
-
-        val matchingLines = (1..15).filter { lineSurahMap[it] == surahNumber }
-        val effectiveLines = if (matchingLines.isEmpty()) (1..15).toList() else matchingLines
-        val startLine = effectiveLines.minOrNull() ?: 1
-        val endLine = effectiveLines.maxOrNull() ?: 15
-
-        val lineHeight = (innerBottom - innerTop) / 15f
-        val cropTop = innerTop + (startLine - 1) * lineHeight
-        val cropBottom = innerTop + endLine * lineHeight
-
-        val padX = 2.5f
-        val padY = 2.0f
-        val vbX = innerLeft - padX
-        val vbY = cropTop - padY
-        val vbW = width + (padX * 2f)
-        val vbH = (cropBottom - cropTop) + (padY * 2f)
-
-        // Line Ayahs and Dividers strictly for the requested surah
-        val lineAyahs = mutableMapOf<Int, List<Int>>()
-        val lineDividers = mutableMapOf<Int, List<Pair<Int, Float>>>()
-        val sTag = String.format(Locale.US, "%03d", surahNumber)
-
-        for (idx in lineMatches.indices) {
-            val lm = lineMatches[idx]
-            val lNum = lm.groupValues[1].toIntOrNull() ?: (idx + 1)
-            if (lNum !in effectiveLines) continue
-
-            val startIdx = lm.range.last + 1
-            val endIdx = if (idx + 1 < lineMatches.size) lineMatches[idx + 1].range.first else cleanSvg.length
-            val chunkBody = cleanSvg.substring(startIdx, endIdx)
-
-            val words = Regex("""<g\s+id="[^"]+"\s+data-surah="$sTag"\s+data-aya="(\d+)"\s+data-line-number="\d+"\s+data-type="text"""")
-                .findAll(chunkBody)
-            val distinctAyahs = mutableListOf<Int>()
-            for (w in words) {
-                val a = w.groupValues[1].toIntOrNull() ?: continue
-                if (a !in distinctAyahs) distinctAyahs.add(a)
-            }
-            if (distinctAyahs.isNotEmpty()) {
-                lineAyahs[lNum] = distinctAyahs
-            }
-
-            val markMatches = Regex("""<g\s+id="([^"]+)"\s+data-surah="$sTag"\s+data-aya="(\d+)"\s+data-line-number="\d+"\s+data-type="aya-mark"""")
-                .findAll(chunkBody)
-            val divs = mutableListOf<Pair<Int, Float>>()
-            for (mm in markMatches) {
-                val markId = mm.groupValues[1]
-                val ayaNum = mm.groupValues[2].toIntOrNull() ?: continue
-                val markSub = chunkBody.substringAfter("id=\"$markId\"").substringBefore("</g>")
-                val xs = Regex("""M\s+([-+]?\d*\.?\d+)[\s,]+[-+]?\d*\.?\d+""").findAll(markSub)
-                    .mapNotNull { it.groupValues[1].toFloatOrNull() }
-                    .toList()
-                if (xs.isNotEmpty()) {
-                    val avgX = xs.average().toFloat()
-                    val normX = (avgX - vbX) / vbW
-                    divs.add(ayaNum to normX)
-                }
-            }
-            if (divs.isNotEmpty()) {
-                lineDividers[lNum] = divs
-            }
-        }
-
-        // Precise word bounding boxes for word-by-word recitation sync
-        val wordRegex = Regex(
-            """<g\s+id="([^"]+)"\s+data-surah="$sTag"\s+data-aya="(\d+)"\s+data-line-number="(\d+)"\s+data-type="text"\s+data-hafs="([^"]+)"\s+data-imlaey="([^"]+)"\s+data-word-index-in-ayah="(\d+)"[^>]*>(.*?)(?=<g\s+id="md-word-|<g\s+id="md-aya-mark-|\z)""",
-            RegexOption.DOT_MATCHES_ALL
-        )
-        val mCoordRegex = Regex("""[Mm]\s*([-\d\.]+)[,\s]+([-\d\.]+)""")
-
-        val ayahWordGroups = mutableMapOf<Int, MutableList<ParsedWordItem>>()
-        for (wm in wordRegex.findAll(cleanSvg)) {
-            val aya = wm.groupValues[2].toIntOrNull() ?: continue
-            val line = wm.groupValues[3].toIntOrNull() ?: continue
-            if (line !in effectiveLines) continue
-            val hafs = wm.groupValues[4]
-            val body = wm.groupValues[7]
-            val xs = mCoordRegex.findAll(body).mapNotNull { it.groupValues[1].toFloatOrNull() }.toList()
-            if (xs.isEmpty()) continue
-            val minX = xs.minOrNull() ?: continue
-            val maxX = xs.maxOrNull() ?: continue
-            ayahWordGroups.getOrPut(aya) { mutableListOf() }.add(ParsedWordItem(line, hafs, minX, maxX))
-        }
-
-        val verseWords = mutableMapOf<Long, MedinaWordBounds>()
-        for ((aya, words) in ayahWordGroups) {
-            var curAudioIdx = 1
-            for (item in words) {
-                if (item.hafs in MEDINA_WAQF_CHARS) continue
-                val key = (aya.toLong() shl 16) or curAudioIdx.toLong()
-                val existing = verseWords[key]
-                if (existing != null && existing.line == item.line) {
-                    verseWords[key] = MedinaWordBounds(item.line, minOf(existing.minX, item.minX), maxOf(existing.maxX, item.maxX))
-                } else {
-                    verseWords[key] = MedinaWordBounds(item.line, item.minX, item.maxX)
-                }
-                if (!isMedinaPrefixWord(item.hafs)) {
-                    curAudioIdx++
-                }
-            }
-        }
-
-        // Transform SVG:
-        // 1. Hide outer margin page decorations
-        var transformedSvg = cleanSvg.replace(
-            Regex("""<g\s+id="md-page-outer"[^>]*>"""),
-            """<g id="md-page-outer" display="none" visibility="hidden">"""
-        )
-
-        // 2. Hide lines outside current surah to prevent any surah bleed-over
-        for (l in 1..15) {
-            if (l !in effectiveLines) {
-                val lId = String.format(Locale.US, "md-line-%02d", l)
-                transformedSvg = transformedSvg.replace(
-                    Regex("""(<g\s+id="$lId"[^>]*)>"""),
-                    """$1 display="none" visibility="hidden">"""
-                )
-            }
-        }
-
-        // 3. Crop viewBox directly to bounds of the current surah's lines
-        transformedSvg = transformedSvg.replace(
-            Regex("""viewBox="0 0 382\.68 547\.09""""),
-            String.format(Locale.US, "viewBox=\"%.2f %.2f %.2f %.2f\" width=\"%.2f\" height=\"%.2f\"", vbX, vbY, vbW, vbH, vbW, vbH)
-        )
-
-        // 4. Inject text ink color and optional stroke width on inner group
-        val innerStroke = if ((strokeWidth.toFloatOrNull() ?: 0f) > 0f) " stroke=\"$ink\" stroke-width=\"$strokeWidth\" stroke-linejoin=\"round\"" else ""
-        transformedSvg = transformedSvg.replace(
-            Regex("""(<g\s+id="md-page-inner"[^>]*)>"""),
-            """$1 fill="$ink"$innerStroke>"""
-        )
-
-        // 5. Inject sage green marker ink on all aya-mark groups so numbers are never white
-        transformedSvg = transformedSvg.replace(
-            Regex("""(<g\s+[^>]*data-type="aya-mark"[^>]*)>"""),
-            """$1 fill="$markerInk" stroke="$markerInk" stroke-width="0">"""
-        )
-
-        val svg = SVG.getFromString(transformedSvg)
-        svg.setDocumentViewBox(vbX, vbY, vbW, vbH)
-        svg.documentWidth = vbW
-        svg.documentHeight = vbH
-        val pic = svg.renderToPicture(vbW.toInt().coerceAtLeast(1), vbH.toInt().coerceAtLeast(1)) ?: return null
-
-        val surahBannerLines = effectiveLines.filter { lineTypeMap[it] == "banner" }
-        val bismillahLine = effectiveLines.firstOrNull { lineTypeMap[it] == "bismillah" }
-
-        val result = MedinaMushafPageData(
-            picture = pic,
-            vbX = vbX,
-            vbY = vbY,
-            vbWidth = vbW,
-            vbHeight = vbH,
-            innerTop = innerTop,
-            innerBottom = innerBottom,
-            innerLeft = innerLeft,
-            innerRight = innerRight,
-            lineAyahs = lineAyahs,
-            lineDividers = lineDividers,
-            verseWords = verseWords,
-            bismillahLine = bismillahLine,
-            surahBannerLines = surahBannerLines
-        )
-        medinaMushafPageCache.put(cacheKey, result)
-        return result
-    } catch (e: Throwable) {
-        android.util.Log.e("MedinaMushaf", "Error loading SVG page $pageFileName", e)
-        return null
-    }
-}
-
 @Composable
-private fun UthmanicMushafPageCard(
+private fun UthmanicTextMushafPageCard(
     chunk: QuranPageChunk,
     surah: SurahMeta,
     colors: QuranReaderColors,
@@ -1451,44 +1158,13 @@ private fun UthmanicMushafPageCard(
     onActiveWordPosition: (Float) -> Unit,
     onAyahClick: ((Int) -> Unit)? = null
 ) {
-    val context = LocalContext.current
     val isArabic = remember { Locale.getDefault().language == "ar" }
+    val isFirstPageOfSurah = chunk.verses.any { it.number == 1 }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var contentTopOffsetPx by remember { mutableFloatStateOf(0f) }
+    var bismillahCenterY by remember { mutableFloatStateOf(-1f) }
 
-    val ink = if (colors.isLight) "#1A1D18" else "#F7F8F5"
-    // Athar's signature sage green for authentic ayah markers
-    val markerInk = when (themeMode) {
-        QuranThemeMode.AMOLED -> "#8DA382"
-        QuranThemeMode.DARK_OLIVE -> "#96AD8B"
-        QuranThemeMode.LIGHT -> "#4A683E"
-    }
-    val strokeWidth = if (fontBold) "0.22" else "0"
-
-    var isError by remember(chunk.pageNumber, surah.number, ink, markerInk, strokeWidth) { mutableStateOf(false) }
-
-    val pageData by produceState<MedinaMushafPageData?>(
-        initialValue = null,
-        chunk.pageNumber,
-        surah.number,
-        ink,
-        markerInk,
-        strokeWidth
-    ) {
-        value = withContext(Dispatchers.IO) {
-            isError = false
-            val parsed = parseMedinaMushafSvg(context, chunk.pageNumber, surah.number, ink, markerInk, strokeWidth)
-            if (parsed == null) isError = true
-            parsed
-        }
-    }
-
-    val bannerPainter = painterResource(R.drawable.ic_surah_banner_frame)
-    val bannerTint = remember(colors.isLight, themeMode) {
-        when {
-            colors.isLight -> Color(0xFF6E553F)
-            themeMode == QuranThemeMode.DARK_OLIVE -> Color(0xFF8E9B86)
-            else -> Color(0xFFC8CEC6)
-        }
-    }
+    val showBismillahLine = isFirstPageOfSurah && surah.number != 9 && surah.number != 1
 
     val pageNumStr = formatDigits(chunk.pageNumber.toString(), numberStylePref)
     val totalPagesStr = formatDigits("604", numberStylePref)
@@ -1500,341 +1176,233 @@ private fun UthmanicMushafPageCard(
     val juzLabel = if (isArabic) "الجزء $juzNumStr" else "Juz $juzNumStr"
     val surahLabel = if (isArabic) "سورة ${surah.arabicName}" else "Surah ${surah.englishName}"
 
-    var contentTopOffsetPx by remember { mutableFloatStateOf(0f) }
+    val highlightBg = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else AtharPrimaryLight.copy(alpha = 0.26f)
 
-    val pageContent = @Composable {
-        val data = pageData
-        if (data != null) {
-            val aspectRatio = data.vbWidth / data.vbHeight
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+    val inlineContent = remember(chunk.verses, fontScale, colors.ayahMarker, activeVerseNumber, isPlaying) {
+        val map = mutableMapOf<String, InlineTextContent>()
+        val sizeSp = (22 * fontScale).sp
+        for (v in chunk.verses) {
+            val isThisVerseActive = isPlaying && (v.number == activeVerseNumber)
+            map["ayah_${v.number}"] = InlineTextContent(
+                Placeholder(
+                    width = sizeSp,
+                    height = sizeSp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
             ) {
-                val maxCardWidth = maxWidth.coerceAtMost(540.dp)
-                val baseCardWidth = (maxCardWidth - 8.dp).coerceAtLeast(100.dp)
-                val cardWidth = (baseCardWidth * fontScale).coerceAtLeast(100.dp)
-                val cardHeight = cardWidth / aspectRatio
+                AyahEndMedallion(
+                    number = v.number,
+                    fontScale = fontScale,
+                    color = if (isThisVerseActive) (if (colors.isLight) AtharPrimary else Color(0xFFC9D8B4)) else colors.ayahMarker
+                )
+            }
+        }
+        map
+    }
 
-                val hScrollState = rememberScrollState()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (cardWidth > maxWidth) Modifier.horizontalScroll(hScrollState)
-                            else Modifier
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(cardWidth)
-                            .height(cardHeight)
-                            .then(
-                                if (onFontScaleChange != null) {
-                                    Modifier.pointerInput(fontScale) {
-                                        detectTransformGestures { _, _, zoom, _ ->
-                                            if (zoom != 1f) {
-                                                val newScale = (fontScale * zoom).coerceIn(0.70f, 2.0f)
-                                                onFontScaleChange(newScale)
-                                            }
-                                        }
-                                    }
-                                } else Modifier
-                            )
-                            .onGloballyPositioned { coords ->
-                                contentTopOffsetPx = coords.positionInParent().y
-                            }
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(chunk.verses, data) {
-                                    detectTapGestures(
-                                        onTap = { tapOffset ->
-                                    val canvasW = size.width.toFloat().coerceAtLeast(1f)
-                                    val canvasH = size.height.toFloat().coerceAtLeast(1f)
-                                    val tapFracX = (tapOffset.x / canvasW).coerceIn(0f, 1f)
-                                    val tapYInVb = data.vbY + (tapOffset.y / canvasH) * data.vbHeight
+    val (annotatedText, activeWordCharOffset, verseCharRanges) = remember(
+        chunk.verses,
+        isPlaying,
+        activeVerseNumber,
+        activeWordIndex,
+        colors.text,
+        colors.isLight
+    ) {
+        var charOffset = -1
+        val ranges = mutableListOf<Pair<Int, IntRange>>()
+        val builder = androidx.compose.ui.text.AnnotatedString.Builder()
 
-                                    val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
-                                    val lineIdx = ((tapYInVb - data.innerTop) / lineHeightVb).toInt().coerceIn(0, 14)
-                                    val lineNum = lineIdx + 1
+        for (vIdx in chunk.verses.indices) {
+            val verse = chunk.verses[vIdx]
+            val vStart = builder.length
+            val isThisVerseActive = isPlaying && (verse.number == activeVerseNumber)
 
-                                    val ayahsOnLine = data.lineAyahs[lineNum] ?: emptyList()
-                                    val dividersOnLine = data.lineDividers[lineNum]?.sortedByDescending { it.second } ?: emptyList()
+            if (!isPlaying) {
+                builder.append(verse.text)
+            } else if (!isThisVerseActive) {
+                builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.40f))) {
+                    builder.append(verse.text)
+                }
+            } else {
+                val tokens = parseVerseTokens(verse.text)
+                val currentWIdx = activeWordIndex ?: 0
+                val highlightColor = if (colors.isLight) Color(0xFF163212) else Color(0xFFFFFFFF)
+                val bgHighlight = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.16f)
 
-                                    val targetVerse = when {
-                                        ayahsOnLine.isEmpty() -> chunk.verses.firstOrNull()?.number ?: 1
-                                        ayahsOnLine.size == 1 -> ayahsOnLine.first()
-                                        dividersOnLine.isEmpty() -> ayahsOnLine.first()
-                                        else -> {
-                                            var chosen = ayahsOnLine.last()
-                                            for (d in dividersOnLine) {
-                                                if (tapFracX >= d.second) {
-                                                    chosen = d.first
-                                                    break
-                                                }
-                                            }
-                                            chosen
-                                        }
-                                    }
-                                    onAyahClick?.invoke(targetVerse)
-                                }
-                            )
+                for (w in tokens.indices) {
+                    val tokenItem = tokens[w]
+                    if (tokenItem.isStopMark) {
+                        builder.withStyle(SpanStyle(color = colors.text.copy(alpha = 0.65f))) {
+                            builder.append(tokenItem.token)
                         }
-                    ) {
-                        val scaleX = size.width / data.vbWidth
-                        val scaleY = size.height / data.vbHeight
-                        val lineHeightVb = (data.innerBottom - data.innerTop) / 15f
-
-                        val isBismillahActive = isPlaying && (activeVerseNumber == 0 || (activeVerseNumber == null && currentPlaybackMs < 6000L && surah.number != 9 && surah.number != 1))
-
-                        // 1. Recitation Audio Highlight (word-by-word or bismillah behind calligraphy)
-                        val highlightBg = if (colors.isLight) AtharPrimary.copy(alpha = 0.20f) else AtharPrimaryLight.copy(alpha = 0.26f)
-
-                        if (isBismillahActive && data.bismillahLine != null) {
-                            val bLine = data.bismillahLine
-                            val lineTopVb = data.innerTop + (bLine - 1) * lineHeightVb
-                            val lineBottomVb = lineTopVb + lineHeightVb
-                            val lineTopPx = (lineTopVb - data.vbY) * scaleY
-                            val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
-
-                            val textLeftPx = (data.innerLeft - data.vbX) * scaleX
-                            val textRightPx = (data.innerRight - data.vbX) * scaleX
-
-                            val padWordY = 1.5.dp.toPx()
-                            drawRoundRect(
-                                color = highlightBg,
-                                topLeft = Offset(textLeftPx.coerceAtLeast(0f), lineTopPx + padWordY),
-                                size = Size((textRightPx - textLeftPx).coerceAtLeast(12f), (lineBottomPx - lineTopPx) - (padWordY * 2f)),
-                                cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
-                            )
-
-                            val bMidY = (lineTopPx + lineBottomPx) / 2f
-                            onActiveWordPosition(contentTopOffsetPx + bMidY)
-                        } else if (isPlaying && activeVerseNumber != null && activeVerseNumber > 0) {
-                            val activeWord = if (activeWordIndex != null && activeWordIndex > 0) {
-                                val wordKey = (activeVerseNumber.toLong() shl 16) or activeWordIndex.toLong()
-                                data.verseWords[wordKey]
-                            } else null
-
-                            if (activeWord != null) {
-                                // Precise word-by-word highlight
-                                val lineTopVb = data.innerTop + (activeWord.line - 1) * lineHeightVb
-                                val lineBottomVb = lineTopVb + lineHeightVb
-                                val lineTopPx = (lineTopVb - data.vbY) * scaleY
-                                val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
-
-                                val padWordX = 2.0f
-                                val wordLeftPx = ((activeWord.minX - padWordX) - data.vbX) * scaleX
-                                val wordRightPx = ((activeWord.maxX + padWordX) - data.vbX) * scaleX
-                                val wordWidthPx = (wordRightPx - wordLeftPx).coerceAtLeast(10f)
-
-                                val padWordY = 1.5.dp.toPx()
-                                drawRoundRect(
-                                    color = highlightBg,
-                                    topLeft = Offset(wordLeftPx.coerceAtLeast(0f), lineTopPx + padWordY),
-                                    size = Size(wordWidthPx, (lineBottomPx - lineTopPx) - (padWordY * 2f)),
-                                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
-                                )
-
-                                val wordMidY = (lineTopPx + lineBottomPx) / 2f
-                                onActiveWordPosition(contentTopOffsetPx + wordMidY)
-                            } else {
-                                // Line-level fallback when activeWordIndex is resolving
-                                val activeLines = data.lineAyahs.filter { (_, ayahs) -> activeVerseNumber in ayahs }.keys.sorted()
-                                if (activeLines.isNotEmpty()) {
-                                    val textLeftPx = (data.innerLeft - data.vbX) * scaleX
-                                    val textRightPx = (data.innerRight - data.vbX) * scaleX
-
-                                    for (l in activeLines) {
-                                        val lineTopVb = data.innerTop + (l - 1) * lineHeightVb
-                                        val lineBottomVb = lineTopVb + lineHeightVb
-                                        val lineTopPx = (lineTopVb - data.vbY) * scaleY
-                                        val lineBottomPx = (lineBottomVb - data.vbY) * scaleY
-
-                                        val ayahs = data.lineAyahs[l] ?: emptyList()
-                                        val divs = data.lineDividers[l] ?: emptyList()
-
-                                        val (rectLeft, rectRight) = if (ayahs.size == 1) {
-                                            textLeftPx to textRightPx
-                                        } else {
-                                            val endDiv = divs.firstOrNull { it.first == activeVerseNumber }
-                                            if (endDiv != null) {
-                                                val prevDiv = divs.filter { it.second > endDiv.second }.minByOrNull { it.second }
-                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
-                                                val left = endDiv.second * size.width
-                                                left to r
-                                            } else {
-                                                val prevDiv = divs.lastOrNull()
-                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
-                                                textLeftPx to r
-                                            }
-                                        }
-
-                                        val padWordY = 1.5.dp.toPx()
-                                        drawRoundRect(
-                                            color = highlightBg,
-                                            topLeft = Offset(rectLeft.coerceAtLeast(0f), lineTopPx + padWordY),
-                                            size = Size((rectRight - rectLeft).coerceAtLeast(12f), (lineBottomPx - lineTopPx) - (padWordY * 2f)),
-                                            cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
-                                        )
-                                    }
-
-                                    // Auto-scroll focal position
-                                    val firstMid = (data.innerTop + (activeLines.first() - 0.5f) * lineHeightVb - data.vbY) * scaleY
-                                    val lastMid = (data.innerTop + (activeLines.last() - 0.5f) * lineHeightVb - data.vbY) * scaleY
-                                    val avgMidY = (firstMid + lastMid) / 2f
-                                    onActiveWordPosition(contentTopOffsetPx + avgMidY)
-                                }
-                            }
-                        }
-
-                        // 2. Surah Cartouche / Heading Banner Frame
-                        for (bLine in data.surahBannerLines) {
-                            val lineTopVb = data.innerTop + (bLine - 1) * lineHeightVb
-                            val lineBottomVb = lineTopVb + lineHeightVb
-                            val lineCenterYPx = ((lineTopVb + lineBottomVb) / 2f - data.vbY) * scaleY
-                            val innerWidthPx = (data.innerRight - data.innerLeft) * scaleX
-                            val bannerWidthPx = (innerWidthPx * 0.98f).coerceAtMost(size.width - 8f)
-                            val bannerHeightPx = bannerWidthPx * (79f / 687f)
-                            val bannerLeftPx = (size.width - bannerWidthPx) / 2f
-                            val bannerTopPx = lineCenterYPx - bannerHeightPx / 2f
-
-                            translate(left = bannerLeftPx, top = bannerTopPx) {
-                                with(bannerPainter) {
-                                    draw(
-                                        size = Size(bannerWidthPx, bannerHeightPx),
-                                        colorFilter = ColorFilter.tint(bannerTint)
+                    } else {
+                        val word1Based = tokenItem.wordIndex
+                        when {
+                            word1Based == currentWIdx -> {
+                                charOffset = builder.length
+                                builder.withStyle(
+                                    SpanStyle(
+                                        color = highlightColor,
+                                        fontWeight = FontWeight.Bold,
+                                        background = bgHighlight,
+                                        shadow = if (!colors.isLight) Shadow(
+                                            color = Color.Black.copy(alpha = 0.75f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 2f
+                                        ) else null
                                     )
+                                ) {
+                                    builder.append(tokenItem.token)
                                 }
                             }
-                        }
-
-                        // 3. Draw native vector Picture
-                        drawIntoCanvas { canvas ->
-                            canvas.nativeCanvas.save()
-                            canvas.nativeCanvas.scale(scaleX, scaleY)
-                            canvas.nativeCanvas.drawPicture(data.picture)
-                            canvas.nativeCanvas.restore()
-                        }
-
-                        // 4. Inactive Verse Dimming Overlays during Audio Recitation
-                        if (isPlaying && (isBismillahActive || (activeVerseNumber != null && activeVerseNumber > 0))) {
-                            val dimOverlayColor = colors.background.copy(alpha = 0.62f)
-
-                            if (isBismillahActive) {
-                                // Dim all lines except the Bismillah line
-                                for (l in 1..15) {
-                                    if (l != data.bismillahLine) {
-                                        val lTopVb = data.innerTop + (l - 1) * lineHeightVb
-                                        val lBottomVb = lTopVb + lineHeightVb
-                                        val lTopPx = (lTopVb - data.vbY) * scaleY
-                                        val lBottomPx = (lBottomVb - data.vbY) * scaleY
-                                        drawRect(
-                                            color = dimOverlayColor,
-                                            topLeft = Offset(0f, lTopPx),
-                                            size = Size(size.width, (lBottomPx - lTopPx).coerceAtLeast(0f))
-                                        )
-                                    }
-                                }
-                            } else if (activeVerseNumber != null && activeVerseNumber > 0) {
-                                val activeVerse = activeVerseNumber
-                                val activeLines = data.lineAyahs.filter { (_, ayahs) -> activeVerse in ayahs }.keys.toSet()
-
-                                for (l in 1..15) {
-                                    val lTopVb = data.innerTop + (l - 1) * lineHeightVb
-                                    val lBottomVb = lTopVb + lineHeightVb
-                                    val lTopPx = (lTopVb - data.vbY) * scaleY
-                                    val lBottomPx = (lBottomVb - data.vbY) * scaleY
-
-                                    if (l !in activeLines) {
-                                        drawRect(
-                                            color = dimOverlayColor,
-                                            topLeft = Offset(0f, lTopPx),
-                                            size = Size(size.width, (lBottomPx - lTopPx).coerceAtLeast(0f))
-                                        )
-                                    } else {
-                                        // Line contains active verse; dim non-active segments on shared line
-                                        val ayahs = data.lineAyahs[l] ?: emptyList()
-                                        val divs = data.lineDividers[l] ?: emptyList()
-
-                                        if (ayahs.size > 1 && divs.isNotEmpty()) {
-                                            val textLeftPx = (data.innerLeft - data.vbX) * scaleX
-                                            val textRightPx = (data.innerRight - data.vbX) * scaleX
-
-                                            val endDiv = divs.firstOrNull { it.first == activeVerse }
-                                            val (activeLeftPx, activeRightPx) = if (endDiv != null) {
-                                                val prevDiv = divs.filter { it.second > endDiv.second }.minByOrNull { it.second }
-                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
-                                                val left = endDiv.second * size.width
-                                                left to r
-                                            } else {
-                                                val prevDiv = divs.lastOrNull()
-                                                val r = prevDiv?.let { it.second * size.width } ?: textRightPx
-                                                textLeftPx to r
-                                            }
-
-                                            if (activeRightPx < size.width) {
-                                                drawRect(
-                                                    color = dimOverlayColor,
-                                                    topLeft = Offset(activeRightPx, lTopPx),
-                                                    size = Size((size.width - activeRightPx).coerceAtLeast(0f), (lBottomPx - lTopPx).coerceAtLeast(0f))
-                                                )
-                                            }
-                                            if (activeLeftPx > 0f) {
-                                                drawRect(
-                                                    color = dimOverlayColor,
-                                                    topLeft = Offset(0f, lTopPx),
-                                                    size = Size(activeLeftPx.coerceAtLeast(0f), (lBottomPx - lTopPx).coerceAtLeast(0f))
-                                                )
-                                            }
-                                        }
-                                    }
+                            word1Based < currentWIdx -> {
+                                builder.withStyle(
+                                    SpanStyle(
+                                        color = colors.text,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                ) {
+                                    builder.append(tokenItem.token)
                                 }
                             }
-
-                            // Dim outer margin padding
-                            val innerTopPx = (data.innerTop - data.vbY) * scaleY
-                            val innerBottomPx = (data.innerBottom - data.vbY) * scaleY
-                            if (innerTopPx > 0f) {
-                                drawRect(
-                                    color = dimOverlayColor,
-                                    topLeft = Offset(0f, 0f),
-                                    size = Size(size.width, innerTopPx)
-                                )
-                            }
-                            if (innerBottomPx < size.height) {
-                                drawRect(
-                                    color = dimOverlayColor,
-                                    topLeft = Offset(0f, innerBottomPx),
-                                    size = Size(size.width, (size.height - innerBottomPx).coerceAtLeast(0f))
-                                )
+                            else -> {
+                                builder.withStyle(
+                                    SpanStyle(
+                                        color = colors.text.copy(alpha = 0.70f),
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                ) {
+                                    builder.append(tokenItem.token)
+                                }
                             }
                         }
                     }
+                    if (w < tokens.lastIndex) {
+                        builder.append(" ")
+                    }
                 }
             }
+
+            builder.append("\u202F")
+            builder.appendInlineContent("ayah_${verse.number}", " (${verse.number}) ")
+            val vEnd = builder.length
+            ranges.add(verse.number to (vStart until vEnd))
+            if (vIdx < chunk.verses.lastIndex) {
+                builder.append(" ")
+            }
         }
-    } else if (isError) {
+        Triple(builder.toAnnotatedString(), charOffset, ranges)
+    }
+
+    val pageContent = @Composable {
+        val isBismillahActive = isPlaying && showBismillahLine &&
+            (activeVerseNumber == 0 || (activeVerseNumber == null && currentPlaybackMs < 6000L))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isFirstPageOfSurah) {
+                SurahHeaderBanner(
+                    surahNumber = surah.number,
+                    colors = colors,
+                    themeMode = themeMode,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                if (showBismillahLine) {
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 6.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isBismillahActive) highlightBg else Color.Transparent)
+                            .padding(horizontal = 20.dp, vertical = 2.dp)
+                            .onGloballyPositioned { coords ->
+                                bismillahCenterY = coords.positionInParent().y + coords.size.height / 2f
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "\uFDFD",
+                            fontFamily = QuranBismillah,
+                            fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = (42 * fontScale).sp,
+                            color = if (colors.isLight) colors.text.copy(alpha = 0.85f) else Color(0xFFCBD2C8),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
+            val hasActiveVerse = isPlaying && chunk.verses.any { it.number == activeVerseNumber }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp),
+                    .then(
+                        if (onFontScaleChange != null) {
+                            Modifier.pointerInput(fontScale) {
+                                detectTransformGestures { _, _, zoom, _ ->
+                                    if (zoom != 1f) {
+                                        val newScale = (fontScale * zoom).coerceIn(0.70f, 2.0f)
+                                        onFontScaleChange(newScale)
+                                    }
+                                }
+                            }
+                        } else Modifier
+                    )
+                    .onGloballyPositioned { coords ->
+                        contentTopOffsetPx = coords.positionInParent().y
+                    }
+                    .pointerInput(chunk.verses, verseCharRanges) {
+                        detectTapGestures { tapOffset ->
+                            val layout = textLayoutResult ?: return@detectTapGestures
+                            val tappedCharOffset = layout.getOffsetForPosition(tapOffset)
+                            val targetVerse = verseCharRanges.find { tappedCharOffset in it.second }?.first
+                                ?: chunk.verses.firstOrNull()?.number
+                            if (targetVerse != null && onAyahClick != null) {
+                                onAyahClick(targetVerse)
+                            }
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (isArabic) "تعذر تحميل الصفحة ${chunk.pageNumber}" else "Unable to load page ${chunk.pageNumber}",
-                    fontFamily = ThmanyahSans,
-                    fontSize = 13.sp,
-                    color = colors.dividerText
+                    text = annotatedText,
+                    inlineContent = inlineContent,
+                    fontFamily = QuranUthmanicHafs,
+                    fontWeight = if (fontBold) FontWeight.Bold else FontWeight.Normal,
+                    fontSize = (21 * fontScale).sp,
+                    lineHeight = (44 * fontScale).sp,
+                    color = colors.text,
+                    textAlign = TextAlign.Justify,
+                    style = TextStyle(
+                        textDirection = TextDirection.Rtl,
+                        shadow = if (fontBold) Shadow(
+                            color = colors.text.copy(alpha = 0.5f),
+                            offset = Offset(0.35f, 0.35f),
+                            blurRadius = 0.5f
+                        ) else null
+                    ),
+                    onTextLayout = { layoutResult ->
+                        textLayoutResult = layoutResult
+                        if (isBismillahActive && bismillahCenterY >= 0) {
+                            onActiveWordPosition(bismillahCenterY)
+                        } else if (hasActiveVerse && activeWordCharOffset >= 0 && activeWordCharOffset < layoutResult.layoutInput.text.length) {
+                            val line = layoutResult.getLineForOffset(activeWordCharOffset)
+                            val lineTop = layoutResult.getLineTop(line)
+                            val lineBottom = layoutResult.getLineBottom(line)
+                            val wordCenterY = (lineTop + lineBottom) / 2f
+                            onActiveWordPosition(contentTopOffsetPx + wordCenterY)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
     }
 
     if (showPageFrame) {
-        // Container Box Mode (enabled via toggle)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1922,7 +1490,6 @@ private fun UthmanicMushafPageCard(
             }
         }
     } else {
-        // Seamless Edge-to-Edge Default Mode
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1931,7 +1498,6 @@ private fun UthmanicMushafPageCard(
         ) {
             pageContent()
 
-            // Authentic Medina Mushaf Footer Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3559,7 +3125,7 @@ private fun SurahReader(
                             QuranLayoutMode.PAGES_SVG -> {
                                 // ─── DESIGN 2: Uthmanic Script Medina Mushaf Pages ───
                                 items(chunks, key = { "uthmanic_page_${surah.number}_${it.pageNumber}" }) { chunk ->
-                                    UthmanicMushafPageCard(
+                                    UthmanicTextMushafPageCard(
                                         chunk = chunk,
                                         surah = surah,
                                         colors = colors,
