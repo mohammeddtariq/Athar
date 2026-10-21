@@ -371,18 +371,18 @@ fun QiblaScreen(onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
             Box(
                 modifier = Modifier
                     .size(52.dp)
+                    .shadow(
+                        elevation = if (isAligned) 14.dp else 0.dp,
+                        shape = CircleShape,
+                        spotColor = AtharPrimaryLight,
+                        ambientColor = AtharPrimaryLight.copy(alpha = 0.6f)
+                    )
                     .clip(CircleShape)
                     .background(if (isAligned) AtharPrimary.copy(alpha = 0.28f) else AtharCardSurface)
                     .border(
                         width = if (isAligned) 2.dp else 1.dp,
                         color = if (isAligned) AtharPrimaryLight else AtharCardBorder,
                         shape = CircleShape
-                    )
-                    .shadow(
-                        elevation = if (isAligned) 14.dp else 0.dp,
-                        shape = CircleShape,
-                        spotColor = AtharPrimaryLight,
-                        ambientColor = AtharPrimaryLight.copy(alpha = 0.6f)
                     ),
                 contentAlignment = Alignment.Center
             ) {

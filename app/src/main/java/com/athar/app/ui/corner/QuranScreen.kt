@@ -5116,6 +5116,7 @@ private fun SurahReader(
                 Box(
                     modifier = Modifier
                         .widthIn(max = 280.dp)
+                        .shadow(elevation = 14.dp, shape = RoundedCornerShape(18.dp))
                         .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFF141A12))
                         .border(
@@ -5128,7 +5129,6 @@ private fun SurahReader(
                             ),
                             shape = RoundedCornerShape(18.dp)
                         )
-                        .shadow(elevation = 14.dp, shape = RoundedCornerShape(18.dp))
                         .clickable { showDirayahHint = false }
                         .padding(horizontal = 14.dp, vertical = 11.dp)
                 ) {

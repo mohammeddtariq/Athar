@@ -710,6 +710,15 @@ private fun CategoryChip(
 ) {
     Box(
         modifier = Modifier
+            .then(
+                if (isSelected) {
+                    Modifier.shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(18.dp),
+                        spotColor = AtharPrimaryLight.copy(alpha = 0.45f)
+                    )
+                } else Modifier
+            )
             .clip(RoundedCornerShape(18.dp))
             .background(
                 if (isSelected) AtharPrimary.copy(alpha = 0.26f)
@@ -719,15 +728,6 @@ private fun CategoryChip(
                 width = if (isSelected) 1.5.dp else 1.dp,
                 color = if (isSelected) AtharPrimaryLight else AtharCardBorder,
                 shape = RoundedCornerShape(18.dp)
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.shadow(
-                        elevation = 8.dp,
-                        shape = RoundedCornerShape(18.dp),
-                        spotColor = AtharPrimaryLight.copy(alpha = 0.45f)
-                    )
-                } else Modifier
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -755,6 +755,15 @@ private fun PrayerSubChip(
 ) {
     Box(
         modifier = Modifier
+            .then(
+                if (isSelected) {
+                    Modifier.shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(14.dp),
+                        spotColor = AtharPrimaryLight.copy(alpha = 0.35f)
+                    )
+                } else Modifier
+            )
             .clip(RoundedCornerShape(14.dp))
             .background(
                 if (isSelected) AtharPrimary.copy(alpha = 0.32f)
@@ -764,15 +773,6 @@ private fun PrayerSubChip(
                 width = if (isSelected) 1.5.dp else 1.dp,
                 color = if (isSelected) AtharPrimaryLight else AtharCardBorder.copy(alpha = 0.6f),
                 shape = RoundedCornerShape(14.dp)
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.shadow(
-                        elevation = 6.dp,
-                        shape = RoundedCornerShape(14.dp),
-                        spotColor = AtharPrimaryLight.copy(alpha = 0.35f)
-                    )
-                } else Modifier
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },

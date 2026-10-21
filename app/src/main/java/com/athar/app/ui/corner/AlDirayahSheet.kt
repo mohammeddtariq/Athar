@@ -1170,13 +1170,6 @@ private fun TafsirBooksBar(
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(animatedBg)
-                        .border(
-                            width = if (isSelected) 1.5.dp else 1.dp,
-                            color = animatedBorder,
-                            shape = RoundedCornerShape(14.dp)
-                        )
                         .then(
                             if (isSelected) {
                                 Modifier.shadow(
@@ -1185,6 +1178,13 @@ private fun TafsirBooksBar(
                                     spotColor = AtharPrimaryLight.copy(alpha = 0.35f)
                                 )
                             } else Modifier
+                        )
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(animatedBg)
+                        .border(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = animatedBorder,
+                            shape = RoundedCornerShape(14.dp)
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },

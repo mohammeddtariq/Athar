@@ -63,7 +63,7 @@ fun DuaCompletionCelebration(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(AtharBackground.copy(alpha = 0.96f)),
+            .background(AtharBackground),
         contentAlignment = Alignment.Center
     ) {
         CelebrationSparkles(modifier = Modifier.matchParentSize())
