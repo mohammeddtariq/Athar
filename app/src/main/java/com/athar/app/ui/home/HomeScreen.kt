@@ -69,6 +69,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -109,6 +110,7 @@ import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.AtharAnimatedLogo
 import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.components.MihrabWatermark
 import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -296,21 +298,6 @@ fun HomeScreen(
                 }
             }
 
-            nextOccasion?.let { occasion ->
-                item {
-                    AnimatedVisibility(
-                        visible = isVisible,
-                        enter = fadeIn(tween(400, 140))
-                    ) {
-                        UpcomingOccasionCard(
-                            occasion = occasion,
-                            language = selectedLanguage,
-                            numberStyle = numberStyle
-                        )
-                    }
-                }
-            }
-
             item {
                 AnimatedVisibility(
                     visible = isVisible,
@@ -328,7 +315,7 @@ fun HomeScreen(
                             color = AtharTextPrimary,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Black,
-                            fontSize = 16.sp
+                            fontSize = 14.5.sp
                         )
 
                         // After-Prayer Duas Pill
@@ -376,6 +363,21 @@ fun HomeScreen(
                         isArabic = selectedLanguage == "ar",
                         numberStyle = numberStyle
                     )
+                }
+            }
+
+            nextOccasion?.let { occasion ->
+                item {
+                    AnimatedVisibility(
+                        visible = isVisible,
+                        enter = fadeIn(tween(400, 320))
+                    ) {
+                        UpcomingOccasionCard(
+                            occasion = occasion,
+                            language = selectedLanguage,
+                            numberStyle = numberStyle
+                        )
+                    }
                 }
             }
             }
@@ -602,21 +604,28 @@ fun NextPrayerCard(
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
             .scale(scale.value)
-            .clip(RoundedCornerShape(20.dp))
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(22.dp),
+                spotColor = AtharPrimaryLight.copy(alpha = 0.22f),
+                ambientColor = Color.Black.copy(alpha = 0.60f)
+            )
+            .clip(RoundedCornerShape(22.dp))
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(AtharGradientStart, AtharGradientEnd)
+                    colors = listOf(AtharPrimarySubtle, AtharBackground)
                 )
             )
     ) {
-        // Static pattern layer inside the card.
-        IslamicPatternBackground(
-            modifier = Modifier.matchParentSize(),
-            alpha = 0.10f,
-            animated = false,
-            cellDp = 64f
+        MihrabWatermark(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 8.dp)
+                .size(176.dp)
+                .alpha(0.12f),
+            color = AtharPrimaryLight
         )
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -649,7 +658,7 @@ fun NextPrayerCard(
                                 color = AtharTextSecondary,
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Medium,
-                                fontSize = 12.sp
+                                fontSize = 11.sp
                             )
                         }
                         if (gregorianDateText.isNotEmpty()) {
@@ -658,7 +667,7 @@ fun NextPrayerCard(
                                 color = AtharTextSecondary,
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Medium,
-                                fontSize = 12.sp
+                                fontSize = 11.sp
                             )
                         }
 
@@ -705,14 +714,14 @@ fun NextPrayerCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 prayerName,
                 color = AtharTextPrimary,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -724,24 +733,24 @@ fun NextPrayerCard(
                 color = AtharTextSecondary,
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 formatDigits(nextTime.format(timeFmt), numberStyle),
                 color = AtharPrimaryLight,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 40.sp,
+                fontSize = 34.sp,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Time Remaining label + countdown pill together in one row.
             Row(
@@ -754,14 +763,14 @@ fun NextPrayerCard(
                     color = AtharPrimaryLight,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.5.sp
+                    fontSize = 12.5.sp
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(AtharPrimary.copy(alpha = 0.20f))
-                        .padding(horizontal = 14.dp, vertical = 7.dp)
+                        .padding(horizontal = 13.dp, vertical = 6.dp)
                 ) {
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         Text(
@@ -800,7 +809,7 @@ private fun BoxScope.CardGlowBorder() {
             .border(
                 1.dp,
                 AtharPrimary.copy(alpha = borderAlpha * 0.40f),
-                RoundedCornerShape(20.dp)
+                RoundedCornerShape(22.dp)
             )
     )
 }
