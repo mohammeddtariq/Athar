@@ -31,7 +31,8 @@ android {
             manifestPlaceholders["appName"] = "@string/app_name_dev"
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             manifestPlaceholders["appName"] = "@string/app_name"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
