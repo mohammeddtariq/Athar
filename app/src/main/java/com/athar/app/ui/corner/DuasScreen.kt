@@ -69,6 +69,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -166,27 +167,23 @@ fun DuasScreen(onBack: () -> Unit = {}) {
     val isLibrarySearching = isLibraryBrowsing && libraryQuery.isNotBlank()
 
     // Dynamic titles
-    val displayTitleAr = remember(selectedCategoryId, selectedPrayerSubCategory, libraryChapter) {
-        when {
-            selectedCategoryId == "library" -> libraryChapter?.titleAr ?: "حصن المسلم"
-            selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
-                "fajr" -> "أذكار بعد صلاة الفجر"
-                "maghrib" -> "أذكار بعد صلاة المغرب"
-                else -> "أذكار بعد الصلوات"
-            }
-            else -> currentCategory.titleAr
+    val displayTitleAr = when {
+        selectedCategoryId == "library" -> libraryChapter?.titleAr ?: stringResource(R.string.duas_library_title)
+        selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
+            "fajr" -> stringResource(R.string.duas_after_fajr_title)
+            "maghrib" -> stringResource(R.string.duas_after_maghrib_title)
+            else -> stringResource(R.string.duas_after_prayers_title)
         }
+        else -> currentCategory.titleAr
     }
-    val displayTitleEn = remember(selectedCategoryId, selectedPrayerSubCategory, libraryChapter) {
-        when {
-            selectedCategoryId == "library" -> libraryChapter?.titleEn ?: "Hisn al-Muslim"
-            selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
-                "fajr" -> "After Fajr Prayer"
-                "maghrib" -> "After Maghrib Prayer"
-                else -> "After Other Prayers"
-            }
-            else -> currentCategory.titleEn
+    val displayTitleEn = when {
+        selectedCategoryId == "library" -> libraryChapter?.titleEn ?: stringResource(R.string.duas_library_title)
+        selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
+            "fajr" -> stringResource(R.string.duas_after_fajr_title)
+            "maghrib" -> stringResource(R.string.duas_after_maghrib_title)
+            else -> stringResource(R.string.duas_after_prayers_title)
         }
+        else -> currentCategory.titleEn
     }
 
     // Per-dua session dhikr counts
@@ -260,19 +257,24 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                     CategoryHeaderBanner(
                         titleAr = displayTitleAr,
                         titleEn = displayTitleEn,
-                        itemCount = when {
-                            isLibrarySearching -> libraryHits.size
-                            isLibraryBrowsing -> library?.chapters?.size ?: 0
-                            else -> activeDuas.size
+                        countText = when {
+                            isLibrarySearching -> countLabel(
+                                R.plurals.duas_result_count,
+                                libraryHits.size,
+                                numberStyle
+                            )
+                            isLibraryBrowsing -> countLabel(
+                                R.plurals.duas_chapter_count,
+                                library?.chapters?.size ?: 0,
+                                numberStyle
+                            )
+                            else -> countLabel(
+                                R.plurals.duas_dua_count,
+                                activeDuas.size,
+                                numberStyle
+                            )
                         },
-                        isArabic = isArabic,
-                        numberStyle = numberStyle,
-                        countUnit = when {
-                            isLibrarySearching -> if (isArabic) "نتيجة" else "Results"
-                            !isLibraryBrowsing -> null
-                            isArabic -> "بابًا"
-                            else -> "Chapters"
-                        }
+                        isArabic = isArabic
                     )
                 }
 
@@ -310,8 +312,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (isArabic) "لا توجد نتائج مطابقة"
-                                        else "No matching duas found",
+                                        text = stringResource(R.string.duas_search_empty),
                                         fontFamily = ThmanyahSans,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 13.sp,
@@ -504,7 +505,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             PrayerSubChip(
-                                title = if (isArabic) "كل الأبواب" else "All chapters",
+                                title = stringResource(R.string.duas_all_chapters),
                                 isSelected = false,
                                 onClick = {
                                     selectedLibraryChapter = null
@@ -525,7 +526,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             PrayerSubChip(
-                                title = if (isArabic) "باقي الصلوات" else "Other Prayers",
+                                title = stringResource(R.string.duas_other_prayers),
                                 isSelected = selectedPrayerSubCategory == "other",
                                 onClick = {
                                     if (selectedPrayerSubCategory != "other") {
@@ -535,7 +536,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                 }
                             )
                             PrayerSubChip(
-                                title = if (isArabic) "صلاة الفجر" else "Fajr",
+                                title = stringResource(R.string.duas_fajr),
                                 isSelected = selectedPrayerSubCategory == "fajr",
                                 onClick = {
                                     if (selectedPrayerSubCategory != "fajr") {
@@ -545,7 +546,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                 }
                             )
                             PrayerSubChip(
-                                title = if (isArabic) "صلاة المغرب" else "Maghrib",
+                                title = stringResource(R.string.duas_maghrib),
                                 isSelected = selectedPrayerSubCategory == "maghrib",
                                 onClick = {
                                     if (selectedPrayerSubCategory != "maghrib") {
@@ -563,20 +564,16 @@ fun DuasScreen(onBack: () -> Unit = {}) {
 }
 
 @Composable
+private fun countLabel(resId: Int, count: Int, numberStyle: NumberStylePreference): String =
+    pluralStringResource(resId, count, formatDigits("$count", numberStyle))
+
+@Composable
 private fun CategoryHeaderBanner(
     titleAr: String,
     titleEn: String,
-    itemCount: Int,
-    isArabic: Boolean,
-    numberStyle: NumberStylePreference,
-    countUnit: String? = null
+    countText: String,
+    isArabic: Boolean
 ) {
-    val countLabel = countUnit ?: if (isArabic) {
-        if (itemCount in 3..10) "أذكار" else "ذكر"
-    } else {
-        if (itemCount == 1) "Dua" else "Duas"
-    }
-    val countText = "${formatDigits("$itemCount", numberStyle)} $countLabel"
     val mainTitle = if (isArabic) titleAr else titleEn
 
     Column(
@@ -721,11 +718,6 @@ private fun LibraryChapterRow(
 ) {
     val primary = if (isArabic) chapter.titleAr else chapter.titleEn
     val secondary = if (isArabic) chapter.titleEn else chapter.titleAr
-    val countLabel = if (isArabic) {
-        if (chapter.totalDuas in 3..10) "أذكار" else "ذكر"
-    } else {
-        if (chapter.totalDuas == 1) "dua" else "duas"
-    }
 
     Box(
         modifier = Modifier
@@ -788,7 +780,11 @@ private fun LibraryChapterRow(
             }
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "${formatDigits(chapter.totalDuas.toString(), numberStyle)} $countLabel",
+                text = countLabel(
+                    R.plurals.duas_dua_count,
+                    chapter.totalDuas,
+                    numberStyle
+                ),
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
@@ -825,7 +821,7 @@ private fun LibrarySearchField(
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    text = if (isArabic) "ابحث في الأبواب والأدعية" else "Search chapters and duas",
+                    text = stringResource(R.string.duas_search_hint),
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.5.sp,
@@ -850,7 +846,7 @@ private fun LibrarySearchField(
         if (query.isNotEmpty()) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -861,7 +857,7 @@ private fun LibrarySearchField(
             ) {
                 Icon(
                     Icons.Rounded.Close,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.duas_clear_search),
                     tint = AtharTextSecondary,
                     modifier = Modifier.size(16.dp)
                 )
@@ -960,7 +956,7 @@ private fun LibraryAttribution(text: String, isArabic: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = if (isArabic) "المصادر والترخيص" else "Sources & license",
+            text = stringResource(R.string.duas_sources_license),
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Bold,
             fontSize = 10.5.sp,
@@ -989,7 +985,8 @@ private fun LibraryDua.toDua(): Dua = Dua(
     translation = translation,
     source = "حصن المسلم / Hisn al-Muslim",
     repeat = repeat,
-    noteAr = reference?.let { "المرجع: $it" }
+    noteAr = reference?.let { "المرجع: $it" },
+    noteEn = reference?.let { "Reference: $it" }
 )
 
 @Composable
@@ -1184,12 +1181,10 @@ private fun DuaItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (count == 0) {
-                        if (isArabic) "اضغط للعدّ" else "Tap to count"
-                    } else if (isDone) {
-                        if (isArabic) "اكتمل الذكر" else "Completed"
-                    } else {
-                        if (isArabic) "استمر في العد" else "Keep counting"
+                    text = when {
+                        count == 0 -> stringResource(R.string.duas_tap_to_count)
+                        isDone -> stringResource(R.string.duas_completed)
+                        else -> stringResource(R.string.duas_keep_counting)
                     },
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Medium,

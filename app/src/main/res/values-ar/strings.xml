@@ -319,5 +319,43 @@
     <string name="al_marifah_close">إغلاق</string>
     <string name="al_marifah_share">مشاركة</string>
     <string name="al_marifah_copy">نسخ</string>
+    <string name="duas_library_title">حصن المسلم</string>
+    <string name="duas_after_fajr_title">أذكار بعد صلاة الفجر</string>
+    <string name="duas_after_maghrib_title">أذكار بعد صلاة المغرب</string>
+    <string name="duas_after_prayers_title">أذكار بعد الصلوات</string>
+    <string name="duas_all_chapters">كل الأبواب</string>
+    <string name="duas_other_prayers">باقي الصلوات</string>
+    <string name="duas_fajr">صلاة الفجر</string>
+    <string name="duas_maghrib">صلاة المغرب</string>
+    <string name="duas_search_hint">ابحث في الأبواب والأدعية</string>
+    <string name="duas_search_empty">لا توجد نتائج مطابقة</string>
+    <string name="duas_clear_search">مسح البحث</string>
+    <string name="duas_sources_license">المصادر والترخيص</string>
+    <string name="duas_tap_to_count">اضغط للعدّ</string>
+    <string name="duas_completed">اكتمل الذكر</string>
+    <string name="duas_keep_counting">استمر في العد</string>
+    <string name="duas_share">مشاركة الذكر</string>
+    <string name="duas_copied">تم النسخ إلى الحافظة</string>
+    <plurals name="duas_dua_count">
+        <item quantity="one">ذكر واحد</item>
+        <item quantity="two">ذكران</item>
+        <item quantity="few">%1$s أذكار</item>
+        <item quantity="many">%1$s ذكرًا</item>
+        <item quantity="other">%1$s ذكر</item>
+    </plurals>
+    <plurals name="duas_chapter_count">
+        <item quantity="one">باب واحد</item>
+        <item quantity="two">بابان</item>
+        <item quantity="few">%1$s أبواب</item>
+        <item quantity="many">%1$s بابًا</item>
+        <item quantity="other">%1$s باب</item>
+    </plurals>
+    <plurals name="duas_result_count">
+        <item quantity="one">نتيجة واحدة</item>
+        <item quantity="two">نتيجتان</item>
+        <item quantity="few">%1$s نتائج</item>
+        <item quantity="many">%1$s نتيجة</item>
+        <item quantity="other">%1$s نتيجة</item>
+    </plurals>
 </resources>
 

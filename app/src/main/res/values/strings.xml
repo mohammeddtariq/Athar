@@ -319,5 +319,34 @@
     <string name="al_marifah_close">Close</string>
     <string name="al_marifah_share">Share</string>
     <string name="al_marifah_copy">Copy</string>
+    <string name="duas_library_title">Hisn al-Muslim</string>
+    <string name="duas_after_fajr_title">After Fajr Prayer</string>
+    <string name="duas_after_maghrib_title">After Maghrib Prayer</string>
+    <string name="duas_after_prayers_title">After Other Prayers</string>
+    <string name="duas_all_chapters">All chapters</string>
+    <string name="duas_other_prayers">Other Prayers</string>
+    <string name="duas_fajr">Fajr</string>
+    <string name="duas_maghrib">Maghrib</string>
+    <string name="duas_search_hint">Search chapters and duas</string>
+    <string name="duas_search_empty">No matching duas found</string>
+    <string name="duas_clear_search">Clear search</string>
+    <string name="duas_sources_license">Sources &amp; license</string>
+    <string name="duas_tap_to_count">Tap to count</string>
+    <string name="duas_completed">Completed</string>
+    <string name="duas_keep_counting">Keep counting</string>
+    <string name="duas_share">Share dua</string>
+    <string name="duas_copied">Copied to clipboard</string>
+    <plurals name="duas_dua_count">
+        <item quantity="one">%1$s dua</item>
+        <item quantity="other">%1$s duas</item>
+    </plurals>
+    <plurals name="duas_chapter_count">
+        <item quantity="one">%1$s chapter</item>
+        <item quantity="other">%1$s chapters</item>
+    </plurals>
+    <plurals name="duas_result_count">
+        <item quantity="one">%1$s result</item>
+        <item quantity="other">%1$s results</item>
+    </plurals>
 </resources>
 
