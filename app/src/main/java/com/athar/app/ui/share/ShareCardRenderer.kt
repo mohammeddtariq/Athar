@@ -5,10 +5,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.text.Layout
 import android.text.StaticLayout
@@ -19,12 +17,12 @@ import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import com.athar.app.R
 import com.athar.app.ui.theme.AtharBackground
-import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 /**
  * Renders a dua or tafsir passage into a shareable portrait card.
@@ -36,6 +34,9 @@ object ShareCardRenderer {
     private const val PADDING = 96
     private const val FRAME_INSET = 38f
     private const val MAX_TAFSIR_CHARS = 1400
+
+    /** Design units are 1080 px wide; the bitmap is rendered larger for crisp sharing. */
+    private const val SUPERSAMPLE = 1.75f
 
     fun renderDua(
         context: Context,
@@ -91,7 +92,6 @@ object ShareCardRenderer {
             typeface = serif
             textSize = 50f
             color = AtharTextPrimary.toArgb()
-            isSubpixelText = true
         }
         val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = sans
@@ -120,24 +120,24 @@ object ShareCardRenderer {
         height += PADDING
         height = height.coerceIn(900, 4096)
 
-        val bitmap = Bitmap.createBitmap(WIDTH, height, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(
+            (WIDTH * SUPERSAMPLE).roundToInt(),
+            (height * SUPERSAMPLE).roundToInt(),
+            Bitmap.Config.ARGB_8888
+        )
         val canvas = Canvas(bitmap)
 
-        canvas.drawPaint(Paint().apply {
-            shader = LinearGradient(
-                0f, 0f, 0f, height.toFloat(),
-                AtharCardSurface.toArgb(), AtharBackground.toArgb(),
-                Shader.TileMode.CLAMP
-            )
-        })
+        canvas.drawColor(AtharBackground.toArgb())
+        canvas.save()
+        canvas.scale(SUPERSAMPLE, SUPERSAMPLE)
 
         drawIslamicLattice(
             canvas = canvas,
             width = WIDTH,
             height = height,
-            cellPx = 200f,
+            cellPx = 220f,
             tint = AtharPrimary.toArgb(),
-            baseAlpha = 0.16f
+            baseAlpha = 0.09f
         )
 
         val frame = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -220,6 +220,7 @@ object ShareCardRenderer {
             footerSubPaint
         )
 
+        canvas.restore()
         return bitmap
     }
 
