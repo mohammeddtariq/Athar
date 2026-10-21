@@ -111,6 +111,7 @@ import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.AtharAnimatedLogo
 import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.MihrabWatermark
+import com.athar.app.ui.components.OrnamentDivider
 import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -372,11 +373,20 @@ fun HomeScreen(
                         visible = isVisible,
                         enter = fadeIn(tween(400, 320))
                     ) {
-                        UpcomingOccasionCard(
-                            occasion = occasion,
-                            language = selectedLanguage,
-                            numberStyle = numberStyle
-                        )
+                        Column {
+                            Spacer(Modifier.height(14.dp))
+                            OrnamentDivider(
+                                color = AtharCardBorder,
+                                ornamentColor = AtharPrimary.copy(alpha = 0.65f),
+                                modifier = Modifier.padding(horizontal = 28.dp)
+                            )
+                            Spacer(Modifier.height(26.dp))
+                            UpcomingOccasionCard(
+                                occasion = occasion,
+                                language = selectedLanguage,
+                                numberStyle = numberStyle
+                            )
+                        }
                     }
                 }
             }
@@ -738,14 +748,21 @@ fun NextPrayerCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OrnamentDivider(
+                color = AtharPrimaryLight.copy(alpha = 0.30f),
+                ornamentColor = AtharPrimaryLight.copy(alpha = 0.75f)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 formatDigits(nextTime.format(timeFmt), numberStyle),
                 color = AtharPrimaryLight,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 34.sp,
+                fontSize = 42.sp,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )

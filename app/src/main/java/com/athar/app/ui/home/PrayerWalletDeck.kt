@@ -9,7 +9,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,12 +46,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -68,6 +63,7 @@ import com.athar.app.R
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.MihrabWatermark
+import com.athar.app.ui.components.OrnamentDivider
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -331,7 +327,10 @@ private fun PrayerWalletCard(
 
             Spacer(Modifier.weight(1f))
 
-            OrnamentDivider(isNext = row.isNext)
+            OrnamentDivider(
+                color = if (row.isNext) AtharPrimaryLight.copy(alpha = 0.55f) else AtharCardBorder,
+                ornamentColor = if (row.isNext) AtharPrimaryLight.copy(alpha = 0.85f) else AtharCardBorder
+            )
 
             Spacer(Modifier.height(9.dp))
 
@@ -348,41 +347,6 @@ private fun PrayerWalletCard(
                 overflow = TextOverflow.Ellipsis
             )
         }
-    }
-}
-
-@Composable
-private fun OrnamentDivider(isNext: Boolean) {
-    val color = if (isNext) AtharPrimaryLight.copy(alpha = 0.55f) else AtharCardBorder
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(
-            Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(Brush.horizontalGradient(listOf(Color.Transparent, color)))
-        )
-        Spacer(Modifier.size(7.dp))
-        Canvas(Modifier.size(9.dp)) {
-            val half = size.minDimension / 2f
-            rotate(45f) {
-                drawRect(
-                    color = color,
-                    topLeft = Offset(center.x - half * 0.72f, center.y - half * 0.72f),
-                    size = Size(half * 1.44f, half * 1.44f),
-                    style = Stroke(1.dp.toPx())
-                )
-            }
-        }
-        Spacer(Modifier.size(7.dp))
-        Box(
-            Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(Brush.horizontalGradient(listOf(color, Color.Transparent)))
-        )
     }
 }
 
