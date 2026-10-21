@@ -2734,7 +2734,7 @@ private fun SurahReader(
     var loadFailed by remember(surah.number) { mutableStateOf(false) }
     var attempt by remember(surah.number) { mutableIntStateOf(0) }
 
-    // Next surah metadata for Netflix-style card
+    // Next surah metadata for the end-of-surah card
     val nextSurah = remember(surah.number) {
         val idx = allSurahs.indexOfFirst { it.number == surah.number }
         if (idx in 0 until allSurahs.lastIndex) allSurahs[idx + 1] else null
@@ -3670,7 +3670,7 @@ private fun SurahReader(
                             }
                         }
 
-                        // Netflix-Style Next Surah Card
+                        // Next Surah Card
                         if (nextSurah != null) {
                             item(key = "next_card_${nextSurah.number}") {
                                 Column(
@@ -5164,7 +5164,7 @@ private fun SurahReader(
                 }
             }
 
-            // ─── FLOATING TAFSIR "AL-MA'RIFAH" ACTION BUTTON ───
+            // ─── FLOATING AL-DIRAYAH ACTION BUTTON ───
             AnimatedVisibility(
                 visible = shouldShowBars,
                 enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 2 },

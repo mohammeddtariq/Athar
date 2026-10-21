@@ -338,7 +338,7 @@ fun AppAnnouncementDialog(
 
                     Spacer(Modifier.height(18.dp))
 
-                    // ─── BOTTOM SAGE GREEN EXPLORE ACTION BUTTON (MATCHING BATTERY DIALOG STYLE) ───
+                    // ─── BOTTOM SAGE GREEN ACTION BUTTON ───
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
