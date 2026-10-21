@@ -298,11 +298,11 @@ fun AppUpdateDialog(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .heightIn(max = 160.dp)
+                                        .heightIn(max = 240.dp)
                                         .padding(horizontal = 14.dp, vertical = 8.dp)
                                         .verticalScroll(rememberScrollState())
                                 ) {
-                                    ChangelogContent(releaseInfo.changelogBody)
+                                    ReleaseNotesMarkdown(releaseInfo.changelogBody)
                                 }
                             }
                         }
@@ -461,68 +461,6 @@ fun AppUpdateDialog(
                             color = AtharTextOnPrimary
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChangelogContent(changelog: String) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        val lines = changelog.lines()
-        for (line in lines) {
-            val trimmed = line.trim()
-            if (trimmed.isEmpty()) continue
-
-            when {
-                trimmed.startsWith("###") || trimmed.startsWith("##") || trimmed.startsWith("#") -> {
-                    val header = trimmed.replace(Regex("^#+\\s*"), "")
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = header,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        color = AtharPrimaryLight
-                    )
-                }
-                trimmed.startsWith("-") || trimmed.startsWith("*") -> {
-                    val bulletText = trimmed.replace(Regex("^[-*]\\s*"), "")
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = "•",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 12.sp,
-                            color = AtharPrimary
-                        )
-                        Text(
-                            text = bulletText,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 11.5.sp,
-                            color = AtharTextPrimary,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-                else -> {
-                    Text(
-                        text = trimmed,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 11.5.sp,
-                        color = AtharTextSecondary,
-                        lineHeight = 16.sp
-                    )
                 }
             }
         }
