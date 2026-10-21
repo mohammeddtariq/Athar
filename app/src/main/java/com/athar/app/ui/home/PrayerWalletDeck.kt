@@ -29,6 +29,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,8 +54,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +67,7 @@ import androidx.compose.ui.zIndex
 import com.athar.app.R
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
+import com.athar.app.ui.components.MihrabWatermark
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -81,6 +87,9 @@ private val CardHeight = 152.dp
 private val CollapsedPeek = 44.dp
 private val FannedPeek = 76.dp
 
+private const val HINT_PREFS = "athar_ui_hints"
+private const val HINT_SEEN_KEY = "prayer_deck_hint_seen"
+
 /**
  * Wallet-style stack of today's prayer times. Cards rest as an overlapping pile;
  * dragging fans them out, and tapping one lifts it above the deck.
@@ -93,6 +102,9 @@ fun PrayerWalletDeck(
     modifier: Modifier = Modifier
 ) {
     val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val hintPrefs = remember(context) { context.getSharedPreferences(HINT_PREFS, 0) }
+    var showGestureHint by remember { mutableStateOf(!hintPrefs.getBoolean(HINT_SEEN_KEY, false)) }
     var focusedKey by rememberSaveable { mutableStateOf<String?>(null) }
     var fanTarget by remember { mutableFloatStateOf(0f) }
     val fan by animateFloatAsState(
@@ -126,7 +138,11 @@ fun PrayerWalletDeck(
             .draggable(
                 orientation = Orientation.Vertical,
                 state = rememberDraggableState { delta ->
-                    fanTarget = (fanTarget - delta / 320f).coerceIn(0f, 1f)
+                    fanTarget = (fanTarget + delta / 320f).coerceIn(0f, 1f)
+                    if (showGestureHint && delta > 2f) {
+                        showGestureHint = false
+                        hintPrefs.edit().putBoolean(HINT_SEEN_KEY, true).apply()
+                    }
                 },
                 onDragStopped = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -167,7 +183,59 @@ fun PrayerWalletDeck(
                         }
                     )
             )
+
+            if (showGestureHint) {
+                DeckGestureHint(
+                    isArabic = isArabic,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 42.dp)
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun DeckGestureHint(
+    isArabic: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "deckHint")
+    val drift by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            tween(1200),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "deckHintDrift"
+    )
+
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(AtharBackground.copy(alpha = 0.86f))
+            .border(1.dp, AtharCardBorder, RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.TouchApp,
+            contentDescription = null,
+            tint = AtharPrimaryLight.copy(alpha = 0.65f + drift * 0.35f),
+            modifier = Modifier
+                .size(18.dp)
+                .offset(y = (drift * 5).dp)
+        )
+        Text(
+            text = stringResource(R.string.home_deck_hint),
+            color = AtharTextSecondary,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.5.sp
+        )
     }
 }
 
@@ -212,12 +280,12 @@ private fun PrayerWalletCard(
                 shape = shape
             )
     ) {
-        StarWatermark(
+        MihrabWatermark(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(end = 22.dp)
-                .size(96.dp)
-                .alpha(if (row.isNext) 0.10f else 0.05f),
+                .padding(end = 16.dp)
+                .size(112.dp)
+                .alpha(if (row.isNext) 0.13f else 0.07f),
             color = AtharPrimaryLight
         )
 
@@ -272,6 +340,7 @@ private fun PrayerWalletCard(
                 color = if (row.isNext) AtharTextPrimary.copy(alpha = 0.92f) else AtharTextSecondary,
                 fontFamily = if (isArabic) ThmanyahSerifText else ThmanyahSans,
                 fontWeight = FontWeight.Medium,
+                fontStyle = FontStyle.Italic,
                 fontSize = 12.sp,
                 lineHeight = 18.sp,
                 textAlign = TextAlign.Start,
@@ -314,25 +383,6 @@ private fun OrnamentDivider(isNext: Boolean) {
                 .height(1.dp)
                 .background(Brush.horizontalGradient(listOf(color, Color.Transparent)))
         )
-    }
-}
-
-@Composable
-private fun StarWatermark(modifier: Modifier = Modifier, color: Color) {
-    Canvas(modifier = modifier) {
-        val radius = size.minDimension * 0.42f
-        val halfSide = radius * 0.707f
-        val stroke = size.minDimension * 0.022f
-        for (deg in floatArrayOf(0f, 45f)) {
-            rotate(deg) {
-                drawRect(
-                    color = color,
-                    topLeft = Offset(center.x - halfSide, center.y - halfSide),
-                    size = Size(halfSide * 2, halfSide * 2),
-                    style = Stroke(stroke)
-                )
-            }
-        }
     }
 }
 

@@ -397,5 +397,6 @@
     <string name="home_prayer_note_asr">﴿حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَى﴾</string>
     <string name="home_prayer_note_maghrib">﴿وَأَقِمِ الصَّلَاةَ طَرَفَيِ النَّهَارِ وَزُلَفًا مِّنَ اللَّيْلِ﴾</string>
     <string name="home_prayer_note_isha">﴿وَمِنَ اللَّيْلِ فَتَهَجَّدْ بِهِ نَافِلَةً لَّكَ﴾</string>
+    <string name="home_deck_hint">اسحب للأسفل لعرض البطاقات</string>
 </resources>
 

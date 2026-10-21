@@ -385,5 +385,6 @@
     <string name="home_prayer_note_asr">"Guard the prayers, especially the middle prayer."</string>
     <string name="home_prayer_note_maghrib">"Establish prayer at the two ends of the day and in the first hours of the night."</string>
     <string name="home_prayer_note_isha">"And rise in the night for prayer as an extra offering."</string>
+    <string name="home_deck_hint">Swipe down to fan the cards</string>
 </resources>
 
