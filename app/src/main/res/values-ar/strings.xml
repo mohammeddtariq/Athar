@@ -364,5 +364,8 @@
     <string name="backup_exported">تم تصدير الإعدادات</string>
     <string name="backup_imported">تمت استعادة الإعدادات</string>
     <string name="backup_failed">تعذّرت قراءة ملف النسخة الاحتياطية أو كتابته</string>
+    <string name="share_failed">تعذّر إنشاء الصورة</string>
+    <string name="share_dua_subject">دعاء من حصن المسلم</string>
+    <string name="share_tafsir_subject">تفسير من أَثَر</string>
 </resources>
 

@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.DuaLibrary
@@ -90,6 +92,7 @@ import com.athar.app.data.formatDigits
 import com.athar.app.data.search
 import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.share.ShareCardRenderer
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -124,6 +127,8 @@ fun DuasScreen(onBack: () -> Unit = {}) {
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val langCode by prefs.selectedLanguage.collectAsState(initial = "ar")
     val isArabic = langCode == "ar"
+    val shareDuaSubject = stringResource(R.string.share_dua_subject)
+    val shareChooserTitle = stringResource(R.string.duas_share)
 
     // Currently selected primary category
     var selectedCategoryId by rememberSaveable { mutableStateOf(duaCategories.first().id) }
@@ -402,6 +407,33 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                 if (count > 0) {
                                     counts = counts + (dua.id to 0)
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                            onShare = {
+                                scope.launch {
+                                    val rendered = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            ShareCardRenderer.renderDua(
+                                                context = context,
+                                                arabic = dua.arabic,
+                                                translation = dua.translation,
+                                                note = if (isArabic) dua.noteAr else dua.noteEn,
+                                                source = dua.source,
+                                                isArabic = isArabic
+                                            )
+                                        }
+                                    }
+                                    val shared = rendered.getOrNull()?.let { bitmap ->
+                                        ShareCardRenderer.shareBitmap(
+                                            context = context,
+                                            bitmap = bitmap,
+                                            subject = shareDuaSubject,
+                                            chooserTitle = shareChooserTitle
+                                        )
+                                    } ?: false
+                                    if (!shared) {
+                                        Toast.makeText(context, R.string.share_failed, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         )
@@ -1010,7 +1042,8 @@ private fun DuaItemCard(
     isArabic: Boolean,
     numberStyle: NumberStylePreference,
     onCount: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onShare: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -1066,20 +1099,45 @@ private fun DuaItemCard(
                     }
                 }
 
-                // Source badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(AtharPrimary.copy(alpha = 0.12f))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = dua.source,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AtharPrimaryLight
-                    )
+                    // Source badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AtharPrimary.copy(alpha = 0.12f))
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = dua.source,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = AtharPrimaryLight
+                        )
+                    }
+
+                    // Share as image
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onShare
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.Share,
+                            contentDescription = stringResource(R.string.duas_share),
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 

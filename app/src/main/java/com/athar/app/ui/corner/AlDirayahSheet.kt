@@ -5,6 +5,13 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.res.stringResource
+import com.athar.app.R
+import com.athar.app.ui.share.ShareCardRenderer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -146,6 +153,7 @@ fun AlDirayahSheet(
     onNavigateToAyah: ((surah: Int, ayah: Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val shareScope = rememberCoroutineScope()
     val appPrefs = remember { AppPreferences(context.applicationContext) }
     val appLanguage by appPrefs.selectedLanguage.collectAsState(initial = if (Locale.getDefault().language == "en") "en" else "ar")
 
@@ -470,31 +478,41 @@ fun AlDirayahSheet(
                             onShare = {
                                 val state = uiState
                                 if (state is TafsirUiState.Success) {
-                                    val shareText = buildString {
-                                        append("﴿ ")
-                                        append(state.tafsir.verseTextArabic)
-                                        append(" ﴾ [")
-                                        append(state.tafsir.surahNameArabic)
-                                        append(": ")
-                                        append(state.tafsir.ayahNumber)
-                                        append("]\n\n")
-                                        if (effectiveArabic) {
-                                            append(state.tafsir.edition.arabicName)
-                                            append(":\n")
-                                            append(state.tafsir.arabicTafsir)
-                                        } else {
-                                            append(state.tafsir.edition.englishName)
-                                            append(":\n")
-                                            append(state.tafsir.englishTafsir)
+                                    val tafsirText =
+                                        if (effectiveArabic) state.tafsir.arabicTafsir else state.tafsir.englishTafsir
+                                    val sourceLabel =
+                                        if (effectiveArabic) state.tafsir.edition.arabicName else state.tafsir.edition.englishName
+                                    val reference =
+                                        "${state.tafsir.surahNameArabic} · ${state.tafsir.ayahNumber}"
+                                    shareScope.launch {
+                                        val rendered = withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                ShareCardRenderer.renderTafsir(
+                                                    context = context,
+                                                    ayahArabic = state.tafsir.verseTextArabic,
+                                                    reference = reference,
+                                                    tafsir = tafsirText,
+                                                    source = sourceLabel,
+                                                    isArabic = effectiveArabic
+                                                )
+                                            }
                                         }
-                                        append("\n\n— Athar • أثـر")
+                                        val shared = rendered.getOrNull()?.let { bitmap ->
+                                            ShareCardRenderer.shareBitmap(
+                                                context = context,
+                                                bitmap = bitmap,
+                                                subject = context.getString(R.string.share_tafsir_subject),
+                                                chooserTitle = context.getString(R.string.share_tafsir_subject)
+                                            )
+                                        } ?: false
+                                        if (!shared) {
+                                            Toast.makeText(
+                                                context,
+                                                R.string.share_failed,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, "Tafsir: ${state.tafsir.surahNameArabic}")
-                                        putExtra(Intent.EXTRA_TEXT, shareText)
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Tafsir"))
                                 }
                             }
                         )
