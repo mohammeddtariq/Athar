@@ -107,6 +107,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -2904,7 +2905,7 @@ private fun SurahReader(
     var showControlsHint by rememberSaveable { mutableStateOf(true) }
     var showIndexHint by rememberSaveable { mutableStateOf(true) }
     var showNavHint by rememberSaveable { mutableStateOf(true) }
-    var showDirayahHint by remember(surah.number) { mutableStateOf(true) }
+    var showDirayahHint by remember(surah.number) { mutableStateOf(false) }
 
     // Recitation Full-Screen Mode: Tools vanish when reciting starts; reappear on touch/drag; auto-vanish after 4s
     LaunchedEffect(isPlaying) {
@@ -2930,11 +2931,18 @@ private fun SurahReader(
         }
     }
 
+    val isPlayingNow by rememberUpdatedState(isPlaying)
+
     LaunchedEffect(surah.number) {
         kotlinx.coroutines.delay(6500)
         showControlsHint = false
         showIndexHint = false
         showNavHint = false
+        // Let the reader-controls hint finish before the Al-Dirayah guidance shows up,
+        // otherwise both tooltips stack on top of each other.
+        kotlinx.coroutines.delay(700)
+        if (!isPlayingNow) showDirayahHint = true
+        kotlinx.coroutines.delay(7000)
         showDirayahHint = false
     }
 
