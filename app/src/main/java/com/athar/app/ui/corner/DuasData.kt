@@ -932,5 +932,12 @@ val duaCategories: List<DuaCategory> = listOf(
         titleAr = "جوامع الدعاء",
         titleEn = "Comprehensive Duas",
         duas = generalDuas
+    ),
+    // Full 132-chapter Hisn al-Muslim catalogue, loaded on demand from assets/duas
+    DuaCategory(
+        id = "library",
+        titleAr = "المزيد من الأدعية",
+        titleEn = "More Duas",
+        duas = emptyList()
     )
 )

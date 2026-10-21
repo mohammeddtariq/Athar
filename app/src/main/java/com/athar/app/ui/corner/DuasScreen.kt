@@ -1,5 +1,6 @@
 package com.athar.app.ui.corner
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -34,9 +36,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -63,10 +67,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.DuaLibrary
+import com.athar.app.data.DuaLibraryRepository
+import com.athar.app.data.LibraryChapter
+import com.athar.app.data.LibraryDua
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.LocalizedTextDirection
@@ -82,7 +91,9 @@ import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Duas & Adhkar browser with:
@@ -113,40 +124,54 @@ fun DuasScreen(onBack: () -> Unit = {}) {
     // Sub-collection for After Prayer ("other", "fajr", "maghrib")
     var selectedPrayerSubCategory by remember { mutableStateOf("other") }
 
+    // Full Hisn al-Muslim library (loaded from assets on first use)
+    var library by remember { mutableStateOf<DuaLibrary?>(null) }
+    var selectedLibraryChapter by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(selectedCategoryId) {
+        if (selectedCategoryId == "library" && library == null) {
+            library = withContext(Dispatchers.IO) { DuaLibraryRepository.load(context) }
+        }
+    }
+    val libraryChapter = remember(library, selectedLibraryChapter) {
+        selectedLibraryChapter?.let { number -> library?.chapters?.firstOrNull { it.number == number } }
+    }
+
     // Active list of duas depending on category and sub-category
-    val activeDuas = remember(selectedCategoryId, selectedPrayerSubCategory) {
-        if (selectedCategoryId == "after_prayer") {
-            when (selectedPrayerSubCategory) {
+    val activeDuas = remember(selectedCategoryId, selectedPrayerSubCategory, libraryChapter) {
+        when {
+            selectedCategoryId == "library" -> libraryChapter?.duas?.map { it.toDua() } ?: emptyList()
+            selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
                 "fajr" -> afterPrayerFajrDuas
                 "maghrib" -> afterPrayerMaghribDuas
                 else -> afterPrayerOtherDuas
             }
-        } else {
-            currentCategory.duas
+            else -> currentCategory.duas
         }
     }
 
+    val isLibraryBrowsing = selectedCategoryId == "library" && selectedLibraryChapter == null
+
     // Dynamic titles
-    val displayTitleAr = remember(selectedCategoryId, selectedPrayerSubCategory) {
-        if (selectedCategoryId == "after_prayer") {
-            when (selectedPrayerSubCategory) {
+    val displayTitleAr = remember(selectedCategoryId, selectedPrayerSubCategory, libraryChapter) {
+        when {
+            selectedCategoryId == "library" -> libraryChapter?.titleAr ?: "حصن المسلم"
+            selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
                 "fajr" -> "أذكار بعد صلاة الفجر"
                 "maghrib" -> "أذكار بعد صلاة المغرب"
                 else -> "أذكار بعد الصلوات"
             }
-        } else {
-            currentCategory.titleAr
+            else -> currentCategory.titleAr
         }
     }
-    val displayTitleEn = remember(selectedCategoryId, selectedPrayerSubCategory) {
-        if (selectedCategoryId == "after_prayer") {
-            when (selectedPrayerSubCategory) {
+    val displayTitleEn = remember(selectedCategoryId, selectedPrayerSubCategory, libraryChapter) {
+        when {
+            selectedCategoryId == "library" -> libraryChapter?.titleEn ?: "Hisn al-Muslim"
+            selectedCategoryId == "after_prayer" -> when (selectedPrayerSubCategory) {
                 "fajr" -> "After Fajr Prayer"
                 "maghrib" -> "After Maghrib Prayer"
                 else -> "After Other Prayers"
             }
-        } else {
-            currentCategory.titleEn
+            else -> currentCategory.titleEn
         }
     }
 
@@ -179,6 +204,18 @@ fun DuasScreen(onBack: () -> Unit = {}) {
     }
     val shouldShowTopBar = isTopBarVisible || isNearTop
 
+    val backToList: () -> Unit = {
+        if (selectedCategoryId == "library" && selectedLibraryChapter != null) {
+            selectedLibraryChapter = null
+            scope.launch { listState.scrollToItem(0) }
+        } else {
+            onBack()
+        }
+    }
+    BackHandler(enabled = selectedCategoryId == "library" && selectedLibraryChapter != null) {
+        selectedLibraryChapter = null
+    }
+
     PatternScaffold {
         Box(
             modifier = Modifier
@@ -189,56 +226,101 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = if (selectedCategoryId == "after_prayer") 170.dp else 125.dp,
+                    top = if (selectedCategoryId == "after_prayer" ||
+                        (selectedCategoryId == "library" && selectedLibraryChapter != null)
+                    ) 170.dp else 125.dp,
                     bottom = 150.dp
                 )
             ) {
                 // Category Banner Header
-                item(key = "banner_${selectedCategoryId}_${if (selectedCategoryId == "after_prayer") selectedPrayerSubCategory else ""}") {
+                item(key = "banner_${selectedCategoryId}_${if (selectedCategoryId == "after_prayer") selectedPrayerSubCategory else ""}_${selectedLibraryChapter ?: ""}") {
                     CategoryHeaderBanner(
                         titleAr = displayTitleAr,
                         titleEn = displayTitleEn,
-                        itemCount = activeDuas.size,
+                        itemCount = if (isLibraryBrowsing) library?.chapters?.size ?: 0 else activeDuas.size,
                         isArabic = isArabic,
-                        numberStyle = numberStyle
+                        numberStyle = numberStyle,
+                        countUnit = when {
+                            !isLibraryBrowsing -> null
+                            isArabic -> "بابًا"
+                            else -> "Chapters"
+                        }
                     )
                 }
 
-                // Duas List — unique key = dua.id (100% collision free)
-                itemsIndexed(
-                    items = activeDuas,
-                    key = { _, dua -> dua.id }
-                ) { index, dua ->
-                    val target = dua.repeat
-                    val count = counts[dua.id] ?: 0
-                    val isDone = count >= target
-
-                    DuaItemCard(
-                        index = index,
-                        totalCount = activeDuas.size,
-                        dua = dua,
-                        count = count,
-                        target = target,
-                        isDone = isDone,
-                        isArabic = isArabic,
-                        numberStyle = numberStyle,
-                        onCount = {
-                            if (count < target) {
-                                val next = count + 1
-                                counts = counts + (dua.id to next)
-                                haptics.performHapticFeedback(
-                                    if (next >= target) HapticFeedbackType.LongPress
-                                    else HapticFeedbackType.TextHandleMove
+                if (isLibraryBrowsing) {
+                    val chapters = library?.chapters
+                    if (chapters == null) {
+                        item(key = "library_loading") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = AtharPrimaryLight,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
-                        },
-                        onReset = {
-                            if (count > 0) {
-                                counts = counts + (dua.id to 0)
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
                         }
-                    )
+                    } else {
+                        items(chapters, key = { "lib_chapter_${it.number}" }) { chapter ->
+                            LibraryChapterRow(
+                                chapter = chapter,
+                                isArabic = isArabic,
+                                numberStyle = numberStyle,
+                                onOpen = {
+                                    selectedLibraryChapter = chapter.number
+                                    scope.launch { listState.scrollToItem(0) }
+                                }
+                            )
+                        }
+                        item(key = "library_credit") {
+                            LibraryAttribution(
+                                text = library?.attribution.orEmpty(),
+                                isArabic = isArabic
+                            )
+                        }
+                    }
+                } else {
+                    // Duas List — unique key = dua.id (100% collision free)
+                    itemsIndexed(
+                        items = activeDuas,
+                        key = { _, dua -> dua.id }
+                    ) { index, dua ->
+                        val target = dua.repeat
+                        val count = counts[dua.id] ?: 0
+                        val isDone = count >= target
+
+                        DuaItemCard(
+                            index = index,
+                            totalCount = activeDuas.size,
+                            dua = dua,
+                            count = count,
+                            target = target,
+                            isDone = isDone,
+                            isArabic = isArabic,
+                            numberStyle = numberStyle,
+                            onCount = {
+                                if (count < target) {
+                                    val next = count + 1
+                                    counts = counts + (dua.id to next)
+                                    haptics.performHapticFeedback(
+                                        if (next >= target) HapticFeedbackType.LongPress
+                                        else HapticFeedbackType.TextHandleMove
+                                    )
+                                }
+                            },
+                            onReset = {
+                                if (count > 0) {
+                                    counts = counts + (dua.id to 0)
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -279,7 +361,7 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                    onClick = onBack
+                                    onClick = backToList
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -328,8 +410,30 @@ fun DuasScreen(onBack: () -> Unit = {}) {
                                 onClick = {
                                     if (!isSelected) {
                                         selectedCategoryId = category.id
+                                        selectedLibraryChapter = null
                                         scope.launch { listState.scrollToItem(0) }
                                     }
+                                }
+                            )
+                        }
+                    }
+
+                    // Sub-selector for the Hisn al-Muslim library (back to the chapter list)
+                    if (selectedCategoryId == "library" && selectedLibraryChapter != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 14.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PrayerSubChip(
+                                title = if (isArabic) "كل الأبواب" else "All chapters",
+                                isSelected = false,
+                                onClick = {
+                                    selectedLibraryChapter = null
+                                    scope.launch { listState.scrollToItem(0) }
                                 }
                             )
                         }
@@ -389,9 +493,10 @@ private fun CategoryHeaderBanner(
     titleEn: String,
     itemCount: Int,
     isArabic: Boolean,
-    numberStyle: NumberStylePreference
+    numberStyle: NumberStylePreference,
+    countUnit: String? = null
 ) {
-    val countLabel = if (isArabic) {
+    val countLabel = countUnit ?: if (isArabic) {
         if (itemCount in 3..10) "أذكار" else "ذكر"
     } else {
         if (itemCount == 1) "Dua" else "Duas"
@@ -531,6 +636,135 @@ private fun PrayerSubChip(
         )
     }
 }
+
+@Composable
+private fun LibraryChapterRow(
+    chapter: LibraryChapter,
+    isArabic: Boolean,
+    numberStyle: NumberStylePreference,
+    onOpen: () -> Unit
+) {
+    val primary = if (isArabic) chapter.titleAr else chapter.titleEn
+    val secondary = if (isArabic) chapter.titleEn else chapter.titleAr
+    val countLabel = if (isArabic) {
+        if (chapter.totalDuas in 3..10) "أذكار" else "ذكر"
+    } else {
+        if (chapter.totalDuas == 1) "dua" else "duas"
+    }
+
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AtharCardSurface.copy(alpha = 0.88f))
+            .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onOpen
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(AtharPrimary.copy(alpha = 0.16f))
+                    .border(1.dp, AtharPrimary.copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        text = formatDigits(chapter.number.toString(), numberStyle),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 11.5.sp,
+                        color = AtharPrimaryLight
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = primary,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    color = AtharTextPrimary,
+                    textAlign = TextAlign.Start,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = secondary,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 10.5.sp,
+                    lineHeight = 14.sp,
+                    color = AtharTextSecondary.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "${formatDigits(chapter.totalDuas.toString(), numberStyle)} $countLabel",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = AtharPrimaryLight
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibraryAttribution(text: String, isArabic: Boolean) {
+    if (text.isBlank()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 30.dp)
+            .padding(top = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = if (isArabic) "المصادر والترخيص" else "Sources & license",
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.5.sp,
+            color = AtharPrimaryLight,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(5.dp))
+        LocalizedTextDirection(text) {
+            Text(
+                text = text,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 9.5.sp,
+                lineHeight = 14.sp,
+                color = AtharTextSecondary.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+private fun LibraryDua.toDua(): Dua = Dua(
+    id = id,
+    arabic = arabic,
+    translation = translation,
+    source = "حصن المسلم / Hisn al-Muslim",
+    repeat = repeat,
+    noteAr = reference?.let { "المرجع: $it" }
+)
 
 @Composable
 private fun DuaItemCard(
