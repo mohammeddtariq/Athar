@@ -231,6 +231,24 @@ fun HomeScreen(
 
     val isVisible = true
 
+    val listState = rememberLazyListState()
+    var isTopBarVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y
+                if (dy < -6f) isTopBarVisible = false
+                else if (dy > 6f) isTopBarVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+    val isNearTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset <= 24
+        }
+    }
+    val shouldShowTopBar = isTopBarVisible || isNearTop
 
     PatternScaffold {
         if (showAfterPrayerDialog) {
@@ -247,23 +265,17 @@ fun HomeScreen(
             )
         }
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .nestedScroll(nestedScrollConnection)
         ) {
-            TopBar(
-                onSettingsClick = onOpenSettings,
-                onOpenNotifications = onOpenNotifications,
-                onOpenSearch = onOpenSearch,
-                notificationsEnabled = notifMaster
-            )
-
             LazyColumn(
+                state = listState,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(bottom = 150.dp)
+                    .fillMaxSize()
+                    .statusBarsPadding(),
+                contentPadding = PaddingValues(top = 62.dp, bottom = 150.dp)
             ) {
                 item {
                 AnimatedVisibility(
@@ -366,6 +378,37 @@ fun HomeScreen(
                     )
                 }
             }
+            }
+
+            AnimatedVisibility(
+                visible = shouldShowTopBar,
+                enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { -it },
+                exit = fadeOut(tween(180)) + slideOutVertically(tween(180)) { -it },
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    AtharBackground,
+                                    AtharBackground.copy(alpha = 0.98f),
+                                    AtharBackground.copy(alpha = 0.92f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                        .statusBarsPadding()
+                        .padding(bottom = 6.dp)
+                ) {
+                    TopBar(
+                        onSettingsClick = onOpenSettings,
+                        onOpenNotifications = onOpenNotifications,
+                        onOpenSearch = onOpenSearch,
+                        notificationsEnabled = notifMaster
+                    )
+                }
             }
         }
     }
