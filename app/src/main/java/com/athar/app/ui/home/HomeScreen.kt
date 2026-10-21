@@ -836,41 +836,22 @@ fun AfterPrayerDuaDialog(
     val prefs = remember { AppPreferences(context.applicationContext) }
     val autoAdvance by prefs.afterPrayerAutoAdvance.collectAsState(initial = true)
 
-    val (prayerTitleAr, prayerTitleEn, duas) = remember(nextKey, isFriday) {
+    val duas = remember(nextKey) {
         when (nextKey) {
-            "sunrise", "dhuhr" -> Triple(
-                "صلاة الفجر",
-                "Fajr Prayer",
-                afterPrayerFajrDuas
-            )
-            "asr" -> Triple(
-                if (isFriday) "صلاة الجمعة" else "صلاة الظهر",
-                if (isFriday) "Friday Prayer" else "Dhuhr Prayer",
-                afterPrayerOtherDuas
-            )
-            "maghrib" -> Triple(
-                "صلاة العصر",
-                "Asr Prayer",
-                afterPrayerOtherDuas
-            )
-            "isha" -> Triple(
-                "صلاة المغرب",
-                "Maghrib Prayer",
-                afterPrayerMaghribDuas
-            )
-            else -> Triple(
-                "صلاة العشاء",
-                "Isha Prayer",
-                afterPrayerOtherDuas
-            )
+            "sunrise", "dhuhr" -> afterPrayerFajrDuas
+            "isha" -> afterPrayerMaghribDuas
+            else -> afterPrayerOtherDuas
         }
     }
 
-    val headerTitle = if (isArabic) {
-        "$prayerTitleAr • أذكار بعد الصلاة"
-    } else {
-        "$prayerTitleEn • After Prayer Adhkar"
+    val headerTitleRes = when (nextKey) {
+        "sunrise", "dhuhr" -> R.string.duas_after_fajr_title
+        "asr" -> if (isFriday) R.string.duas_after_jumuah_title else R.string.duas_after_dhuhr_title
+        "maghrib" -> R.string.duas_after_asr_title
+        "isha" -> R.string.duas_after_maghrib_title
+        else -> R.string.duas_after_isha_title
     }
+    val headerTitle = stringResource(headerTitleRes)
 
     var counts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     val pagerState = rememberPagerState(pageCount = { duas.size })
@@ -969,7 +950,7 @@ fun AfterPrayerDuaDialog(
                     ) {
                         Icon(
                             Icons.Rounded.Autorenew,
-                            contentDescription = if (isArabic) "الإكمال التلقائي" else "Auto-advance",
+                            contentDescription = stringResource(R.string.home_auto_advance),
                             tint = if (autoAdvance) AtharPrimaryLight else AtharTextSecondary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -1186,12 +1167,10 @@ fun AfterPrayerDuaDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (count == 0) {
-                                        if (isArabic) "اضغط للعدّ" else "Tap to count"
-                                    } else if (isDone) {
-                                        if (isArabic) "اكتمل الذكر" else "Completed"
-                                    } else {
-                                        if (isArabic) "استمر في العد" else "Keep counting"
+                                    text = when {
+                                        count == 0 -> stringResource(R.string.duas_tap_to_count)
+                                        isDone -> stringResource(R.string.duas_completed)
+                                        else -> stringResource(R.string.duas_keep_counting)
                                     },
                                     fontFamily = ThmanyahSans,
                                     fontWeight = FontWeight.Medium,
@@ -1403,7 +1382,7 @@ fun AfterPrayerDuaDialog(
                         Spacer(Modifier.height(20.dp))
 
                         Text(
-                            text = if (isArabic) "تقبّل الله" else "May Allah accept",
+                            text = stringResource(R.string.home_allah_accept),
                             fontFamily = ThmanyahSerifDisplay,
                             fontWeight = FontWeight.Black,
                             fontSize = 26.sp,
@@ -1414,11 +1393,7 @@ fun AfterPrayerDuaDialog(
                         Spacer(Modifier.height(8.dp))
 
                         Text(
-                            text = if (isArabic) {
-                                "أتممت أذكار ما بعد الصلاة\nجعلها الله في ميزان حسناتك"
-                            } else {
-                                "You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds."
-                            },
+                            text = stringResource(R.string.home_after_prayer_done),
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp,
@@ -1442,7 +1417,7 @@ fun AfterPrayerDuaDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (isArabic) "الحمد لله" else "Alhamdulillah",
+                                text = stringResource(R.string.home_alhamdulillah),
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 13.sp,

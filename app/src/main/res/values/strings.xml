@@ -370,5 +370,13 @@
     <string name="search_all_verses">Verses</string>
     <string name="search_all_duas">Duas</string>
     <string name="search_all_back">Back</string>
+    <string name="duas_after_dhuhr_title">After Dhuhr Prayer</string>
+    <string name="duas_after_jumuah_title">After Jumu\'ah Prayer</string>
+    <string name="duas_after_asr_title">After Asr Prayer</string>
+    <string name="duas_after_isha_title">After Isha Prayer</string>
+    <string name="home_auto_advance">Auto-advance</string>
+    <string name="home_allah_accept">May Allah accept</string>
+    <string name="home_after_prayer_done">You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds.</string>
+    <string name="home_alhamdulillah">Alhamdulillah</string>
 </resources>
 

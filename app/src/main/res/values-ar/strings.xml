@@ -382,5 +382,13 @@
     <string name="search_all_verses">الآيات</string>
     <string name="search_all_duas">الأدعية</string>
     <string name="search_all_back">رجوع</string>
+    <string name="duas_after_dhuhr_title">أذكار بعد صلاة الظهر</string>
+    <string name="duas_after_jumuah_title">أذكار بعد صلاة الجمعة</string>
+    <string name="duas_after_asr_title">أذكار بعد صلاة العصر</string>
+    <string name="duas_after_isha_title">أذكار بعد صلاة العشاء</string>
+    <string name="home_auto_advance">الإكمال التلقائي</string>
+    <string name="home_allah_accept">تقبّل الله</string>
+    <string name="home_after_prayer_done">أتممت أذكار ما بعد الصلاة\nجعلها الله في ميزان حسناتك</string>
+    <string name="home_alhamdulillah">الحمد لله</string>
 </resources>
 
