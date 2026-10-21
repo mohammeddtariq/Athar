@@ -91,6 +91,7 @@ import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
 import com.athar.app.data.search
 import com.athar.app.ui.components.LocalizedTextDirection
+import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.share.ShareCardRenderer
 import com.athar.app.ui.theme.AtharBackground
@@ -219,6 +220,9 @@ fun DuasScreen(
             }
         )
     ) { mutableStateOf(emptyMap()) }
+
+    // Congratulate when the tap completes the last remaining dua of the visible collection
+    var showCelebration by remember(activeDuas) { mutableStateOf(false) }
 
     // Scroll state & scroll-aware floating top bar
     val listState = rememberLazyListState()
@@ -412,11 +416,19 @@ fun DuasScreen(
                             onCount = {
                                 if (count < target) {
                                     val next = count + 1
+                                    val remaining = activeDuas.count { other ->
+                                        (counts[other.id] ?: 0) < other.repeat
+                                    }
                                     counts = counts + (dua.id to next)
-                                    haptics.performHapticFeedback(
-                                        if (next >= target) HapticFeedbackType.LongPress
-                                        else HapticFeedbackType.TextHandleMove
-                                    )
+                                    if (next >= target && remaining <= 1) {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showCelebration = true
+                                    } else {
+                                        haptics.performHapticFeedback(
+                                            if (next >= target) HapticFeedbackType.LongPress
+                                            else HapticFeedbackType.TextHandleMove
+                                        )
+                                    }
                                 }
                             },
                             onReset = {
@@ -616,6 +628,19 @@ fun DuasScreen(
                         }
                     }
                 }
+            }
+
+            AnimatedVisibility(
+                visible = showCelebration,
+                enter = fadeIn(tween(350)),
+                exit = fadeOut(tween(250)),
+                modifier = Modifier.matchParentSize()
+            ) {
+                DuaCompletionCelebration(
+                    title = stringResource(R.string.home_allah_accept),
+                    body = stringResource(R.string.duas_celebration_done),
+                    onDismiss = { showCelebration = false }
+                )
             }
         }
     }

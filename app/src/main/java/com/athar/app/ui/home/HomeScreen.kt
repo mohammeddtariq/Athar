@@ -101,6 +101,7 @@ import com.athar.app.data.computeDayPrayers
 import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
 import com.athar.app.data.formatDigits
+import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.AtharAnimatedLogo
 import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.LocalizedTextDirection
@@ -1351,141 +1352,12 @@ fun AfterPrayerDuaDialog(
                 exit = fadeOut(tween(250)),
                 modifier = Modifier.matchParentSize()
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(AtharBackground.copy(alpha = 0.94f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CelebrationSparkles(modifier = Modifier.matchParentSize())
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(88.dp)
-                                .clip(CircleShape)
-                                .background(AtharPrimary.copy(alpha = 0.16f))
-                                .border(1.5.dp, AtharPrimaryLight.copy(alpha = 0.7f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = AtharPrimaryLight,
-                                modifier = Modifier.size(42.dp)
-                            )
-                        }
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Text(
-                            text = stringResource(R.string.home_allah_accept),
-                            fontFamily = ThmanyahSerifDisplay,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 26.sp,
-                            color = AtharTextPrimary,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Text(
-                            text = stringResource(R.string.home_after_prayer_done),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp,
-                            color = AtharTextSecondary,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(Modifier.height(26.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(AtharPrimary)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = { celebrationDismissed = true }
-                                )
-                                .padding(horizontal = 32.dp, vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.home_alhamdulillah),
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.sp,
-                                color = AtharTextOnPrimary
-                            )
-                        }
-                    }
-                }
+                DuaCompletionCelebration(
+                    title = stringResource(R.string.home_allah_accept),
+                    body = stringResource(R.string.home_after_prayer_done),
+                    onDismiss = { celebrationDismissed = true }
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun CelebrationSparkles(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "completionSparkles")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 2400,
-                easing = androidx.compose.animation.core.LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sparklePhase"
-    )
-
-    val gold = Color(0xFFE6D79A)
-
-    Canvas(modifier = modifier) {
-        val center = Offset(size.width / 2f, size.height * 0.42f)
-        val unit = size.minDimension
-
-        repeat(20) { i ->
-            val seed = (i * 0.61803398f) % 1f
-            val progress = (phase + seed) % 1f
-            val direction = if (i % 2 == 0) 1f else -1f
-            val angle = seed * 6.2831855f + progress * 0.9f * direction
-            val radius = unit * (0.16f + (i % 5) * 0.055f) + progress * unit * 0.08f
-            val x = center.x + cos(angle) * radius
-            val y = center.y + sin(angle) * radius * 0.62f
-            val alpha = ((1f - progress) * 0.85f).coerceIn(0f, 1f)
-            val color = if (i % 3 == 0) gold else AtharPrimaryLight
-            val length = 3.5f + (i % 4) * 1.6f
-            val sparkleCenter = Offset(x, y)
-
-            drawCircle(
-                color = color,
-                radius = 1.6f + (i % 3),
-                center = sparkleCenter,
-                alpha = alpha
-            )
-            drawLine(
-                color = color,
-                start = Offset(x - length, y),
-                end = Offset(x + length, y),
-                strokeWidth = 1.1f,
-                alpha = alpha
-            )
-            drawLine(
-                color = color,
-                start = Offset(x, y - length),
-                end = Offset(x, y + length),
-                strokeWidth = 1.1f,
-                alpha = alpha
-            )
         }
     }
 }
