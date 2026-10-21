@@ -128,11 +128,14 @@ object ShareCardRenderer {
             )
         })
 
-        val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(14, 201, 216, 180)
-        }
-        canvas.drawCircle(WIDTH - 60f, 110f, 220f, halo)
-        canvas.drawCircle(40f, height - 80f, 190f, halo)
+        drawIslamicLattice(
+            canvas = canvas,
+            width = WIDTH,
+            height = height,
+            cellPx = 200f,
+            tint = AtharPrimary.toArgb(),
+            baseAlpha = 0.16f
+        )
 
         val frame = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -215,6 +218,121 @@ object ShareCardRenderer {
         )
 
         return bitmap
+    }
+
+    /**
+     * Port of the in-app [com.athar.app.ui.components.IslamicPatternBackground] so shared
+     * cards carry the same eight-pointed star lattice instead of loose gradient blobs.
+     */
+    private fun drawIslamicLattice(
+        canvas: Canvas,
+        width: Int,
+        height: Int,
+        cellPx: Float,
+        tint: Int,
+        baseAlpha: Float
+    ) {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val cols = (w / cellPx).toInt() + 3
+        val rows = (h / cellPx).toInt() + 3
+        val starRadius = cellPx * 0.38f
+        val starHalfSide = starRadius * 0.707f
+        val starStroke = (starRadius * 0.045f).coerceAtLeast(1.2f)
+        val ribbonStroke = (cellPx * 0.015f).coerceAtLeast(1f)
+        val diamondSize = cellPx * 0.12f
+        val diamondStroke = (diamondSize * 0.30f).coerceAtLeast(1f)
+        val red = Color.red(tint)
+        val green = Color.green(tint)
+        val blue = Color.blue(tint)
+
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            isSubpixelText = true
+        }
+        val rect = RectF()
+
+        for (r in -1..rows) {
+            for (c in -1..cols) {
+                val cx = c * cellPx + (if (r % 2 == 0) 0f else cellPx / 2f)
+                val cy = r * cellPx
+
+                val diagonal = ((cx / w) * 0.7f + (1f - cy / h) * 0.3f).coerceIn(0f, 1f)
+                val localAlpha = (baseAlpha * (diagonal * diagonal * 1.2f)).coerceIn(0.01f, 1f)
+                if (localAlpha <= 0.005f) continue
+
+                val strokeColor = Color.argb((localAlpha * 255f).toInt(), red, green, blue)
+                val highlightColor = Color.argb((localAlpha * 0.45f * 255f).toInt(), red, green, blue)
+
+                linePaint.color = strokeColor
+                linePaint.strokeWidth = starStroke
+                for (deg in floatArrayOf(0f, 45f)) {
+                    canvas.save()
+                    canvas.rotate(deg, cx, cy)
+                    canvas.drawLine(cx - starHalfSide, cy - starHalfSide, cx + starHalfSide, cy - starHalfSide, linePaint)
+                    canvas.drawLine(cx + starHalfSide, cy - starHalfSide, cx + starHalfSide, cy + starHalfSide, linePaint)
+                    canvas.drawLine(cx + starHalfSide, cy + starHalfSide, cx - starHalfSide, cy + starHalfSide, linePaint)
+                    canvas.drawLine(cx - starHalfSide, cy + starHalfSide, cx - starHalfSide, cy - starHalfSide, linePaint)
+                    canvas.restore()
+                }
+
+                val innerRadius = starRadius * 0.32f
+                linePaint.color = highlightColor
+                linePaint.strokeWidth = starStroke * 0.8f
+                var prevX = 0f
+                var prevY = 0f
+                var startX = 0f
+                var startY = 0f
+                for (i in 0..8) {
+                    val angle = Math.toRadians(i * 45.0 + 22.5)
+                    val x = cx + (innerRadius * Math.cos(angle)).toFloat()
+                    val y = cy + (innerRadius * Math.sin(angle)).toFloat()
+                    if (i == 0) {
+                        startX = x
+                        startY = y
+                    } else {
+                        canvas.drawLine(prevX, prevY, x, y, linePaint)
+                    }
+                    prevX = x
+                    prevY = y
+                }
+                canvas.drawLine(prevX, prevY, startX, startY, linePaint)
+
+                linePaint.color = strokeColor
+                linePaint.strokeWidth = ribbonStroke
+                for (i in 0 until 8) {
+                    val angle = Math.toRadians(i * 45.0)
+                    val cos = Math.cos(angle).toFloat()
+                    val sin = Math.sin(angle).toFloat()
+                    canvas.drawLine(
+                        cx + starRadius * 0.82f * cos,
+                        cy + starRadius * 0.82f * sin,
+                        cx + cellPx * 0.50f * cos,
+                        cy + cellPx * 0.50f * sin,
+                        linePaint
+                    )
+                }
+
+                linePaint.strokeWidth = diamondStroke
+                drawCornerDiamond(canvas, linePaint, rect, cx + cellPx / 2f, cy, diamondSize)
+                drawCornerDiamond(canvas, linePaint, rect, cx, cy + cellPx / 2f, diamondSize)
+            }
+        }
+    }
+
+    private fun drawCornerDiamond(
+        canvas: Canvas,
+        paint: Paint,
+        rect: RectF,
+        cx: Float,
+        cy: Float,
+        size: Float
+    ) {
+        canvas.save()
+        canvas.rotate(45f, cx, cy)
+        rect.set(cx - size, cy - size, cx + size, cy + size)
+        canvas.drawRect(rect, paint)
+        canvas.restore()
     }
 
     private fun buildLayout(
