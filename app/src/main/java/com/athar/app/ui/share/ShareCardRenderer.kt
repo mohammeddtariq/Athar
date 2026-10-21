@@ -50,7 +50,8 @@ object ShareCardRenderer {
         body = translation,
         note = note,
         source = source,
-        isArabic = isArabic
+        isArabic = isArabic,
+        footerLabel = if (isArabic) "دعاء" else "Dua"
     )
 
     fun renderTafsir(
@@ -66,7 +67,8 @@ object ShareCardRenderer {
         body = tafsir.take(MAX_TAFSIR_CHARS).let { if (tafsir.length > MAX_TAFSIR_CHARS) "$it…" else it },
         note = reference,
         source = source,
-        isArabic = isArabic
+        isArabic = isArabic,
+        footerLabel = context.getString(R.string.al_marifah_name)
     )
 
     private fun render(
@@ -75,7 +77,8 @@ object ShareCardRenderer {
         body: String,
         note: String?,
         source: String,
-        isArabic: Boolean
+        isArabic: Boolean,
+        footerLabel: String
     ): Bitmap {
         val serif = font(context, R.font.thmanyah_serif_text_regular)
         val serifBlack = font(context, R.font.thmanyah_serif_display_black)
@@ -211,7 +214,7 @@ object ShareCardRenderer {
             textAlign = Paint.Align.CENTER
         }
         canvas.drawText(
-            if (isArabic) "أَثَر · تدبّر القرآن" else "Athar · Contemplating the Qur'an",
+            if (isArabic) "أَثَر · $footerLabel" else "Athar · $footerLabel",
             centerX,
             footerY + 34f,
             footerSubPaint
