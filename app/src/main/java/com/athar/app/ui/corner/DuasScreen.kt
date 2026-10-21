@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -125,19 +126,19 @@ fun DuasScreen(onBack: () -> Unit = {}) {
     val isArabic = langCode == "ar"
 
     // Currently selected primary category
-    var selectedCategoryId by remember { mutableStateOf(duaCategories.first().id) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf(duaCategories.first().id) }
     val currentCategory = remember(selectedCategoryId) {
         duaCategories.firstOrNull { it.id == selectedCategoryId } ?: duaCategories.first()
     }
 
     // Sub-collection for After Prayer ("other", "fajr", "maghrib")
-    var selectedPrayerSubCategory by remember { mutableStateOf("other") }
+    var selectedPrayerSubCategory by rememberSaveable { mutableStateOf("other") }
 
     // Full Hisn al-Muslim library (loaded from assets on first use)
     var library by remember { mutableStateOf<DuaLibrary?>(null) }
-    var selectedLibraryChapter by remember { mutableStateOf<Int?>(null) }
+    var selectedLibraryChapter by rememberSaveable { mutableStateOf<Int?>(null) }
     var libraryQuery by rememberSaveable { mutableStateOf("") }
-    var pendingLibraryScroll by remember { mutableStateOf<Int?>(null) }
+    var pendingLibraryScroll by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(selectedCategoryId) {
         if (selectedCategoryId == "library" && library == null) {
             library = withContext(Dispatchers.IO) { DuaLibraryRepository.load(context) }
@@ -186,8 +187,17 @@ fun DuasScreen(onBack: () -> Unit = {}) {
         else -> currentCategory.titleEn
     }
 
-    // Per-dua session dhikr counts
-    var counts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    // Per-dua session dhikr counts, kept across config changes and tab switches
+    var counts by rememberSaveable(
+        stateSaver = listSaver<Map<String, Int>, Any>(
+            save = { map -> map.entries.flatMap { listOf(it.key, it.value) } },
+            restore = { flat ->
+                flat.chunked(2)
+                    .filter { it.size == 2 }
+                    .associate { (it[0] as String) to (it[1] as Int) }
+            }
+        )
+    ) { mutableStateOf(emptyMap()) }
 
     // Scroll state & scroll-aware floating top bar
     val listState = rememberLazyListState()
