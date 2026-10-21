@@ -470,33 +470,24 @@ private fun TopBar(
                     )
                 }
 
-                Row(
+                Box(
                     modifier = Modifier
-                        .height(36.dp)
-                        .clip(RoundedCornerShape(18.dp))
+                        .size(36.dp)
+                        .clip(CircleShape)
                         .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
+                        .border(1.dp, AtharCardBorder, CircleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onOpenNotifications
-                        )
-                        .padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         if (notificationsEnabled) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.home_notification_settings),
                         tint = if (notificationsEnabled) AtharPrimaryLight else AtharTextSecondary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.home_notification_settings),
-                        color = AtharTextPrimary,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.5.sp
+                        modifier = Modifier.size(19.dp)
                     )
                 }
 
