@@ -266,42 +266,6 @@ fun OnboardingFlow(
                 onStart = { finish(skipLocation = false) }
             )
         }
-
-        // Sticky top bar with skip button - visible once language is selected
-        if (language != null) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                AtharBackground,
-                                AtharBackground.copy(alpha = 0.96f),
-                                AtharBackground.copy(alpha = 0.82f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = { finish(skipLocation = true) }) {
-                        Text(
-                            text = if (language == "ar") "تخطَّ الإعداد" else "Skip setup",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = AtharTextSecondary
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 
