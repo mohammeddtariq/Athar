@@ -118,7 +118,12 @@ import kotlinx.coroutines.withContext
  * - Western / Arabic-Indic number preferences formatting
  */
 @Composable
-fun DuasScreen(onBack: () -> Unit = {}) {
+fun DuasScreen(
+    onBack: () -> Unit = {},
+    initialLibraryChapter: Int? = null,
+    initialDuaIndex: Int? = null,
+    onInitialTargetConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -148,6 +153,17 @@ fun DuasScreen(onBack: () -> Unit = {}) {
         if (selectedCategoryId == "library" && library == null) {
             library = withContext(Dispatchers.IO) { DuaLibraryRepository.load(context) }
         }
+    }
+    LaunchedEffect(initialLibraryChapter, initialDuaIndex) {
+        val chapter = initialLibraryChapter ?: return@LaunchedEffect
+        if (library == null) {
+            library = withContext(Dispatchers.IO) { DuaLibraryRepository.load(context) }
+        }
+        libraryQuery = ""
+        selectedCategoryId = "library"
+        selectedLibraryChapter = chapter
+        pendingLibraryScroll = initialDuaIndex
+        onInitialTargetConsumed()
     }
     val libraryChapter = remember(library, selectedLibraryChapter) {
         selectedLibraryChapter?.let { number -> library?.chapters?.firstOrNull { it.number == number } }

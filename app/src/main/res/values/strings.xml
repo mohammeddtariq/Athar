@@ -363,5 +363,12 @@
         <item quantity="one">in %1$s day</item>
         <item quantity="other">in %1$s days</item>
     </plurals>
+    <string name="search_all_title">Search</string>
+    <string name="search_all_hint">Search the Quran and duas</string>
+    <string name="search_all_empty">No matches in the Quran or duas</string>
+    <string name="search_all_surahs">Surahs</string>
+    <string name="search_all_verses">Verses</string>
+    <string name="search_all_duas">Duas</string>
+    <string name="search_all_back">Back</string>
 </resources>
 

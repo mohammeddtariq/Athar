@@ -375,5 +375,12 @@
         <item quantity="many">بعد %1$s يومًا</item>
         <item quantity="other">بعد %1$s يوم</item>
     </plurals>
+    <string name="search_all_title">بحث</string>
+    <string name="search_all_hint">ابحث في القرآن والأدعية</string>
+    <string name="search_all_empty">لا توجد نتائج في القرآن أو الأدعية</string>
+    <string name="search_all_surahs">السور</string>
+    <string name="search_all_verses">الآيات</string>
+    <string name="search_all_duas">الأدعية</string>
+    <string name="search_all_back">رجوع</string>
 </resources>
 

@@ -98,6 +98,7 @@ import com.athar.app.ui.corner.DuasScreen
 import com.athar.app.ui.corner.QiblaScreen
 import com.athar.app.ui.corner.QuranScreen
 import com.athar.app.ui.home.HomeScreen
+import com.athar.app.ui.search.UnifiedSearchOverlay
 import com.athar.app.ui.settings.SettingsScreen
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharNavGlow
@@ -179,6 +180,9 @@ fun MainScreen(
     var showDirayahAnnouncement by remember { mutableStateOf(false) }
     var showAmanahAnnouncement by remember { mutableStateOf(false) }
     var openDirayahDirectly by remember { mutableStateOf(false) }
+    var showUnifiedSearch by remember { mutableStateOf(false) }
+    var quranSearchTarget by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var duasSearchTarget by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
 
     LaunchedEffect(hasSeenAmanahAnnouncement, hasSeenDirayahAnnouncement) {
         val amanahSeen = hasSeenAmanahAnnouncement ?: return@LaunchedEffect
@@ -266,7 +270,8 @@ fun MainScreen(
                         targetSettingsSection = "notifications"
                         navController.navigateToTab(Screen.Settings)
                     },
-                    onNavigateToDuas = { navController.navigateToTab(Screen.Duas) }
+                    onNavigateToDuas = { navController.navigateToTab(Screen.Duas) },
+                    onOpenSearch = { showUnifiedSearch = true }
                 )
             }
             composable(Screen.Quran.route) {
@@ -275,11 +280,19 @@ fun MainScreen(
                     onReadingModeChanged = { isReading -> isQuranReading = isReading },
                     openDirayahDirectly = openDirayahDirectly,
                     onDirayahDirectlyConsumed = { openDirayahDirectly = false },
+                    initialSurahNumber = quranSearchTarget?.first,
+                    initialAyahNumber = quranSearchTarget?.second,
+                    onInitialTargetConsumed = { quranSearchTarget = null },
                     isNavBarVisible = isNavBarVisible
                 )
             }
             composable(Screen.Duas.route) {
-                DuasScreen(onBack = { navController.navigateToTab(Screen.Home) })
+                DuasScreen(
+                    onBack = { navController.navigateToTab(Screen.Home) },
+                    initialLibraryChapter = duasSearchTarget?.first,
+                    initialDuaIndex = duasSearchTarget?.second,
+                    onInitialTargetConsumed = { duasSearchTarget = null }
+                )
             }
             composable(Screen.Qibla.route) {
                 QiblaScreen(
@@ -314,6 +327,22 @@ fun MainScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             AtharNavBar(navController)
+        }
+
+        if (showUnifiedSearch) {
+            UnifiedSearchOverlay(
+                onDismiss = { showUnifiedSearch = false },
+                onOpenVerse = { surah, ayah ->
+                    showUnifiedSearch = false
+                    quranSearchTarget = surah to ayah
+                    navController.navigateToTab(Screen.Quran)
+                },
+                onOpenDua = { chapter, duaIndex ->
+                    showUnifiedSearch = false
+                    duasSearchTarget = chapter to duaIndex
+                    navController.navigateToTab(Screen.Duas)
+                }
+            )
         }
 
         // Feature Announcements (Al-Amanah or Al-Dirayah)

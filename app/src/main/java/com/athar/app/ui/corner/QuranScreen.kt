@@ -334,6 +334,9 @@ fun QuranScreen(
     onReadingModeChanged: (Boolean) -> Unit = {},
     openDirayahDirectly: Boolean = false,
     onDirayahDirectlyConsumed: () -> Unit = {},
+    initialSurahNumber: Int? = null,
+    initialAyahNumber: Int? = null,
+    onInitialTargetConsumed: () -> Unit = {},
     isNavBarVisible: Boolean = true
 ) {
     val context = LocalContext.current
@@ -405,6 +408,17 @@ fun QuranScreen(
             showTafsirWithSurahIndex = true
             onDirayahDirectlyConsumed()
         }
+    }
+
+    LaunchedEffect(initialSurahNumber, initialAyahNumber) {
+        val surahNumber = initialSurahNumber ?: return@LaunchedEffect
+        val meta = allSurahs.firstOrNull { it.number == surahNumber } ?: return@LaunchedEffect
+        targetPageToScroll = QuranPages.getPageForVerse(
+            surahNumber,
+            (initialAyahNumber ?: 1).coerceIn(1, meta.ayahs)
+        )
+        openSurah = meta
+        onInitialTargetConsumed()
     }
 
     val colors = remember(themeMode) { getQuranColors(themeMode) }

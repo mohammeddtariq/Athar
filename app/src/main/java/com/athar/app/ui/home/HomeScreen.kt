@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
@@ -141,7 +142,8 @@ private val timeFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 fun HomeScreen(
     onOpenSettings: () -> Unit = {},
     onOpenNotifications: () -> Unit = onOpenSettings,
-    onNavigateToDuas: () -> Unit = {}
+    onNavigateToDuas: () -> Unit = {},
+    onOpenSearch: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember { AppPreferences(context.applicationContext) }
@@ -247,6 +249,7 @@ fun HomeScreen(
             TopBar(
                 onSettingsClick = onOpenSettings,
                 onOpenNotifications = onOpenNotifications,
+                onOpenSearch = onOpenSearch,
                 notificationsEnabled = notifMaster
             )
 
@@ -362,6 +365,7 @@ fun HomeScreen(
 private fun TopBar(
     onSettingsClick: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSearch: () -> Unit,
     notificationsEnabled: Boolean
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -380,6 +384,28 @@ private fun TopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // 0. Unified search across the Quran and duas
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(AtharCardSurface)
+                        .border(1.dp, AtharCardBorder, CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onOpenSearch
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = stringResource(R.string.search_all_title),
+                        tint = AtharPrimaryLight,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
                 // 1. Notification Settings Pill
                 Row(
                     modifier = Modifier
