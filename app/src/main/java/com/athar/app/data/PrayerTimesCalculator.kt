@@ -5,6 +5,7 @@ import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.CalculationParameters
+import com.batoulapps.adhan.HighLatitudeRule
 import com.batoulapps.adhan.data.DateComponents
 import java.time.LocalDate
 import java.time.LocalTime
@@ -60,36 +61,50 @@ fun computeDayPrayers(
 ): DayPrayers {
     val coordinates = Coordinates(lat, lng)
     val components = DateComponents(date.year, date.monthValue, date.dayOfMonth)
-    val times = PrayerTimes(coordinates, components, calcMethodParams(method, madhab))
-    // Fields are null when the library can't converge (e.g. extreme latitudes).
-    val fajr = times.fajr ?: return fallbackDayPrayers()
-    val sunrise = times.sunrise ?: return fallbackDayPrayers()
-    val dhuhr = times.dhuhr ?: return fallbackDayPrayers()
-    val asr = times.asr ?: return fallbackDayPrayers()
-    val maghrib = times.maghrib ?: return fallbackDayPrayers()
-    val isha = times.isha ?: return fallbackDayPrayers()
     val zone = ZoneId.systemDefault()
-    fun Date.toLocal(): LocalTime =
-        this.toInstant().atZone(zone).toLocalTime().withSecond(0).withNano(0)
-    return DayPrayers(
-        fajr = fajr.toLocal(),
-        sunrise = sunrise.toLocal(),
-        dhuhr = dhuhr.toLocal(),
-        asr = asr.toLocal(),
-        maghrib = maghrib.toLocal(),
-        isha = isha.toLocal(),
-        date = date
-    )
+
+    fun readTimes(params: CalculationParameters): DayPrayers? {
+        val times = PrayerTimes(coordinates, components, params)
+        // Fields are null when the library can't converge (e.g. extreme latitudes).
+        val fajr = times.fajr ?: return null
+        val sunrise = times.sunrise ?: return null
+        val dhuhr = times.dhuhr ?: return null
+        val asr = times.asr ?: return null
+        val maghrib = times.maghrib ?: return null
+        val isha = times.isha ?: return null
+        fun Date.toLocal(): LocalTime =
+            this.toInstant().atZone(zone).toLocalTime().withSecond(0).withNano(0)
+        return DayPrayers(
+            fajr = fajr.toLocal(),
+            sunrise = sunrise.toLocal(),
+            dhuhr = dhuhr.toLocal(),
+            asr = asr.toLocal(),
+            maghrib = maghrib.toLocal(),
+            isha = isha.toLocal(),
+            date = date
+        )
+    }
+
+    // Mid-summer and mid-winter at high latitudes have no astronomical twilight,
+    // so fall back to the twilight-angle rule before giving up on the whole day.
+    return readTimes(calcMethodParams(method, madhab))
+        ?: readTimes(
+            calcMethodParams(method, madhab).apply {
+                highLatitudeRule = HighLatitudeRule.TWILIGHT_ANGLE
+            }
+        )
+        ?: fallbackDayPrayers(date)
 }
 
 /** Fallback static times used before a location is set (matches previous design). */
-fun fallbackDayPrayers(): DayPrayers = DayPrayers(
+fun fallbackDayPrayers(date: LocalDate = LocalDate.now()): DayPrayers = DayPrayers(
     fajr = LocalTime.of(5, 8),
     sunrise = LocalTime.of(6, 36),
     dhuhr = LocalTime.of(13, 52),
     asr = LocalTime.of(16, 32),
     maghrib = LocalTime.of(19, 6),
-    isha = LocalTime.of(20, 33)
+    isha = LocalTime.of(20, 33),
+    date = date
 )
 
 fun findNextPrayer(today: DayPrayers, now: LocalTime = LocalTime.now()): NextPrayer {
