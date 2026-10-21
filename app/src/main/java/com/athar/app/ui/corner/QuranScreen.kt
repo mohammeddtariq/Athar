@@ -35,8 +35,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1522,6 +1524,11 @@ private fun UthmanicMushafPageCard(
 
     var contentTopOffsetPx by remember { mutableFloatStateOf(0f) }
 
+    // Pinch-to-zoom must not swallow one-finger drags: the reader should be able to
+    // scroll the page from anywhere on the mushaf, not only from its margins.
+    val fontScaleNow by rememberUpdatedState(fontScale)
+    val onFontScaleChangeNow by rememberUpdatedState(onFontScaleChange)
+
     val pageContent = @Composable {
         val data = pageData
         if (data != null) {
@@ -1550,12 +1557,26 @@ private fun UthmanicMushafPageCard(
                             .width(cardWidth)
                             .height(cardHeight)
                             .then(
-                                if (onFontScaleChange != null) {
-                                    Modifier.pointerInput(fontScale) {
-                                        detectTransformGestures { _, _, zoom, _ ->
-                                            if (zoom != 1f) {
-                                                val newScale = (fontScale * zoom).coerceIn(0.70f, 2.0f)
-                                                onFontScaleChange(newScale)
+                                if (onFontScaleChangeNow != null) {
+                                    Modifier.pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            awaitFirstDown(requireUnconsumed = false)
+                                            var baseScale = fontScaleNow
+                                            var accumulated = 1f
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                if (event.changes.count { it.pressed } >= 2) {
+                                                    val zoom = event.calculateZoom()
+                                                    if (zoom.isFinite() && zoom != 1f) {
+                                                        if (accumulated == 1f) baseScale = fontScaleNow
+                                                        accumulated *= zoom
+                                                        onFontScaleChangeNow?.invoke(
+                                                            (baseScale * accumulated).coerceIn(0.70f, 2.0f)
+                                                        )
+                                                        event.changes.forEach { if (it.pressed) it.consume() }
+                                                    }
+                                                }
+                                                if (event.changes.none { it.pressed }) break
                                             }
                                         }
                                     }
