@@ -93,6 +93,7 @@ import com.athar.app.data.LocationHelper
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.DayPrayers
 import com.athar.app.data.HijriDateHelper
+import com.athar.app.data.IslamicOccasions
 import com.athar.app.data.MadhabOption
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.computeDayPrayers
@@ -207,6 +208,7 @@ fun HomeScreen(
     }
 
     val next = remember(day, nowMinute) { findNextPrayer(day, nowMinute) }
+    val nextOccasion = remember(day.date) { IslamicOccasions.next(day.date) }
     val isFriday = LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY
     val dhuhrLabel = if (isFriday) R.string.home_friday_prayer else R.string.home_prayer_dhuhr
 
@@ -270,6 +272,21 @@ fun HomeScreen(
                         cityLabel = currentCityLabel,
                         onLocationClick = onOpenSettings
                     )
+                }
+            }
+
+            nextOccasion?.let { occasion ->
+                item {
+                    AnimatedVisibility(
+                        visible = isVisible,
+                        enter = fadeIn(tween(400, 140))
+                    ) {
+                        UpcomingOccasionCard(
+                            occasion = occasion,
+                            language = selectedLanguage,
+                            numberStyle = numberStyle
+                        )
+                    }
                 }
             }
 

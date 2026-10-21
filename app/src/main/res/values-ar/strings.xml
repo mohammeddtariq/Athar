@@ -367,5 +367,13 @@
     <string name="share_failed">تعذّر إنشاء الصورة</string>
     <string name="share_dua_subject">دعاء من حصن المسلم</string>
     <string name="share_tafsir_subject">تفسير من أَثَر</string>
+    <string name="occasion_today">اليوم</string>
+    <plurals name="occasion_in_days">
+        <item quantity="one">بعد يوم واحد</item>
+        <item quantity="two">بعد يومين</item>
+        <item quantity="few">بعد %1$s أيام</item>
+        <item quantity="many">بعد %1$s يومًا</item>
+        <item quantity="other">بعد %1$s يوم</item>
+    </plurals>
 </resources>
 

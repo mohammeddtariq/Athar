@@ -358,5 +358,10 @@
     <string name="share_failed">Couldn\'t create the image</string>
     <string name="share_dua_subject">A dua from Hisn al-Muslim</string>
     <string name="share_tafsir_subject">Tafsir from Athar</string>
+    <string name="occasion_today">Today</string>
+    <plurals name="occasion_in_days">
+        <item quantity="one">in %1$s day</item>
+        <item quantity="other">in %1$s days</item>
+    </plurals>
 </resources>
 
