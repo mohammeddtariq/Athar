@@ -348,5 +348,12 @@
         <item quantity="one">%1$s result</item>
         <item quantity="other">%1$s results</item>
     </plurals>
+    <string name="settings_backup">Backup &amp; restore</string>
+    <string name="settings_backup_sub">Save your settings to a file, or bring them back after reinstalling.</string>
+    <string name="settings_backup_export">Export settings</string>
+    <string name="settings_backup_import">Restore from file</string>
+    <string name="backup_exported">Settings exported</string>
+    <string name="backup_imported">Settings restored</string>
+    <string name="backup_failed">Could not read or write the backup file</string>
 </resources>
 

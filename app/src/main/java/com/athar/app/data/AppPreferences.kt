@@ -1,11 +1,13 @@
 package com.athar.app.data
 
 import android.content.Context
+import com.athar.app.BuildConfig
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -14,6 +16,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "athar_preferences")
 
@@ -24,6 +28,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class AppPreferences(private val context: Context) {
 
     companion object {
+        const val BACKUP_SCHEMA = 1
         // Language / onboarding (mirrors keys in LanguagePreferences for interop)
         private val LANGUAGE_KEY = stringPreferencesKey("selected_language")
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
@@ -566,6 +571,90 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setLiveStatusLanguage(lang: String) {
         context.dataStore.edit { it[LIVE_STATUS_LANGUAGE_KEY] = lang }
+    }
+
+    /**
+     * Serializes every stored preference (typed) so it can be written to a file and
+     * restored on another install. Unknown keys are preserved, which keeps older
+     * backups forward compatible.
+     */
+    suspend fun exportBackupJson(): String {
+        val data = context.dataStore.data.first()
+        val values = JSONObject()
+        data.asMap().forEach { (key, value) ->
+            val entry = JSONObject()
+            when (value) {
+                is String -> {
+                    entry.put("type", "string")
+                    entry.put("value", value)
+                }
+                is Boolean -> {
+                    entry.put("type", "boolean")
+                    entry.put("value", value)
+                }
+                is Int -> {
+                    entry.put("type", "int")
+                    entry.put("value", value)
+                }
+                is Long -> {
+                    entry.put("type", "long")
+                    entry.put("value", value)
+                }
+                is Float -> {
+                    entry.put("type", "float")
+                    entry.put("value", value.toDouble())
+                }
+                is Double -> {
+                    entry.put("type", "double")
+                    entry.put("value", value)
+                }
+                is Set<*> -> {
+                    entry.put("type", "stringSet")
+                    entry.put("value", JSONArray(value.map { it.toString() }))
+                }
+                else -> return@forEach
+            }
+            values.put(key.name, entry)
+        }
+        return JSONObject().apply {
+            put("schema", BACKUP_SCHEMA)
+            put("appVersion", BuildConfig.VERSION_NAME)
+            put("exportedAt", System.currentTimeMillis())
+            put("values", values)
+        }.toString(2)
+    }
+
+    /** Merges a backup created by [exportBackupJson] and returns how many keys were applied. */
+    suspend fun restoreBackupJson(json: String): Result<Int> = runCatching {
+        val root = JSONObject(json)
+        require(root.optInt("schema", 0) == BACKUP_SCHEMA) { "Unsupported backup format" }
+        val values = root.optJSONObject("values") ?: error("Backup contains no settings")
+        var applied = 0
+        context.dataStore.edit { prefs ->
+            val keys = values.keys()
+            while (keys.hasNext()) {
+                val name = keys.next()
+                val entry = values.optJSONObject(name) ?: continue
+                when (entry.optString("type")) {
+                    "string" -> prefs[stringPreferencesKey(name)] = entry.getString("value")
+                    "boolean" -> prefs[booleanPreferencesKey(name)] = entry.getBoolean("value")
+                    "int" -> prefs[intPreferencesKey(name)] = entry.getInt("value")
+                    "long" -> prefs[longPreferencesKey(name)] = entry.getLong("value")
+                    "float" -> prefs[floatPreferencesKey(name)] = entry.getDouble("value").toFloat()
+                    "double" -> prefs[doublePreferencesKey(name)] = entry.getDouble("value")
+                    "stringSet" -> {
+                        val array = entry.getJSONArray("value")
+                        val set = buildSet {
+                            for (i in 0 until array.length()) add(array.getString(i))
+                        }
+                        prefs[stringSetPreferencesKey(name)] = set
+                    }
+                    else -> continue
+                }
+                applied++
+            }
+        }
+        applied
     }
 }
 

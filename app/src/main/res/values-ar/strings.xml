@@ -357,5 +357,12 @@
         <item quantity="many">%1$s نتيجة</item>
         <item quantity="other">%1$s نتيجة</item>
     </plurals>
+    <string name="settings_backup">النسخ الاحتياطي والاستعادة</string>
+    <string name="settings_backup_sub">احفظ إعداداتك في ملف، أو استعدها بعد إعادة التثبيت.</string>
+    <string name="settings_backup_export">تصدير الإعدادات</string>
+    <string name="settings_backup_import">استعادة من ملف</string>
+    <string name="backup_exported">تم تصدير الإعدادات</string>
+    <string name="backup_imported">تمت استعادة الإعدادات</string>
+    <string name="backup_failed">تعذّرت قراءة ملف النسخة الاحتياطية أو كتابته</string>
 </resources>
 

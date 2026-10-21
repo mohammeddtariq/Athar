@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
+import android.widget.Toast
 import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,6 +49,8 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -126,8 +129,10 @@ import com.athar.app.ui.components.AppUpdateDialog
 import com.athar.app.updater.AppReleaseInfo
 import com.athar.app.updater.AppUpdateManager
 import com.athar.app.updater.UpdateCheckResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 const val ATHAR_GITHUB_URL = "https://github.com/mohammeddtariq/Athar"
 
@@ -139,6 +144,55 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { AppPreferences(context.applicationContext) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val payload = prefs.exportBackupJson()
+                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                            out.write(payload.toByteArray(Charsets.UTF_8))
+                        } ?: error("Could not open the target file")
+                    }
+                }
+                Toast.makeText(
+                    context,
+                    context.getString(
+                        if (result.isSuccess) R.string.backup_exported else R.string.backup_failed
+                    ),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val text = context.contentResolver.openInputStream(uri)
+                            ?.bufferedReader(Charsets.UTF_8)
+                            ?.use { it.readText() }
+                            ?: error("Could not read the selected file")
+                        prefs.restoreBackupJson(text).getOrThrow()
+                    }
+                }
+                Toast.makeText(
+                    context,
+                    context.getString(
+                        if (result.isSuccess) R.string.backup_imported else R.string.backup_failed
+                    ),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
     val listState = rememberLazyListState()
     var isNotifHighlighted by remember { mutableStateOf(false) }
     var isWidgetHighlighted by remember { mutableStateOf(false) }
@@ -1441,6 +1495,34 @@ fun SettingsScreen(
                 }
             }
 
+            // ── Backup & restore ──
+            item {
+                SectionCard(title = stringResource(R.string.settings_backup)) {
+                    Text(
+                        stringResource(R.string.settings_backup_sub),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    BackupActionRow(
+                        label = stringResource(R.string.settings_backup_export),
+                        icon = Icons.Rounded.FileUpload,
+                        onClick = {
+                            exportLauncher.launch(
+                                "athar-backup-${java.text.SimpleDateFormat("yyyyMMdd", Locale.US).format(java.util.Date())}.json"
+                            )
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    BackupActionRow(
+                        label = stringResource(R.string.settings_backup_import),
+                        icon = Icons.Rounded.FileDownload,
+                        onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
+                    )
+                }
+            }
+
             // ── About + GitHub ──
             item {
                 SectionCard(title = stringResource(R.string.settings_about)) {
@@ -1896,6 +1978,37 @@ private fun NotifRow(
             mode = mode,
             onModeSelected = onChange
         )
+    }
+}
+
+@Composable
+private fun BackupActionRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, AtharCardBorder, RoundedCornerShape(12.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            label,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Black,
+            fontSize = 13.5.sp,
+            color = AtharPrimaryLight
+        )
+        Icon(icon, null, tint = AtharTextSecondary, modifier = Modifier.size(17.dp))
     }
 }
 
