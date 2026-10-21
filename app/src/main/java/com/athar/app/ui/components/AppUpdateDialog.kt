@@ -119,6 +119,7 @@ fun AppUpdateDialog(
             val result = AppUpdateManager.downloadApk(
                 context = context,
                 downloadUrl = apkUrl,
+                expectedSha256 = releaseInfo.sha256,
                 onProgress = { progress, _, _ ->
                     downloadProgress = progress
                     uiState = UpdateUiState.Downloading(progress)

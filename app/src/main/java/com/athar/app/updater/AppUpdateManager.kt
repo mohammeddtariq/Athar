@@ -27,6 +27,7 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.security.MessageDigest
 import java.util.Locale
 
 data class AppReleaseInfo(
@@ -36,7 +37,9 @@ data class AppReleaseInfo(
     val changelogBody: String,
     val htmlUrl: String,
     val downloadUrl: String?,
-    val assetSize: Long
+    val assetSize: Long,
+    /** Lowercase hex SHA-256 published by GitHub for the APK asset, when available. */
+    val sha256: String? = null
 )
 
 sealed interface UpdateCheckResult {
@@ -173,6 +176,7 @@ object AppUpdateManager {
 
         var downloadUrl: String? = null
         var assetSize = 0L
+        var assetDigest: String? = null
 
         val assets = json.optJSONArray("assets")
         if (assets != null) {
@@ -182,6 +186,10 @@ object AppUpdateManager {
                 if (name.endsWith(".apk", ignoreCase = true)) {
                     downloadUrl = asset.optString("browser_download_url")
                     assetSize = asset.optLong("size", 0L)
+                    val digest = asset.optString("digest", "")
+                    if (digest.startsWith("sha256:", ignoreCase = true)) {
+                        assetDigest = digest.substringAfter(':').trim().lowercase()
+                    }
                     break
                 }
             }
@@ -204,7 +212,8 @@ object AppUpdateManager {
                     changelogBody = changelog,
                     htmlUrl = htmlUrl,
                     downloadUrl = downloadUrl,
-                    assetSize = assetSize
+                    assetSize = assetSize,
+                    sha256 = assetDigest
                 )
                 return UpdateCheckResult.UpdateAvailable(info)
             } else {
@@ -223,7 +232,8 @@ object AppUpdateManager {
                 changelogBody = changelog,
                 htmlUrl = htmlUrl,
                 downloadUrl = downloadUrl,
-                assetSize = assetSize
+                assetSize = assetSize,
+                sha256 = assetDigest
             )
             return UpdateCheckResult.UpdateAvailable(info)
         }
@@ -284,6 +294,7 @@ object AppUpdateManager {
     suspend fun downloadApk(
         context: Context,
         downloadUrl: String,
+        expectedSha256: String? = null,
         onProgress: (progress: Float, downloadedBytes: Long, totalBytes: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
@@ -301,12 +312,14 @@ object AppUpdateManager {
             inputStream = connection.inputStream
             outputStream = FileOutputStream(partFile)
 
+            val digest = MessageDigest.getInstance("SHA-256")
             val buffer = ByteArray(8192)
             var downloadedBytes = 0L
             var read: Int
 
             while (inputStream.read(buffer).also { read = it } != -1) {
                 outputStream.write(buffer, 0, read)
+                digest.update(buffer, 0, read)
                 downloadedBytes += read
 
                 val progress = if (totalBytes > 0) {
@@ -320,6 +333,16 @@ object AppUpdateManager {
             outputStream.flush()
             outputStream.close()
             outputStream = null
+
+            if (!expectedSha256.isNullOrBlank()) {
+                val actual = digest.digest().joinToString("") { "%02x".format(it) }
+                if (!actual.equals(expectedSha256, ignoreCase = true)) {
+                    partFile.delete()
+                    return@withContext Result.failure(
+                        IllegalStateException("Checksum mismatch: the downloaded update is not the published file")
+                    )
+                }
+            }
 
             if (partFile.exists()) {
                 if (targetFile.exists()) targetFile.delete()
