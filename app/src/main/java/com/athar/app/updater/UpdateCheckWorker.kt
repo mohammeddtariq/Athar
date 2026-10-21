@@ -18,6 +18,9 @@ import java.util.concurrent.TimeUnit
 /**
  * Background worker that periodically checks GitHub for newly released Athar versions.
  * Dispatches a serene system notification when an update is available.
+ *
+ * This is the fallback path: the primary trigger is [UpdateAlarmScheduler], which keeps
+ * polling in Doze and is not deferred the way WorkManager jobs are.
  */
 class UpdateCheckWorker(
     context: Context,
@@ -26,13 +29,7 @@ class UpdateCheckWorker(
 
     override suspend fun doWork(): Result {
         return try {
-            val sp = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            sp.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
-
-            val result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
-            if (result is UpdateCheckResult.UpdateAvailable) {
-                AppUpdateManager.showUpdateNotification(applicationContext, result.releaseInfo)
-            }
+            runCheck(applicationContext)
             Result.success()
         } catch (e: Exception) {
             Result.retry()
@@ -50,7 +47,7 @@ class UpdateCheckWorker(
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
-            val request = PeriodicWorkRequestBuilder<UpdateCheckWorker>(2, TimeUnit.HOURS)
+            val request = PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.HOURS)
                 .setConstraints(constraints)
                 .build()
 
@@ -77,6 +74,24 @@ class UpdateCheckWorker(
             )
         }
 
+        /** Checks GitHub and posts the (deduplicated) update notification if needed. */
+        suspend fun runCheck(context: Context): UpdateCheckResult {
+            val appContext = context.applicationContext
+            val sp = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            sp.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+
+            val result = try {
+                AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
+            } catch (e: Exception) {
+                return UpdateCheckResult.Error(e.localizedMessage ?: "Network error")
+            }
+
+            if (result is UpdateCheckResult.UpdateAvailable) {
+                AppUpdateManager.showUpdateNotification(appContext, result.releaseInfo)
+            }
+            return result
+        }
+
         suspend fun checkIfDue(context: Context, minIntervalMinutes: Long = 90) {
             val sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val lastCheck = sp.getLong(KEY_LAST_CHECK, 0L)
@@ -84,15 +99,8 @@ class UpdateCheckWorker(
             if (now - lastCheck < minIntervalMinutes * 60 * 1000L) {
                 return
             }
-            sp.edit().putLong(KEY_LAST_CHECK, now).apply()
-
             withContext(Dispatchers.IO) {
-                try {
-                    val result = AppUpdateManager.checkForUpdate(BuildConfig.VERSION_NAME)
-                    if (result is UpdateCheckResult.UpdateAvailable) {
-                        AppUpdateManager.showUpdateNotification(context, result.releaseInfo)
-                    }
-                } catch (_: Exception) {}
+                runCatching { runCheck(context) }
             }
         }
     }

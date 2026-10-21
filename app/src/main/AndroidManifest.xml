@@ -52,6 +52,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Wake-up alarm that polls GitHub for new releases even in Doze -->
+        <receiver
+            android:name=".updater.UpdateAlarmReceiver"
+            android:exported="false" />
+
         <!-- Next Prayer Box Widget -->
         <receiver
             android:name=".widget.NextPrayerWidgetProvider"

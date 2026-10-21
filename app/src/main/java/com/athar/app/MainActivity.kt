@@ -25,6 +25,7 @@ import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.updater.AppReleaseInfo
 import com.athar.app.updater.AppUpdateManager
+import com.athar.app.updater.UpdateAlarmScheduler
 import com.athar.app.updater.UpdateCheckResult
 import com.athar.app.updater.UpdateCheckWorker
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
         // Clean up previously downloaded APK update files and schedule background check
         AppUpdateManager.cleanupDownloadedApks(applicationContext)
         UpdateCheckWorker.schedule(applicationContext)
+        UpdateAlarmScheduler.ensureScheduled(applicationContext)
 
         appPreferences = AppPreferences(applicationContext)
         val initialLang = runCatching {

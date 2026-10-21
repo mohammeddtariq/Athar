@@ -320,6 +320,9 @@ class BootReceiver : BroadcastReceiver() {
                     com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
                     LiveStatusNotificationManager.update(context)
                     com.athar.app.updater.UpdateCheckWorker.schedule(context)
+                    // Poll GitHub soon after boot/update, then every ~30 minutes via alarms
+                    com.athar.app.updater.UpdateAlarmScheduler.schedule(context, delayMinutes = 3)
+                    com.athar.app.updater.UpdateCheckWorker.runCheck(context)
                 } finally {
                     pendingResult.finish()
                 }

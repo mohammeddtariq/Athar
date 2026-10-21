@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import android.content.res.Configuration
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
 import com.athar.app.MainActivity
 import com.athar.app.R
@@ -91,6 +92,8 @@ object AppUpdateManager {
     private const val ATOM_FEED_URL = "https://github.com/$GITHUB_REPO/releases.atom"
     const val UPDATE_CHANNEL_ID = "athar_app_updates"
     private const val UPDATE_NOTIF_ID = 9001
+    private const val UPDATE_META_PREFS = "athar_update_check_meta"
+    private const val KEY_LAST_NOTIFIED_TAG = "last_notified_tag"
     const val EXTRA_OPEN_UPDATER = "com.athar.app.OPEN_UPDATER"
 
     /**
@@ -405,12 +408,26 @@ object AppUpdateManager {
 
     /**
      * Posts a serene system notification to alert the user about a newly discovered update.
+     * Each release is announced once; later polls for the same version stay silent.
      */
     fun showUpdateNotification(context: Context, releaseInfo: AppReleaseInfo) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Localize notification according to app's selected language
+        // Without the runtime permission the notification would be a silent no-op;
+        // leave the release unmarked so it is announced once permission is granted.
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
+        // One notification per released version, no matter how often we poll.
         val prefs = AppPreferences(context.applicationContext)
+        val meta = context.applicationContext
+            .getSharedPreferences(UPDATE_META_PREFS, Context.MODE_PRIVATE)
+        val lastNotifiedTag = meta.getString(KEY_LAST_NOTIFIED_TAG, null)
+        if (!releaseInfo.tagName.isNullOrBlank() && releaseInfo.tagName == lastNotifiedTag) {
+            return
+        }
+        meta.edit().putString(KEY_LAST_NOTIFIED_TAG, releaseInfo.tagName).apply()
+
+        // Localize notification according to app's selected language
         val langCode = runCatching { runBlocking { prefs.selectedLanguage.first() } }.getOrDefault("ar")
         val locale = Locale.forLanguageTag(langCode)
         val config = Configuration(context.resources.configuration).apply {
@@ -442,13 +459,15 @@ object AppUpdateManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val body = localizedContext.getString(R.string.update_notif_body, releaseInfo.versionName)
         val notification = NotificationCompat.Builder(context, UPDATE_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(localizedContext.getString(R.string.update_notif_title))
-            .setContentText(localizedContext.getString(R.string.update_notif_body, releaseInfo.versionName))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(localizedContext.getString(R.string.update_notif_body, releaseInfo.versionName)))
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+            .setOnlyAlertOnce(true)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
