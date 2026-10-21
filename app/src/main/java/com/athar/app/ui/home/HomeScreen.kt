@@ -244,7 +244,8 @@ fun HomeScreen(
         ) {
             TopBar(
                 onSettingsClick = onOpenSettings,
-                onAfterPrayerClick = { showAfterPrayerDialog = true }
+                onOpenNotifications = onOpenNotifications,
+                notificationsEnabled = notifMaster
             )
 
             LazyColumn(
@@ -292,7 +293,7 @@ fun HomeScreen(
                             fontSize = 16.sp
                         )
 
-                        // Notification Settings Pill
+                        // After-Prayer Duas Pill
                         Row(
                             modifier = Modifier
                                 .height(30.dp)
@@ -302,20 +303,20 @@ fun HomeScreen(
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                    onClick = onOpenNotifications
+                                    onClick = { showAfterPrayerDialog = true }
                                 )
                                 .padding(horizontal = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                if (notifMaster) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                                painter = painterResource(R.drawable.ic_prayer_hands),
                                 contentDescription = null,
-                                tint = if (notifMaster) AtharPrimaryLight else AtharTextSecondary,
+                                tint = AtharPrimaryLight,
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                stringResource(R.string.home_notification_settings),
+                                stringResource(R.string.home_after_prayer_adhkar),
                                 color = AtharTextPrimary,
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Bold,
@@ -343,7 +344,8 @@ fun HomeScreen(
 @Composable
 private fun TopBar(
     onSettingsClick: () -> Unit,
-    onAfterPrayerClick: () -> Unit
+    onOpenNotifications: () -> Unit,
+    notificationsEnabled: Boolean
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
@@ -361,7 +363,7 @@ private fun TopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 1. After-Prayer Duas Pill
+                // 1. Notification Settings Pill
                 Row(
                     modifier = Modifier
                         .height(36.dp)
@@ -371,20 +373,20 @@ private fun TopBar(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onAfterPrayerClick
+                            onClick = onOpenNotifications
                         )
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_prayer_hands),
+                        if (notificationsEnabled) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
                         contentDescription = null,
-                        tint = AtharPrimaryLight,
+                        tint = if (notificationsEnabled) AtharPrimaryLight else AtharTextSecondary,
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        stringResource(R.string.home_after_prayer_adhkar),
+                        stringResource(R.string.home_notification_settings),
                         color = AtharTextPrimary,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
