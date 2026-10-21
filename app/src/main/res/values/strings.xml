@@ -379,5 +379,11 @@
     <string name="home_after_prayer_done">You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds.</string>
     <string name="home_alhamdulillah">Alhamdulillah</string>
     <string name="duas_celebration_done">You have completed these adhkar.\nMay it weigh in your scale of good deeds.</string>
+    <string name="home_prayer_note_fajr">"Prayer is light."</string>
+    <string name="home_prayer_note_sunrise">"And the sun runs on its fixed course."</string>
+    <string name="home_prayer_note_dhuhr">"Indeed, prayer has been decreed upon the believers at specified times."</string>
+    <string name="home_prayer_note_asr">"Guard the prayers, especially the middle prayer."</string>
+    <string name="home_prayer_note_maghrib">"Establish prayer at the two ends of the day and in the first hours of the night."</string>
+    <string name="home_prayer_note_isha">"And rise in the night for prayer as an extra offering."</string>
 </resources>
 

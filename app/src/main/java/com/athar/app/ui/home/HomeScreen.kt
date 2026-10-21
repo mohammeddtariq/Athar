@@ -12,6 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,7 +38,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -60,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +76,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -226,7 +231,7 @@ fun HomeScreen(
 
     val isVisible = true
 
-    // Dark base with the Islamic lattice (Quran stays pure black).
+
     PatternScaffold {
         if (showAfterPrayerDialog) {
             AfterPrayerDuaDialog(
@@ -348,18 +353,22 @@ fun HomeScreen(
                 }
             }
 
-            itemsIndexed(rows) { index, row ->
+            item {
                 AnimatedVisibility(
                     visible = isVisible,
-                    enter = fadeIn(tween(350, 250 + index * 50)) +
-                        slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { 30 }
+                    enter = fadeIn(tween(400, 260)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { 40 }
                 ) {
-                    PrayerItem(row, numberStyle = numberStyle)
+                    PrayerWalletDeck(
+                        rows = rows,
+                        isArabic = selectedLanguage == "ar",
+                        numberStyle = numberStyle
+                    )
                 }
+            }
             }
         }
     }
-}
 }
 
 @Composable
@@ -385,7 +394,6 @@ private fun TopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 0. Unified search across the Quran and duas
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -407,7 +415,6 @@ private fun TopBar(
                     )
                 }
 
-                // 1. Notification Settings Pill
                 Row(
                     modifier = Modifier
                         .height(36.dp)
@@ -438,7 +445,6 @@ private fun TopBar(
                     )
                 }
 
-                // 2. Settings Icon Button (Larger, icon only, without label)
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -754,66 +760,6 @@ private fun BoxScope.CardGlowBorder() {
                 RoundedCornerShape(20.dp)
             )
     )
-}
-
-@Composable
-fun PrayerItem(
-    row: PrayerRow,
-    numberStyle: NumberStylePreference = NumberStylePreference.WESTERN
-) {
-    Box(
-        modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 3.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .then(
-                if (row.isNext) {
-                    Modifier
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(AtharPrimarySubtle.copy(alpha = 0.6f), AtharCardSurface)
-                            )
-                        )
-                        .border(1.dp, AtharPrimary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                } else {
-                    Modifier
-                        .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp))
-                }
-            )
-            .padding(horizontal = 16.dp, vertical = 13.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(row.nameResId),
-                    color = AtharTextPrimary,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                if (row.isNext) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .background(AtharPrimaryLight, CircleShape)
-                    )
-                }
-            }
-            Text(
-                formatDigits(row.time.format(timeFmt), numberStyle),
-                color = if (row.isNext) AtharPrimaryLight else AtharTextSecondary,
-                fontFamily = ThmanyahSans,
-                fontWeight = if (row.isNext) FontWeight.Black else FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-    }
 }
 
 /**

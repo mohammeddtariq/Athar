@@ -391,5 +391,11 @@
     <string name="home_after_prayer_done">أتممت أذكار ما بعد الصلاة\nجعلها الله في ميزان حسناتك</string>
     <string name="home_alhamdulillah">الحمد لله</string>
     <string name="duas_celebration_done">أتممت هذه الأذكار\nجعلها الله في ميزان حسناتك</string>
+    <string name="home_prayer_note_fajr">«الصَّلَاةُ نُورٌ»</string>
+    <string name="home_prayer_note_sunrise">﴿وَالشَّمْسُ تَجْرِي لِمُسْتَقَرٍّ لَهَا﴾</string>
+    <string name="home_prayer_note_dhuhr">﴿إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَوْقُوتًا﴾</string>
+    <string name="home_prayer_note_asr">﴿حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَى﴾</string>
+    <string name="home_prayer_note_maghrib">﴿وَأَقِمِ الصَّلَاةَ طَرَفَيِ النَّهَارِ وَزُلَفًا مِّنَ اللَّيْلِ﴾</string>
+    <string name="home_prayer_note_isha">﴿وَمِنَ اللَّيْلِ فَتَهَجَّدْ بِهِ نَافِلَةً لَّكَ﴾</string>
 </resources>
 
