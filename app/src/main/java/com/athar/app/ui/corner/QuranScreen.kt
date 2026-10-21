@@ -1495,11 +1495,24 @@ private fun UthmanicMushafPageCard(
         markerInk,
         strokeWidth
     ) {
-        value = withContext(Dispatchers.IO) {
+        val parsed = withContext(Dispatchers.IO) {
             isError = false
-            val parsed = parseMedinaMushafSvg(context, chunk.pageNumber, surah.number, ink, markerInk, strokeWidth)
-            if (parsed == null) isError = true
-            parsed
+            parseMedinaMushafSvg(context, chunk.pageNumber, surah.number, ink, markerInk, strokeWidth)
+                .also { if (it == null) isError = true }
+        }
+        value = parsed
+        if (parsed != null) {
+            // Warm the neighbouring pages so turning a page skips the parse cost.
+            launch {
+                delay(350)
+                withContext(Dispatchers.IO) {
+                    for (neighbor in intArrayOf(chunk.pageNumber - 1, chunk.pageNumber + 1)) {
+                        if (neighbor in 1..604) {
+                            parseMedinaMushafSvg(context, neighbor, surah.number, ink, markerInk, strokeWidth)
+                        }
+                    }
+                }
+            }
         }
     }
 
