@@ -179,7 +179,7 @@ import kotlinx.coroutines.isActive
 import com.athar.app.data.ChapterRecitationTiming
 import com.athar.app.data.QuranRecitationSyncRepository
 import com.athar.app.data.VerseChunk
-import com.athar.app.ui.components.MihrabWatermark
+import com.athar.app.ui.components.AmanahRosette
 import com.athar.app.ui.components.OrnamentDivider
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
@@ -619,6 +619,12 @@ private fun SurahListScreen(
     val lastReadJuz = remember(lastReadSurahNum) {
         allSurahs.firstOrNull { it.number == lastReadSurahNum }?.juz
     }
+    var expandedSurah by rememberSaveable { mutableStateOf<Int?>(null) }
+    var expandedJuz by rememberSaveable { mutableStateOf<Int?>(null) }
+    LaunchedEffect(query, selectedTab) {
+        expandedSurah = null
+        expandedJuz = null
+    }
 
     val filteredSurahs = remember(query) {
         if (query.isBlank()) allSurahs
@@ -815,8 +821,16 @@ private fun SurahListScreen(
                             surah = surah,
                             colors = colors,
                             isLastRead = surah.number == lastReadSurahNum,
+                            isExpanded = expandedSurah == surah.number,
                             glowAlpha = lastReadGlowAlpha,
-                            onClick = { onSelectSurah(surah) }
+                            onClick = {
+                                if (expandedSurah == surah.number) {
+                                    expandedSurah = null
+                                    onSelectSurah(surah)
+                                } else {
+                                    expandedSurah = surah.number
+                                }
+                            }
                         )
                     }
                 }
@@ -830,11 +844,17 @@ private fun SurahListScreen(
                             juz = juz,
                             colors = colors,
                             isLastRead = juz.number == lastReadJuz,
+                            isExpanded = expandedJuz == juz.number,
                             glowAlpha = lastReadGlowAlpha,
                             onClick = {
-                                val startSurah = allSurahs.firstOrNull { it.number == juz.startSurahNumber }
-                                    ?: allSurahs.first()
-                                onSelectSurah(startSurah)
+                                if (expandedJuz == juz.number) {
+                                    expandedJuz = null
+                                    val startSurah = allSurahs.firstOrNull { it.number == juz.startSurahNumber }
+                                        ?: allSurahs.first()
+                                    onSelectSurah(startSurah)
+                                } else {
+                                    expandedJuz = juz.number
+                                }
                             }
                         )
                     }
@@ -851,6 +871,7 @@ private fun SurahCardItem(
     surah: SurahMeta,
     colors: QuranReaderColors,
     isLastRead: Boolean = false,
+    isExpanded: Boolean = false,
     glowAlpha: Float = 0f,
     onClick: () -> Unit
 ) {
@@ -859,7 +880,11 @@ private fun SurahCardItem(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.975f else 1f,
+        targetValue = when {
+            pressed -> 0.975f
+            isExpanded -> 1.025f
+            else -> 1f
+        },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -867,31 +892,54 @@ private fun SurahCardItem(
         label = "surahCardScale"
     )
     val accent = if (isLastRead) glowAlpha else 0f
+    val lift by animateDpAsState(
+        targetValue = if (isExpanded) (-6).dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "quranCardLift"
+    )
 
     Box(
         modifier = Modifier
             .padding(vertical = 5.dp)
             .fillMaxWidth()
             .height(QuranCardHeight)
+            .offset(y = lift)
             .scale(scale)
             .shadow(
-                elevation = if (isLastRead) 18.dp else 4.dp,
+                elevation = when {
+                    isExpanded -> 24.dp
+                    isLastRead -> 18.dp
+                    else -> 4.dp
+                },
                 shape = shape,
-                spotColor = AtharPrimaryLight.copy(alpha = if (isLastRead) accent else 0.10f),
+                spotColor = AtharPrimaryLight.copy(
+                    alpha = when {
+                        isExpanded -> 0.55f
+                        isLastRead -> accent
+                        else -> 0.10f
+                    }
+                ),
                 ambientColor = Color.Black.copy(alpha = 0.55f)
             )
             .clip(shape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        if (isLastRead) AtharPrimarySubtle else AtharCardSurface,
+                        if (isLastRead || isExpanded) AtharPrimarySubtle else AtharCardSurface,
                         AtharBackground
                     )
                 )
             )
             .border(
-                width = if (isLastRead) 1.2.dp else 1.dp,
-                color = if (isLastRead) AtharPrimary.copy(alpha = 0.45f + accent * 0.5f) else AtharCardBorder,
+                width = if (isExpanded) 1.5.dp else if (isLastRead) 1.2.dp else 1.dp,
+                color = when {
+                    isExpanded -> AtharPrimaryLight.copy(alpha = 0.85f)
+                    isLastRead -> AtharPrimary.copy(alpha = 0.45f + accent * 0.5f)
+                    else -> AtharCardBorder
+                },
                 shape = shape
             )
             .clickable(
@@ -903,12 +951,18 @@ private fun SurahCardItem(
                 }
             )
     ) {
-        MihrabWatermark(
+        AmanahRosette(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 10.dp)
-                .size(96.dp)
-                .alpha(if (isLastRead) 0.12f else 0.06f),
+                .size(110.dp)
+                .alpha(
+                    when {
+                        isExpanded -> 0.20f
+                        isLastRead -> 0.16f
+                        else -> 0.09f
+                    }
+                ),
             color = AtharPrimaryLight
         )
 
@@ -1019,6 +1073,7 @@ private fun JuzCardItem(
     juz: JuzMeta,
     colors: QuranReaderColors,
     isLastRead: Boolean = false,
+    isExpanded: Boolean = false,
     glowAlpha: Float = 0f,
     onClick: () -> Unit
 ) {
@@ -1030,7 +1085,11 @@ private fun JuzCardItem(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.975f else 1f,
+        targetValue = when {
+            pressed -> 0.975f
+            isExpanded -> 1.025f
+            else -> 1f
+        },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -1038,31 +1097,54 @@ private fun JuzCardItem(
         label = "juzCardScale"
     )
     val accent = if (isLastRead) glowAlpha else 0f
+    val lift by animateDpAsState(
+        targetValue = if (isExpanded) (-6).dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "quranCardLift"
+    )
 
     Box(
         modifier = Modifier
             .padding(vertical = 5.dp)
             .fillMaxWidth()
             .height(QuranCardHeight)
+            .offset(y = lift)
             .scale(scale)
             .shadow(
-                elevation = if (isLastRead) 18.dp else 4.dp,
+                elevation = when {
+                    isExpanded -> 24.dp
+                    isLastRead -> 18.dp
+                    else -> 4.dp
+                },
                 shape = shape,
-                spotColor = AtharPrimaryLight.copy(alpha = if (isLastRead) accent else 0.10f),
+                spotColor = AtharPrimaryLight.copy(
+                    alpha = when {
+                        isExpanded -> 0.55f
+                        isLastRead -> accent
+                        else -> 0.10f
+                    }
+                ),
                 ambientColor = Color.Black.copy(alpha = 0.55f)
             )
             .clip(shape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        if (isLastRead) AtharPrimarySubtle else AtharCardSurface,
+                        if (isLastRead || isExpanded) AtharPrimarySubtle else AtharCardSurface,
                         AtharBackground
                     )
                 )
             )
             .border(
-                width = if (isLastRead) 1.2.dp else 1.dp,
-                color = if (isLastRead) AtharPrimary.copy(alpha = 0.45f + accent * 0.5f) else AtharCardBorder,
+                width = if (isExpanded) 1.5.dp else if (isLastRead) 1.2.dp else 1.dp,
+                color = when {
+                    isExpanded -> AtharPrimaryLight.copy(alpha = 0.85f)
+                    isLastRead -> AtharPrimary.copy(alpha = 0.45f + accent * 0.5f)
+                    else -> AtharCardBorder
+                },
                 shape = shape
             )
             .clickable(
@@ -1074,12 +1156,18 @@ private fun JuzCardItem(
                 }
             )
     ) {
-        MihrabWatermark(
+        AmanahRosette(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 10.dp)
-                .size(96.dp)
-                .alpha(if (isLastRead) 0.12f else 0.06f),
+                .size(110.dp)
+                .alpha(
+                    when {
+                        isExpanded -> 0.20f
+                        isLastRead -> 0.16f
+                        else -> 0.09f
+                    }
+                ),
             color = AtharPrimaryLight
         )
 
