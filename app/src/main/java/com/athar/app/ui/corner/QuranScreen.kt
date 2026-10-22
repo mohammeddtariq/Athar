@@ -45,6 +45,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlin.math.absoluteValue
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -118,6 +120,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -146,6 +149,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.withStyle
@@ -175,6 +179,8 @@ import kotlinx.coroutines.isActive
 import com.athar.app.data.ChapterRecitationTiming
 import com.athar.app.data.QuranRecitationSyncRepository
 import com.athar.app.data.VerseChunk
+import com.athar.app.ui.components.MihrabWatermark
+import com.athar.app.ui.components.OrnamentDivider
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -184,6 +190,7 @@ import com.athar.app.ui.theme.AtharNavbarBg
 import com.athar.app.ui.theme.AtharNavbarBorder
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.QuranBismillah
@@ -602,6 +609,17 @@ private fun SurahListScreen(
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
+    val lastReadGlow = rememberInfiniteTransition(label = "lastReadGlow")
+    val lastReadGlowAlpha by lastReadGlow.animateFloat(
+        initialValue = 0.18f,
+        targetValue = 0.50f,
+        animationSpec = infiniteRepeatable(tween(2600), repeatMode = RepeatMode.Reverse),
+        label = "lastReadGlowAlpha"
+    )
+    val lastReadJuz = remember(lastReadSurahNum) {
+        allSurahs.firstOrNull { it.number == lastReadSurahNum }?.juz
+    }
+
     val filteredSurahs = remember(query) {
         if (query.isBlank()) allSurahs
         else allSurahs.filter {
@@ -796,6 +814,8 @@ private fun SurahListScreen(
                         SurahCardItem(
                             surah = surah,
                             colors = colors,
+                            isLastRead = surah.number == lastReadSurahNum,
+                            glowAlpha = lastReadGlowAlpha,
                             onClick = { onSelectSurah(surah) }
                         )
                     }
@@ -809,6 +829,8 @@ private fun SurahListScreen(
                         JuzCardItem(
                             juz = juz,
                             colors = colors,
+                            isLastRead = juz.number == lastReadJuz,
+                            glowAlpha = lastReadGlowAlpha,
                             onClick = {
                                 val startSurah = allSurahs.firstOrNull { it.number == juz.startSurahNumber }
                                     ?: allSurahs.first()
@@ -822,98 +844,169 @@ private fun SurahListScreen(
     }
 }
 
+private val QuranCardHeight = 118.dp
+
 @Composable
 private fun SurahCardItem(
     surah: SurahMeta,
     colors: QuranReaderColors,
+    isLastRead: Boolean = false,
+    glowAlpha: Float = 0f,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(22.dp)
+    val haptics = LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.975f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "surahCardScale"
+    )
+    val accent = if (isLastRead) glowAlpha else 0f
+
     Box(
         modifier = Modifier
-            .padding(vertical = 4.dp)
+            .padding(vertical = 5.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(AtharCardSurface)
-            .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
+            .height(QuranCardHeight)
+            .scale(scale)
+            .shadow(
+                elevation = if (isLastRead) 18.dp else 4.dp,
+                shape = shape,
+                spotColor = AtharPrimaryLight.copy(alpha = if (isLastRead) accent else 0.10f),
+                ambientColor = Color.Black.copy(alpha = 0.55f)
             )
-            .padding(horizontal = 16.dp, vertical = 13.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        if (isLastRead) AtharPrimarySubtle else AtharCardSurface,
+                        AtharBackground
+                    )
+                )
+            )
+            .border(
+                width = if (isLastRead) 1.2.dp else 1.dp,
+                color = if (isLastRead) AtharPrimary.copy(alpha = 0.45f + accent * 0.5f) else AtharCardBorder,
+                shape = shape
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                }
+            )
     ) {
-        // Enforce constant LTR order across all app languages:
-        // Left = Number Badge + English Subtitles
-        // Right = Arabic Calligraphy + Uthmanic Name
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Surah Number Badge & English Name (Left side)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(AtharBackground.copy(alpha = 0.65f))
-                            .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = surah.number.toArabicIndic(),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = AtharPrimaryLight
-                        )
-                    }
+        MihrabWatermark(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 10.dp)
+                .size(96.dp)
+                .alpha(if (isLastRead) 0.12f else 0.06f),
+            color = AtharPrimaryLight
+        )
 
-                    Column(horizontalAlignment = Alignment.Start) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 13.dp)
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(AtharBackground.copy(alpha = 0.65f))
+                                .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = surah.number.toArabicIndic(),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharPrimaryLight
+                            )
+                        }
+
                         Text(
                             text = surah.englishName,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
-                            color = AtharTextPrimary
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "${stringResource(R.string.quran_juz_label, surah.juz)} • " +
-                                stringResource(R.string.quran_ayahs, surah.ayahs) + " • " +
-                                (if (surah.revelationType == RevelationType.MECCAN)
-                                    stringResource(R.string.quran_revelation_meccan)
-                                else
-                                    stringResource(R.string.quran_revelation_medinan)),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp,
-                            color = AtharTextSecondary
+                            color = AtharTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
 
-                // Arabic Calligraphy + Unified Uthmanic Name (Right side)
-                Column(horizontalAlignment = Alignment.End) {
+                    Spacer(Modifier.width(8.dp))
+
                     Text(
                         text = QuranRepository.getSurahTitleGlyph(surah.number),
                         fontFamily = QuranSurahNames,
-                        fontSize = 28.sp,
+                        fontSize = 26.sp,
                         color = AtharTextPrimary,
                         textAlign = TextAlign.End
                     )
-                    Spacer(Modifier.height(1.dp))
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            OrnamentDivider(
+                color = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.35f) else AtharCardBorder,
+                ornamentColor = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.80f) else AtharCardBorder
+            )
+
+            Spacer(Modifier.height(7.dp))
+
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${stringResource(R.string.quran_juz_label, surah.juz)} • " +
+                            stringResource(R.string.quran_ayahs, surah.ayahs) + " • " +
+                            (if (surah.revelationType == RevelationType.MECCAN)
+                                stringResource(R.string.quran_revelation_meccan)
+                            else
+                                stringResource(R.string.quran_revelation_medinan)),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
                     Text(
                         text = "سورة " + surah.arabicName,
                         fontFamily = ThmanyahSerifDisplay,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        fontSize = 12.5.sp,
                         color = AtharTextSecondary,
-                        textAlign = TextAlign.End
+                        textAlign = TextAlign.End,
+                        maxLines = 1
                     )
                 }
             }
@@ -925,92 +1018,164 @@ private fun SurahCardItem(
 private fun JuzCardItem(
     juz: JuzMeta,
     colors: QuranReaderColors,
+    isLastRead: Boolean = false,
+    glowAlpha: Float = 0f,
     onClick: () -> Unit
 ) {
     val startSurah = remember(juz.startSurahNumber) {
         allSurahs.firstOrNull { it.number == juz.startSurahNumber }
     }
+    val shape = RoundedCornerShape(22.dp)
+    val haptics = LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.975f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "juzCardScale"
+    )
+    val accent = if (isLastRead) glowAlpha else 0f
 
     Box(
         modifier = Modifier
-            .padding(vertical = 4.dp)
+            .padding(vertical = 5.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(AtharCardSurface)
-            .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
+            .height(QuranCardHeight)
+            .scale(scale)
+            .shadow(
+                elevation = if (isLastRead) 18.dp else 4.dp,
+                shape = shape,
+                spotColor = AtharPrimaryLight.copy(alpha = if (isLastRead) accent else 0.10f),
+                ambientColor = Color.Black.copy(alpha = 0.55f)
             )
-            .padding(horizontal = 16.dp, vertical = 13.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        if (isLastRead) AtharPrimarySubtle else AtharCardSurface,
+                        AtharBackground
+                    )
+                )
+            )
+            .border(
+                width = if (isLastRead) 1.2.dp else 1.dp,
+                color = if (isLastRead) AtharPrimary.copy(alpha = 0.45f + accent * 0.5f) else AtharCardBorder,
+                shape = shape
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                }
+            )
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left: Badge & English Name
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(AtharBackground.copy(alpha = 0.65f))
-                            .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = juz.number.toArabicIndic(),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = AtharPrimaryLight
-                        )
-                    }
+        MihrabWatermark(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 10.dp)
+                .size(96.dp)
+                .alpha(if (isLastRead) 0.12f else 0.06f),
+            color = AtharPrimaryLight
+        )
 
-                    Column(horizontalAlignment = Alignment.Start) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 13.dp)
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(AtharBackground.copy(alpha = 0.65f))
+                                .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = juz.number.toArabicIndic(),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AtharPrimaryLight
+                            )
+                        }
+
                         Text(
                             text = juz.englishName,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
-                            color = AtharTextPrimary
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = (startSurah?.englishName ?: "") + " • " +
-                                stringResource(R.string.quran_page_label, juz.startPage),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp,
-                            color = AtharTextSecondary
+                            color = AtharTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
 
-                // Right: Arabic Name
-                Column(horizontalAlignment = Alignment.End) {
+                    Spacer(Modifier.width(8.dp))
+
                     Text(
                         text = juz.arabicName,
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = AtharTextPrimary,
-                        textAlign = TextAlign.End
+                        textAlign = TextAlign.End,
+                        maxLines = 1
                     )
-                    Spacer(Modifier.height(2.dp))
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            OrnamentDivider(
+                color = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.35f) else AtharCardBorder,
+                ornamentColor = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.80f) else AtharCardBorder
+            )
+
+            Spacer(Modifier.height(7.dp))
+
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = (startSurah?.englishName ?: "") + " • " +
+                            stringResource(R.string.quran_page_label, juz.startPage),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
                     Text(
                         text = "يبدأ من سورة ${startSurah?.arabicName ?: ""}",
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 12.sp,
                         color = AtharTextSecondary,
-                        textAlign = TextAlign.End
+                        textAlign = TextAlign.End,
+                        maxLines = 1
                     )
                 }
             }
