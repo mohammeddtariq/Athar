@@ -26,6 +26,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -275,10 +278,13 @@ fun HomeScreen(
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
-                contentPadding = PaddingValues(top = 62.dp, bottom = 150.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 62.dp + WindowInsets.statusBars
+                        .asPaddingValues()
+                        .calculateTopPadding(),
+                    bottom = 150.dp
+                )
             ) {
                 item {
                 AnimatedVisibility(
@@ -401,16 +407,6 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    AtharBackground,
-                                    AtharBackground.copy(alpha = 0.98f),
-                                    AtharBackground.copy(alpha = 0.92f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
                         .statusBarsPadding()
                         .padding(bottom = 6.dp)
                 ) {
@@ -602,7 +598,7 @@ fun NextPrayerCard(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 14.dp)
             .fillMaxWidth()
             .scale(scale.value)
             .shadow(
@@ -626,7 +622,7 @@ fun NextPrayerCard(
                 .alpha(0.12f),
             color = AtharPrimaryLight
         )
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -671,48 +667,50 @@ fun NextPrayerCard(
                                 fontSize = 11.sp
                             )
                         }
-
-                        // Location Button inside next prayer card below both dates
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(AtharCardSurface.copy(alpha = 0.85f))
-                                .border(1.dp, AtharCardBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = onLocationClick
-                                )
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Outlined.LocationOn,
-                                contentDescription = null,
-                                tint = AtharPrimaryLight,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                cityLabel ?: stringResource(R.string.home_location_not_set),
-                                color = AtharTextPrimary,
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.5.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
                 }
-                Text(
-                    stringResource(R.string.home_next_prayer),
-                    color = AtharPrimaryLight,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 12.sp
-                )
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AtharCardSurface.copy(alpha = 0.85f))
+                            .border(1.dp, AtharCardBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onLocationClick
+                            )
+                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Outlined.LocationOn,
+                            contentDescription = null,
+                            tint = AtharPrimaryLight,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            cityLabel ?: stringResource(R.string.home_location_not_set),
+                            color = AtharTextPrimary,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.home_next_prayer),
+                        color = AtharPrimaryLight,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -739,26 +737,26 @@ fun NextPrayerCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(7.dp))
 
             OrnamentDivider(
                 color = AtharPrimaryLight.copy(alpha = 0.30f),
                 ornamentColor = AtharPrimaryLight.copy(alpha = 0.75f)
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(7.dp))
 
             Text(
                 formatDigits(nextTime.format(timeFmt), numberStyle),
                 color = AtharPrimaryLight,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 42.sp,
+                fontSize = 40.sp,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Time Remaining label + countdown pill together in one row.
             Row(
