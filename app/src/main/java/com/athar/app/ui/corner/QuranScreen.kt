@@ -63,6 +63,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -864,7 +865,8 @@ private fun SurahListScreen(
     }
 }
 
-private val QuranCardHeight = 118.dp
+private val QuranCardHeight = 132.dp
+private val QuranCardPeek = 96.dp
 
 @Composable
 private fun SurahCardItem(
@@ -898,171 +900,182 @@ private fun SurahCardItem(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
-        label = "quranCardLift"
+        label = "surahCardLift"
+    )
+    val slotHeight by animateDpAsState(
+        targetValue = if (isExpanded) QuranCardHeight else QuranCardPeek,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "surahCardSlot"
     )
 
-    Box(
-        modifier = Modifier
-            .padding(vertical = 5.dp)
-            .fillMaxWidth()
-            .height(QuranCardHeight)
-            .offset(y = lift)
-            .scale(scale)
-            .shadow(
-                elevation = when {
-                    isExpanded -> 24.dp
-                    isLastRead -> 18.dp
-                    else -> 4.dp
-                },
-                shape = shape,
-                spotColor = AtharPrimaryLight.copy(
-                    alpha = when {
-                        isExpanded -> 0.55f
-                        isLastRead -> accent
-                        else -> 0.10f
-                    }
-                ),
-                ambientColor = Color.Black.copy(alpha = 0.55f)
-            )
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        if (isLastRead || isExpanded) AtharPrimarySubtle else AtharCardSurface,
-                        AtharBackground
+    Box(modifier = Modifier.height(slotHeight)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .requiredHeight(QuranCardHeight)
+                .offset(y = lift)
+                .scale(scale)
+                .shadow(
+                    elevation = when {
+                        isExpanded -> 24.dp
+                        isLastRead -> 18.dp
+                        else -> 4.dp
+                    },
+                    shape = shape,
+                    spotColor = AtharPrimaryLight.copy(
+                        alpha = when {
+                            isExpanded -> 0.55f
+                            isLastRead -> accent
+                            else -> 0.10f
+                        }
+                    ),
+                    ambientColor = Color.Black.copy(alpha = 0.55f)
+                )
+                .clip(shape)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            if (isLastRead || isExpanded) AtharPrimarySubtle else AtharCardSurface,
+                            AtharBackground
+                        )
                     )
                 )
-            )
-            .border(
-                width = if (isExpanded) 1.5.dp else if (isLastRead) 1.2.dp else 1.dp,
-                color = when {
-                    isExpanded -> AtharPrimaryLight.copy(alpha = 0.85f)
-                    isLastRead -> AtharPrimary.copy(alpha = 0.45f + accent * 0.5f)
-                    else -> AtharCardBorder
-                },
-                shape = shape
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onClick()
-                }
-            )
-    ) {
-        AmanahRosette(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 10.dp)
-                .size(110.dp)
-                .alpha(
-                    when {
-                        isExpanded -> 0.20f
-                        isLastRead -> 0.16f
-                        else -> 0.09f
+                .border(
+                    width = if (isExpanded) 1.5.dp else if (isLastRead) 1.2.dp else 1.dp,
+                    color = when {
+                        isExpanded -> AtharPrimaryLight.copy(alpha = 0.85f)
+                        isLastRead -> AtharPrimary.copy(alpha = 0.45f + accent * 0.5f)
+                        else -> AtharCardBorder
+                    },
+                    shape = shape
+                )
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onClick()
                     }
-                ),
-            color = AtharPrimaryLight
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp, vertical = 13.dp)
+                )
         ) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            AmanahRosette(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 10.dp)
+                    .size(if (isExpanded) 120.dp else 104.dp)
+                    .alpha(
+                        when {
+                            isExpanded -> 0.20f
+                            isLastRead -> 0.16f
+                            else -> 0.09f
+                        }
+                    ),
+                color = AtharPrimaryLight
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 18.dp, vertical = 13.dp)
+            ) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(AtharBackground.copy(alpha = 0.65f))
-                                .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(AtharBackground.copy(alpha = 0.65f))
+                                    .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = surah.number.toArabicIndic(),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = AtharPrimaryLight
+                                )
+                            }
+
                             Text(
-                                text = surah.number.toArabicIndic(),
+                                text = surah.englishName,
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = AtharPrimaryLight
+                                fontSize = 15.sp,
+                                color = AtharTextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
+                        Spacer(Modifier.width(8.dp))
+
                         Text(
-                            text = surah.englishName,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            text = QuranRepository.getSurahTitleGlyph(surah.number),
+                            fontFamily = QuranSurahNames,
+                            fontSize = 26.sp,
                             color = AtharTextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            textAlign = TextAlign.End
                         )
                     }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Text(
-                        text = QuranRepository.getSurahTitleGlyph(surah.number),
-                        fontFamily = QuranSurahNames,
-                        fontSize = 26.sp,
-                        color = AtharTextPrimary,
-                        textAlign = TextAlign.End
-                    )
                 }
-            }
 
-            Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(6.dp))
 
-            OrnamentDivider(
-                color = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.35f) else AtharCardBorder,
-                ornamentColor = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.80f) else AtharCardBorder
-            )
+                OrnamentDivider(
+                    color = if (isLastRead || isExpanded) AtharPrimaryLight.copy(alpha = 0.35f) else AtharCardBorder,
+                    ornamentColor = if (isLastRead || isExpanded) AtharPrimaryLight.copy(alpha = 0.80f) else AtharCardBorder
+                )
 
-            Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(5.dp))
 
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${stringResource(R.string.quran_juz_label, surah.juz)} • " +
-                            stringResource(R.string.quran_ayahs, surah.ayahs) + " • " +
-                            (if (surah.revelationType == RevelationType.MECCAN)
-                                stringResource(R.string.quran_revelation_meccan)
-                            else
-                                stringResource(R.string.quran_revelation_medinan)),
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 11.5.sp,
-                        color = AtharTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${stringResource(R.string.quran_juz_label, surah.juz)} • " +
+                                stringResource(R.string.quran_ayahs, surah.ayahs) + " • " +
+                                (if (surah.revelationType == RevelationType.MECCAN)
+                                    stringResource(R.string.quran_revelation_meccan)
+                                else
+                                    stringResource(R.string.quran_revelation_medinan)),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.5.sp,
+                            color = AtharTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(8.dp))
 
-                    Text(
-                        text = "سورة " + surah.arabicName,
-                        fontFamily = ThmanyahSerifDisplay,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.End,
-                        maxLines = 1
-                    )
+                        Text(
+                            text = "سورة " + surah.arabicName,
+                            fontFamily = ThmanyahSerifDisplay,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.5.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.End,
+                            maxLines = 1
+                        )
+                    }
                 }
+
+                Spacer(Modifier.weight(1f))
             }
         }
     }
@@ -1103,169 +1116,180 @@ private fun JuzCardItem(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
-        label = "quranCardLift"
+        label = "juzCardLift"
+    )
+    val slotHeight by animateDpAsState(
+        targetValue = if (isExpanded) QuranCardHeight else QuranCardPeek,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "juzCardSlot"
     )
 
-    Box(
-        modifier = Modifier
-            .padding(vertical = 5.dp)
-            .fillMaxWidth()
-            .height(QuranCardHeight)
-            .offset(y = lift)
-            .scale(scale)
-            .shadow(
-                elevation = when {
-                    isExpanded -> 24.dp
-                    isLastRead -> 18.dp
-                    else -> 4.dp
-                },
-                shape = shape,
-                spotColor = AtharPrimaryLight.copy(
-                    alpha = when {
-                        isExpanded -> 0.55f
-                        isLastRead -> accent
-                        else -> 0.10f
-                    }
-                ),
-                ambientColor = Color.Black.copy(alpha = 0.55f)
-            )
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        if (isLastRead || isExpanded) AtharPrimarySubtle else AtharCardSurface,
-                        AtharBackground
+    Box(modifier = Modifier.height(slotHeight)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .requiredHeight(QuranCardHeight)
+                .offset(y = lift)
+                .scale(scale)
+                .shadow(
+                    elevation = when {
+                        isExpanded -> 24.dp
+                        isLastRead -> 18.dp
+                        else -> 4.dp
+                    },
+                    shape = shape,
+                    spotColor = AtharPrimaryLight.copy(
+                        alpha = when {
+                            isExpanded -> 0.55f
+                            isLastRead -> accent
+                            else -> 0.10f
+                        }
+                    ),
+                    ambientColor = Color.Black.copy(alpha = 0.55f)
+                )
+                .clip(shape)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            if (isLastRead || isExpanded) AtharPrimarySubtle else AtharCardSurface,
+                            AtharBackground
+                        )
                     )
                 )
-            )
-            .border(
-                width = if (isExpanded) 1.5.dp else if (isLastRead) 1.2.dp else 1.dp,
-                color = when {
-                    isExpanded -> AtharPrimaryLight.copy(alpha = 0.85f)
-                    isLastRead -> AtharPrimary.copy(alpha = 0.45f + accent * 0.5f)
-                    else -> AtharCardBorder
-                },
-                shape = shape
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onClick()
-                }
-            )
-    ) {
-        AmanahRosette(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 10.dp)
-                .size(110.dp)
-                .alpha(
-                    when {
-                        isExpanded -> 0.20f
-                        isLastRead -> 0.16f
-                        else -> 0.09f
+                .border(
+                    width = if (isExpanded) 1.5.dp else if (isLastRead) 1.2.dp else 1.dp,
+                    color = when {
+                        isExpanded -> AtharPrimaryLight.copy(alpha = 0.85f)
+                        isLastRead -> AtharPrimary.copy(alpha = 0.45f + accent * 0.5f)
+                        else -> AtharCardBorder
+                    },
+                    shape = shape
+                )
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onClick()
                     }
-                ),
-            color = AtharPrimaryLight
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp, vertical = 13.dp)
+                )
         ) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            AmanahRosette(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 10.dp)
+                    .size(if (isExpanded) 120.dp else 104.dp)
+                    .alpha(
+                        when {
+                            isExpanded -> 0.20f
+                            isLastRead -> 0.16f
+                            else -> 0.09f
+                        }
+                    ),
+                color = AtharPrimaryLight
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 18.dp, vertical = 13.dp)
+            ) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(AtharBackground.copy(alpha = 0.65f))
-                                .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(AtharBackground.copy(alpha = 0.65f))
+                                    .border(1.dp, AtharCardBorder, RoundedCornerShape(11.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = juz.number.toArabicIndic(),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = AtharPrimaryLight
+                                )
+                            }
+
                             Text(
-                                text = juz.number.toArabicIndic(),
+                                text = juz.englishName,
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = AtharPrimaryLight
+                                fontSize = 15.sp,
+                                color = AtharTextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
+                        Spacer(Modifier.width(8.dp))
+
                         Text(
-                            text = juz.englishName,
+                            text = juz.arabicName,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                             color = AtharTextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            textAlign = TextAlign.End,
+                            maxLines = 1
                         )
                     }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Text(
-                        text = juz.arabicName,
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = AtharTextPrimary,
-                        textAlign = TextAlign.End,
-                        maxLines = 1
-                    )
                 }
-            }
 
-            Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(6.dp))
 
-            OrnamentDivider(
-                color = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.35f) else AtharCardBorder,
-                ornamentColor = if (isLastRead) AtharPrimaryLight.copy(alpha = 0.80f) else AtharCardBorder
-            )
+                OrnamentDivider(
+                    color = if (isLastRead || isExpanded) AtharPrimaryLight.copy(alpha = 0.35f) else AtharCardBorder,
+                    ornamentColor = if (isLastRead || isExpanded) AtharPrimaryLight.copy(alpha = 0.80f) else AtharCardBorder
+                )
 
-            Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(5.dp))
 
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = (startSurah?.englishName ?: "") + " • " +
-                            stringResource(R.string.quran_page_label, juz.startPage),
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 11.5.sp,
-                        color = AtharTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = (startSurah?.englishName ?: "") + " • " +
+                                stringResource(R.string.quran_page_label, juz.startPage),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.5.sp,
+                            color = AtharTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(8.dp))
 
-                    Text(
-                        text = "يبدأ من سورة ${startSurah?.arabicName ?: ""}",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp,
-                        color = AtharTextSecondary,
-                        textAlign = TextAlign.End,
-                        maxLines = 1
-                    )
+                        Text(
+                            text = "يبدأ من سورة ${startSurah?.arabicName ?: ""}",
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = AtharTextSecondary,
+                            textAlign = TextAlign.End,
+                            maxLines = 1
+                        )
+                    }
                 }
+
+                Spacer(Modifier.weight(1f))
             }
         }
     }
