@@ -392,12 +392,12 @@
     <string name="home_after_prayer_done">أتممت أذكار ما بعد الصلاة\nجعلها الله في ميزان حسناتك</string>
     <string name="home_alhamdulillah">الحمد لله</string>
     <string name="duas_celebration_done">أتممت هذه الأذكار\nجعلها الله في ميزان حسناتك</string>
-    <string name="home_prayer_note_fajr">﴿إِنَّ قُرْآنَ الْفَجْرِ كَانَ مَشْهُودًا﴾ — الإسراء ٧٨</string>
-    <string name="home_prayer_note_sunrise">«مَنْ صَلَّى الْفَجْرَ فِي جَمَاعَةٍ ثُمَّ جَلَسَ حَتَّى تَطْلُعَ الشَّمْسُ ثُمَّ صَلَّى رَكْعَتَيْنِ كَانَتْ لَهُ كَأَجْرِ حَجَّةٍ وَعُمْرَةٍ» — الترمذي ٥٨٦</string>
-    <string name="home_prayer_note_dhuhr">﴿وَلَهُ الْحَمْدُ فِي السَّمَاوَاتِ وَالْأَرْضِ وَعَشِيًّا وَحِينَ تُظْهِرُونَ﴾ — الروم ١٨</string>
-    <string name="home_prayer_note_asr">«مَنْ فَاتَتْهُ صَلَاةُ الْعَصْرِ فَكَأَنَّمَا وُتِرَ أَهْلَهُ وَمَالَهُ» — البخاري ٥٥٢</string>
-    <string name="home_prayer_note_maghrib">﴿وَسَبِّحْهُ بُكْرَةً وَأَصِيلًا﴾ — الأحزاب ٤٢</string>
-    <string name="home_prayer_note_isha">«مَنْ صَلَّى الْعِشَاءَ فِي جَمَاعَةٍ فَكَأَنَّمَا قَامَ نِصْفَ اللَّيْلِ» — مسلم ٦٥٦</string>
+    <string name="home_prayer_note_fajr">الفجرُ أوّلُ ضوءٍ يتذكّرُ الليل.</string>
+    <string name="home_prayer_note_sunrise">الشروقُ آمينُ السماءِ على الفجر.</string>
+    <string name="home_prayer_note_dhuhr">الظهرُ حين يُنصتُ النهارُ لصوتِ السماء.</string>
+    <string name="home_prayer_note_asr">العصرُ ساعةٌ كهرمانيةٌ تسألُ عمّا قدّمتْ يداك.</string>
+    <string name="home_prayer_note_maghrib">المغربُ شمسٌ تطوي ضياءَها في صلاة.</string>
+    <string name="home_prayer_note_isha">العشاءُ تُغطّي العالمَ المتعبَ بلحافٍ من النجوم.</string>
     <string name="home_deck_hint">اسحب للأسفل لعرض البطاقات</string>
 </resources>
 

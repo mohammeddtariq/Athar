@@ -380,12 +380,12 @@
     <string name="home_after_prayer_done">You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds.</string>
     <string name="home_alhamdulillah">Alhamdulillah</string>
     <string name="duas_celebration_done">You have completed these adhkar.\nMay it weigh in your scale of good deeds.</string>
-    <string name="home_prayer_note_fajr">"Indeed, the recitation of dawn is ever witnessed." — Al-Isra 17:78</string>
-    <string name="home_prayer_note_sunrise">"Whoever prays Fajr in congregation, then sits until the sun rises, then prays two rak\'ahs, has the reward of Hajj and Umrah." — At-Tirmidhi 586</string>
-    <string name="home_prayer_note_dhuhr">"And to Him belongs praise in the heavens and the earth, and at evening and when you reach noon." — Ar-Rum 30:18</string>
-    <string name="home_prayer_note_asr">"Whoever misses the Asr prayer is as if he lost his family and his wealth." — Al-Bukhari 552</string>
-    <string name="home_prayer_note_maghrib">"And exalt Him morning and afternoon." — Al-Ahzab 33:42</string>
-    <string name="home_prayer_note_isha">"Whoever prays Isha in congregation is as if he prayed half the night." — Muslim 656</string>
+    <string name="home_prayer_note_fajr">Fajr is the first light that remembers the night.</string>
+    <string name="home_prayer_note_sunrise">Sunrise is the sky\'s quiet amen to Fajr.</string>
+    <string name="home_prayer_note_dhuhr">Dhuhr is noon bowing its head in the heart of the world.</string>
+    <string name="home_prayer_note_asr">Asr is the amber hour that asks what your hands have sent ahead.</string>
+    <string name="home_prayer_note_maghrib">Maghrib is the sun folding its light into a prayer.</string>
+    <string name="home_prayer_note_isha">Isha tucks the weary world beneath a blanket of stars.</string>
     <string name="home_deck_hint">Swipe down to fan the cards</string>
 </resources>
 
