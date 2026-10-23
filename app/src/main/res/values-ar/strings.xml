@@ -393,12 +393,12 @@
     <string name="home_after_prayer_done">أتممت أذكار ما بعد الصلاة\nجعلها الله في ميزان حسناتك</string>
     <string name="home_alhamdulillah">الحمد لله</string>
     <string name="duas_celebration_done">أتممت هذه الأذكار\nجعلها الله في ميزان حسناتك</string>
-    <string name="home_prayer_note_fajr">الفجرُ أوّلُ ضوءٍ يتذكّرُ الليل.</string>
-    <string name="home_prayer_note_sunrise">الشروقُ آمينُ السماءِ على الفجر.</string>
-    <string name="home_prayer_note_dhuhr">الظهرُ حين يُنصتُ النهارُ لصوتِ السماء.</string>
-    <string name="home_prayer_note_asr">العصرُ ساعةٌ كهرمانيةٌ تسألُ عمّا قدّمتْ يداك.</string>
-    <string name="home_prayer_note_maghrib">المغربُ شمسٌ تطوي ضياءَها في صلاة.</string>
-    <string name="home_prayer_note_isha">العشاءُ تُغطّي العالمَ المتعبَ بلحافٍ من النجوم.</string>
+    <string name="home_prayer_note_fajr">حتى الظلامُ يتوقّفُ عند الفجر.</string>
+    <string name="home_prayer_note_sunrise">تتنفّسُ السماءُ عند الشروق، ما زال دفءُ الفجرِ فيها.</string>
+    <string name="home_prayer_note_dhuhr">توقّفْ عند ذروةِ الشمس — الظهرُ سكينةٌ مخبوءةٌ في النهار.</string>
+    <string name="home_prayer_note_asr">حين يذوبُ الضوءُ ذهبًا، ماذا تُرسلُ قبل العصر؟</string>
+    <string name="home_prayer_note_maghrib">تُفلتُ الشمسُ النهارَ، فيلتقطُه المغربُ في صلاة.</string>
+    <string name="home_prayer_note_isha">يُسدلُ الليلُ ستارَه، ويُبقي العشاءُ لك مصباحًا.</string>
     <string name="home_deck_hint">اسحب للأسفل لعرض البطاقات</string>
 </resources>
 

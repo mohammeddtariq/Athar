@@ -381,12 +381,12 @@
     <string name="home_after_prayer_done">You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds.</string>
     <string name="home_alhamdulillah">Alhamdulillah</string>
     <string name="duas_celebration_done">You have completed these adhkar.\nMay it weigh in your scale of good deeds.</string>
-    <string name="home_prayer_note_fajr">Fajr is the first light that remembers the night.</string>
-    <string name="home_prayer_note_sunrise">Sunrise is the sky\'s quiet amen to Fajr.</string>
-    <string name="home_prayer_note_dhuhr">Dhuhr is noon bowing its head in the heart of the world.</string>
-    <string name="home_prayer_note_asr">Asr is the amber hour that asks what your hands have sent ahead.</string>
-    <string name="home_prayer_note_maghrib">Maghrib is the sun folding its light into a prayer.</string>
-    <string name="home_prayer_note_isha">Isha tucks the weary world beneath a blanket of stars.</string>
+    <string name="home_prayer_note_fajr">Even the darkness pauses for Fajr.</string>
+    <string name="home_prayer_note_sunrise">The sky exhales at sunrise, still warm from Fajr.</string>
+    <string name="home_prayer_note_dhuhr">Pause at the sun\'s height — dhuhr is the stillness hidden in the day.</string>
+    <string name="home_prayer_note_asr">When the light turns gold, what will you send ahead before Asr?</string>
+    <string name="home_prayer_note_maghrib">The sun lets go of the day, and maghrib catches it in prayer.</string>
+    <string name="home_prayer_note_isha">Night draws its curtain, and Isha leaves one lamp burning for you.</string>
     <string name="home_deck_hint">Swipe down to fan the cards</string>
 </resources>
 
