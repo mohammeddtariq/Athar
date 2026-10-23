@@ -647,183 +647,48 @@ private fun SurahListScreen(
         }
     }
 
+    val listState = rememberLazyListState()
+    var isHeaderVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y
+                if (dy < -6f) isHeaderVisible = false
+                else if (dy > 6f) isHeaderVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+    val isNearTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset <= 30
+        }
+    }
+    val shouldShowHeader = isHeaderVisible || isNearTop
+    val density = LocalDensity.current
+    var headerHeight by remember { mutableStateOf(0.dp) }
+
+    LaunchedEffect(selectedTab) {
+        listState.scrollToItem(0)
+    }
+
     PatternScaffold {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .nestedScroll(nestedScrollConnection)
         ) {
-            // Top Bar (Matches Qibla screen: clean, uncircled, 22.sp FontWeight.Black)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onBack
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = AtharTextPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                Text(
-                    stringResource(R.string.quran_title),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 22.sp,
-                    color = AtharTextPrimary
-                )
-
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.size(44.dp))
-            }
-
-            // Dual Tab Bar: "السور" (Surahs 1..114) and "الأجزاء" (Juz 1..30)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                val surahsActive = selectedTab == QuranTabIndex.SURAHS
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (surahsActive) AtharPrimary.copy(alpha = 0.22f) else Color.Transparent)
-                        .border(
-                            1.dp,
-                            if (surahsActive) AtharPrimaryLight.copy(alpha = 0.6f) else Color.Transparent,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { onTabSelect(QuranTabIndex.SURAHS) }
-                        )
-                        .padding(vertical = 9.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.quran_tab_surahs) + " (114)",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = if (surahsActive) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 13.5.sp,
-                        color = if (surahsActive) AtharPrimaryLight else AtharTextSecondary
-                    )
-                }
-
-                val juzActive = selectedTab == QuranTabIndex.JUZ
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (juzActive) AtharPrimary.copy(alpha = 0.22f) else Color.Transparent)
-                        .border(
-                            1.dp,
-                            if (juzActive) AtharPrimaryLight.copy(alpha = 0.6f) else Color.Transparent,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { onTabSelect(QuranTabIndex.JUZ) }
-                        )
-                        .padding(vertical = 9.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.quran_tab_juz) + " (30)",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = if (juzActive) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 13.5.sp,
-                        color = if (juzActive) AtharPrimaryLight else AtharTextSecondary
-                    )
-                }
-            }
-
-            // Search Bar
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(AtharCardSurface)
-                    .border(1.dp, AtharCardBorder, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 18.dp, vertical = 11.dp)
-            ) {
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    singleLine = true,
-                    textStyle = TextStyle(
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        color = AtharTextPrimary,
-                        textAlign = if (isRtl) TextAlign.Start else TextAlign.Start,
-                        textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
-                    ),
-                    cursorBrush = SolidColor(AtharPrimary),
-                    modifier = Modifier.fillMaxWidth(),
-                    decorationBox = { inner ->
-                        if (query.isEmpty()) {
-                            Text(
-                                stringResource(R.string.quran_search),
-                                fontFamily = ThmanyahSans,
-                                fontSize = 14.sp,
-                                color = AtharTextSecondary,
-                                textAlign = if (isRtl) TextAlign.Start else TextAlign.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        inner()
-                    }
-                )
-            }
-
-            // "Al-Dirayah" (الدِّرَايَة) Animated Glow Feature Bar Tab
-            if (query.isBlank()) {
-                AlDirayahGlowCard(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-                    onClick = onOpenTafsirIndex
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            OrnamentDivider(
-                color = AtharCardBorder,
-                ornamentColor = AtharPrimary.copy(alpha = 0.65f),
-                modifier = Modifier.padding(horizontal = 28.dp)
-            )
-
-            Spacer(Modifier.height(12.dp))
-
             // Content List (seamless with IslamicPatternBackground)
             if (selectedTab == QuranTabIndex.SURAHS) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 220.dp)
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = headerHeight + 8.dp,
+                        bottom = 220.dp
+                    )
                 ) {
                     items(filteredSurahs, key = { it.number }) { surah ->
                         SurahCardItem(
@@ -845,8 +710,14 @@ private fun SurahListScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 220.dp)
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = headerHeight + 8.dp,
+                        bottom = 220.dp
+                    )
                 ) {
                     items(filteredJuz, key = { it.number }) { juz ->
                         JuzCardItem(
@@ -867,6 +738,200 @@ private fun SurahListScreen(
                             }
                         )
                     }
+                }
+            }
+
+            // Scroll-aware floating header: top bar, tabs, search, and Al-Dirayah.
+            AnimatedVisibility(
+                visible = shouldShowHeader,
+                enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { -it },
+                exit = fadeOut(tween(180)) + slideOutVertically(tween(180)) { -it },
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned {
+                            headerHeight = with(density) { it.size.height.toDp() }
+                        }
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    AtharBackground,
+                                    AtharBackground.copy(alpha = 0.98f),
+                                    AtharBackground.copy(alpha = 0.92f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                        .statusBarsPadding()
+                        .padding(bottom = 8.dp)
+                ) {
+                    // Top Bar (Matches Qibla screen: clean, uncircled, 22.sp FontWeight.Black)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onBack
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = "Back",
+                                tint = AtharTextPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
+                        Text(
+                            stringResource(R.string.quran_title),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 22.sp,
+                            color = AtharTextPrimary
+                        )
+
+                        Spacer(Modifier.weight(1f))
+                        Spacer(Modifier.size(44.dp))
+                    }
+
+                    // Dual Tab Bar: "السور" (Surahs 1..114) and "الأجزاء" (Juz 1..30)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AtharCardSurface)
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(16.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val surahsActive = selectedTab == QuranTabIndex.SURAHS
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (surahsActive) AtharPrimary.copy(alpha = 0.22f) else Color.Transparent)
+                                .border(
+                                    1.dp,
+                                    if (surahsActive) AtharPrimaryLight.copy(alpha = 0.6f) else Color.Transparent,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { onTabSelect(QuranTabIndex.SURAHS) }
+                                )
+                                .padding(vertical = 9.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.quran_tab_surahs) + " (114)",
+                                fontFamily = ThmanyahSans,
+                                fontWeight = if (surahsActive) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.5.sp,
+                                color = if (surahsActive) AtharPrimaryLight else AtharTextSecondary
+                            )
+                        }
+
+                        val juzActive = selectedTab == QuranTabIndex.JUZ
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (juzActive) AtharPrimary.copy(alpha = 0.22f) else Color.Transparent)
+                                .border(
+                                    1.dp,
+                                    if (juzActive) AtharPrimaryLight.copy(alpha = 0.6f) else Color.Transparent,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { onTabSelect(QuranTabIndex.JUZ) }
+                                )
+                                .padding(vertical = 9.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.quran_tab_juz) + " (30)",
+                                fontFamily = ThmanyahSans,
+                                fontWeight = if (juzActive) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.5.sp,
+                                color = if (juzActive) AtharPrimaryLight else AtharTextSecondary
+                            )
+                        }
+                    }
+
+                    // Search Bar
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(AtharCardSurface)
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 18.dp, vertical = 11.dp)
+                    ) {
+                        BasicTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                color = AtharTextPrimary,
+                                textAlign = if (isRtl) TextAlign.Start else TextAlign.Start,
+                                textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                            ),
+                            cursorBrush = SolidColor(AtharPrimary),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (query.isEmpty()) {
+                                    Text(
+                                        stringResource(R.string.quran_search),
+                                        fontFamily = ThmanyahSans,
+                                        fontSize = 14.sp,
+                                        color = AtharTextSecondary,
+                                        textAlign = if (isRtl) TextAlign.Start else TextAlign.Start,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                    }
+
+                    // "Al-Dirayah" (الدِّرَايَة) Animated Glow Feature Bar Tab
+                    if (query.isBlank()) {
+                        AlDirayahGlowCard(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                            onClick = onOpenTafsirIndex
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    OrnamentDivider(
+                        color = AtharCardBorder,
+                        ornamentColor = AtharPrimary.copy(alpha = 0.65f),
+                        modifier = Modifier.padding(horizontal = 28.dp)
+                    )
+
+                    Spacer(Modifier.height(12.dp))
                 }
             }
         }
