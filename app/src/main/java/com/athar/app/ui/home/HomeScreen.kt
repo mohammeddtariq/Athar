@@ -782,9 +782,9 @@ fun NextPrayerCard(
                         Text(
                             remainingText,
                             color = AtharPrimaryLight,
-                            fontFamily = ThmanyahSans,
+                            fontFamily = ThmanyahSerifDisplay,
                             fontWeight = FontWeight.Black,
-                            fontSize = 16.sp
+                            fontSize = 17.sp
                         )
                     }
                 }
