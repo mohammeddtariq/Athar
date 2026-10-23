@@ -809,13 +809,21 @@ private fun SurahListScreen(
                 )
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(14.dp))
+
+            OrnamentDivider(
+                color = AtharCardBorder,
+                ornamentColor = AtharPrimary.copy(alpha = 0.65f),
+                modifier = Modifier.padding(horizontal = 28.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             // Content List (seamless with IslamicPatternBackground)
             if (selectedTab == QuranTabIndex.SURAHS) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 220.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 220.dp)
                 ) {
                     items(filteredSurahs, key = { it.number }) { surah ->
                         SurahCardItem(
@@ -838,7 +846,7 @@ private fun SurahListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 220.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 220.dp)
                 ) {
                     items(filteredJuz, key = { it.number }) { juz ->
                         JuzCardItem(
