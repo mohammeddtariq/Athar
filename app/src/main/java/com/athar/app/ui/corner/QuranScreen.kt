@@ -4918,6 +4918,31 @@ private fun SurahReader(
                                     }
                                 }
                             }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = colors.dividerText,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text(
+                                    text = stringResource(R.string.quran_layout_offline),
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = colors.dividerText,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
                             Spacer(Modifier.height(12.dp))
 
                             Row(
