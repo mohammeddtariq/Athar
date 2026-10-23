@@ -343,7 +343,7 @@ private fun PrayerWalletCard(
                 fontSize = 12.sp,
                 lineHeight = 18.sp,
                 textAlign = TextAlign.Start,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
         }

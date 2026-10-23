@@ -36,6 +36,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
@@ -74,6 +76,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,6 +102,7 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -283,7 +287,7 @@ fun DuasScreen(
                 contentPadding = PaddingValues(
                     top = if (selectedCategoryId == "after_prayer" ||
                         (selectedCategoryId == "library" && selectedLibraryChapter != null)
-                    ) 170.dp else 125.dp,
+                    ) 244.dp else 199.dp,
                     bottom = 150.dp
                 )
             ) {
@@ -538,6 +542,18 @@ fun DuasScreen(
                         Spacer(Modifier.size(44.dp))
                     }
 
+                    HisnAlMuslimHero(
+                        isSelected = selectedCategoryId == "library",
+                        onClick = {
+                            if (selectedCategoryId != "library" || selectedLibraryChapter != null) {
+                                selectedCategoryId = "library"
+                                selectedLibraryChapter = null
+                                libraryQuery = ""
+                                scope.launch { listState.scrollToItem(0) }
+                            }
+                        }
+                    )
+
                     // Main categories row
                     Row(
                         modifier = Modifier
@@ -547,7 +563,7 @@ fun DuasScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        duaCategories.forEach { category ->
+                        duaCategories.filter { it.id != "library" }.forEach { category ->
                             val isSelected = category.id == selectedCategoryId
                             CategoryChip(
                                 title = if (isArabic) category.titleAr else category.titleEn,
@@ -649,6 +665,90 @@ fun DuasScreen(
 @Composable
 private fun countLabel(resId: Int, count: Int, numberStyle: NumberStylePreference): String =
     pluralStringResource(resId, count, formatDigits("$count", numberStyle))
+
+@Composable
+private fun HisnAlMuslimHero(
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(20.dp)
+    val accent = if (isSelected) 0.85f else 0.40f
+
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 14.dp, vertical = 5.dp)
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (isSelected) 16.dp else 8.dp,
+                shape = shape,
+                spotColor = AtharPrimaryLight.copy(alpha = if (isSelected) 0.35f else 0.14f),
+                ambientColor = Color.Black.copy(alpha = 0.50f)
+            )
+            .clip(shape)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(AtharPrimarySubtle, AtharBackground)
+                )
+            )
+            .border(
+                width = if (isSelected) 1.4.dp else 1.dp,
+                color = AtharPrimary.copy(alpha = accent),
+                shape = shape
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(AtharPrimary.copy(alpha = 0.20f))
+                .border(1.dp, AtharPrimary.copy(alpha = 0.45f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.MenuBook,
+                contentDescription = null,
+                tint = AtharPrimaryLight,
+                modifier = Modifier.size(19.dp)
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.duas_library_title),
+                fontFamily = ThmanyahSerifDisplay,
+                fontWeight = FontWeight.Black,
+                fontSize = 17.sp,
+                color = AtharTextPrimary
+            )
+            Spacer(Modifier.height(1.dp))
+            Text(
+                text = stringResource(R.string.duas_hisn_hero_sub),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 10.5.sp,
+                color = AtharTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Icon(
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            contentDescription = null,
+            tint = AtharPrimaryLight.copy(alpha = 0.85f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
 
 @Composable
 private fun CategoryHeaderBanner(
@@ -1086,25 +1186,32 @@ private fun DuaItemCard(
     onReset: () -> Unit,
     onShare: () -> Unit
 ) {
+    val shape = RoundedCornerShape(26.dp)
+    val noteText = if (isArabic) dua.noteAr ?: dua.noteEn else dua.noteEn ?: dua.noteAr
+
     Box(
         modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 5.dp)
+            .padding(horizontal = 18.dp, vertical = 7.dp)
             .fillMaxWidth()
-            .then(
-                if (isDone) {
-                    Modifier.shadow(
-                        elevation = 10.dp,
-                        shape = RoundedCornerShape(18.dp),
-                        spotColor = AtharPrimaryLight.copy(alpha = 0.25f)
-                    )
-                } else Modifier
+            .shadow(
+                elevation = if (isDone) 16.dp else 6.dp,
+                shape = shape,
+                spotColor = AtharPrimaryLight.copy(alpha = if (isDone) 0.30f else 0.10f),
+                ambientColor = Color.Black.copy(alpha = 0.55f)
             )
-            .clip(RoundedCornerShape(18.dp))
-            .background(AtharCardSurface.copy(alpha = 0.88f))
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        if (isDone) AtharPrimarySubtle else AtharCardSurface,
+                        AtharBackground
+                    )
+                )
+            )
             .border(
-                width = 1.dp,
-                color = if (isDone) AtharPrimary.copy(alpha = 0.65f) else AtharCardBorder,
-                shape = RoundedCornerShape(18.dp)
+                width = if (isDone) 1.2.dp else 1.dp,
+                color = if (isDone) AtharPrimary.copy(alpha = 0.55f) else AtharCardBorder,
+                shape = shape
             )
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -1112,178 +1219,142 @@ private fun DuaItemCard(
                 onClick = onCount,
                 onLongClick = onReset
             )
-            .padding(16.dp)
+            .padding(horizontal = 18.dp, vertical = 16.dp)
     ) {
         Column {
-            // Top Row: Number badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Index badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AtharPrimary.copy(alpha = 0.16f))
-                        .border(1.dp, AtharPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        Text(
-                            text = "${formatDigits((index + 1).toString(), numberStyle)} / ${formatDigits(totalCount.toString(), numberStyle)}",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 11.sp,
-                            color = AtharPrimaryLight
-                        )
-                    }
+                    Text(
+                        text = formatDigits(
+                            (index + 1).toString().padStart(2, '0'),
+                            numberStyle
+                        ),
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 24.sp,
+                        color = AtharPrimaryLight.copy(alpha = 0.90f)
+                    )
+
+                    Box(
+                        Modifier
+                            .width(1.dp)
+                            .height(20.dp)
+                            .background(AtharCardBorder)
+                    )
+
+                    Text(
+                        text = dua.source,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.8.sp,
+                        color = AtharTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onShare
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Source badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AtharPrimary.copy(alpha = 0.12f))
-                            .padding(horizontal = 9.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = dua.source,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            color = AtharPrimaryLight
-                        )
-                    }
-
-                    // Share as image
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onShare
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Rounded.Share,
-                            contentDescription = stringResource(R.string.duas_share),
-                            tint = AtharPrimaryLight,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Rounded.Share,
+                        contentDescription = stringResource(R.string.duas_share),
+                        tint = AtharPrimaryLight.copy(alpha = 0.80f),
+                        modifier = Modifier.size(17.dp)
+                    )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Arabic text
             Text(
                 text = dua.arabic,
                 fontFamily = ThmanyahSerifText,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 19.sp,
-                lineHeight = 36.sp,
+                fontSize = 21.sp,
+                lineHeight = 40.sp,
                 color = AtharTextPrimary,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // English translation
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(AtharCardBorder.copy(alpha = 0.55f))
+            )
+
+            Spacer(Modifier.height(12.dp))
+
             LocalizedTextDirection(dua.translation) {
                 Text(
                     text = dua.translation,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.5.sp,
-                    lineHeight = 18.sp,
+                    lineHeight = 19.sp,
                     color = AtharTextSecondary,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // In-card Hadith Guidelines / Virtue note (for After Prayer & specific duas)
-            val noteText = if (isArabic) dua.noteAr ?: dua.noteEn else dua.noteEn ?: dua.noteAr
             if (!noteText.isNullOrBlank()) {
-                Spacer(Modifier.height(11.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(AtharPrimary.copy(alpha = 0.10f))
-                        .border(
-                            width = 1.dp,
-                            color = AtharPrimaryLight.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 11.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(AtharPrimary.copy(alpha = 0.25f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Rounded.Info,
-                                contentDescription = null,
-                                tint = AtharPrimaryLight,
-                                modifier = Modifier.size(13.dp)
-                            )
-                        }
-                        LocalizedTextDirection(noteText) {
-                            Text(
-                                text = noteText,
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.5.sp,
-                                lineHeight = 16.5.sp,
-                                color = AtharTextPrimary,
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                Spacer(Modifier.height(10.dp))
+                LocalizedTextDirection(noteText) {
+                    Text(
+                        text = noteText,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.SemiBold,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 11.5.sp,
+                        lineHeight = 17.sp,
+                        color = AtharPrimaryLight.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
-            // Progress bar
             if (target > 1 && count > 0) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(13.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
+                        .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(AtharCardBorder)
+                        .background(AtharCardBorder.copy(alpha = 0.7f))
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth((count.toFloat() / target).coerceAtMost(1f))
-                            .height(4.dp)
+                            .height(3.dp)
                             .background(if (isDone) AtharPrimaryLight else AtharPrimary)
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Bottom action row: Tap hint & Counter pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1301,32 +1372,16 @@ private fun DuaItemCard(
                     color = if (isDone) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.7f)
                 )
 
-                // Counter pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (isDone) AtharPrimary
-                            else AtharPrimary.copy(alpha = 0.22f)
-                        )
-                        .border(
-                            1.dp,
-                            if (isDone) AtharPrimaryLight else AtharPrimary.copy(alpha = 0.45f),
-                            RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        Text(
-                            text = if (count == 0) formatDigits("×$target", numberStyle)
-                                   else if (isDone) "${formatDigits(target.toString(), numberStyle)} ✓"
-                                   else "${formatDigits(count.toString(), numberStyle)} / ${formatDigits(target.toString(), numberStyle)}",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 12.sp,
-                            color = if (isDone) AtharTextOnPrimary else AtharPrimaryLight
-                        )
-                    }
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        text = if (count == 0) formatDigits("×$target", numberStyle)
+                               else if (isDone) "${formatDigits(target.toString(), numberStyle)} ✓"
+                               else "${formatDigits(count.toString(), numberStyle)} / ${formatDigits(target.toString(), numberStyle)}",
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        color = if (isDone) AtharPrimaryLight else AtharTextPrimary.copy(alpha = 0.92f)
+                    )
                 }
             }
         }

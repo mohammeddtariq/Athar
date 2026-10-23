@@ -320,6 +320,7 @@
     <string name="al_marifah_share">Share</string>
     <string name="al_marifah_copy">Copy</string>
     <string name="duas_library_title">Hisn al-Muslim</string>
+    <string name="duas_hisn_hero_sub">The complete Hisn al-Muslim collection</string>
     <string name="duas_after_fajr_title">After Fajr Prayer</string>
     <string name="duas_after_maghrib_title">After Maghrib Prayer</string>
     <string name="duas_after_prayers_title">After Other Prayers</string>
@@ -379,12 +380,12 @@
     <string name="home_after_prayer_done">You have completed the after-prayer adhkar.\nMay it weigh in your scale of good deeds.</string>
     <string name="home_alhamdulillah">Alhamdulillah</string>
     <string name="duas_celebration_done">You have completed these adhkar.\nMay it weigh in your scale of good deeds.</string>
-    <string name="home_prayer_note_fajr">"Prayer is light."</string>
-    <string name="home_prayer_note_sunrise">"And the sun runs on its fixed course."</string>
-    <string name="home_prayer_note_dhuhr">"Indeed, prayer has been decreed upon the believers at specified times."</string>
-    <string name="home_prayer_note_asr">"Guard the prayers, especially the middle prayer."</string>
-    <string name="home_prayer_note_maghrib">"Establish prayer at the two ends of the day and in the first hours of the night."</string>
-    <string name="home_prayer_note_isha">"And rise in the night for prayer as an extra offering."</string>
+    <string name="home_prayer_note_fajr">"Indeed, the recitation of dawn is ever witnessed." — Al-Isra 17:78</string>
+    <string name="home_prayer_note_sunrise">"Whoever prays Fajr in congregation, then sits until the sun rises, then prays two rak\'ahs, has the reward of Hajj and Umrah." — At-Tirmidhi 586</string>
+    <string name="home_prayer_note_dhuhr">"And to Him belongs praise in the heavens and the earth, and at evening and when you reach noon." — Ar-Rum 30:18</string>
+    <string name="home_prayer_note_asr">"Whoever misses the Asr prayer is as if he lost his family and his wealth." — Al-Bukhari 552</string>
+    <string name="home_prayer_note_maghrib">"And exalt Him morning and afternoon." — Al-Ahzab 33:42</string>
+    <string name="home_prayer_note_isha">"Whoever prays Isha in congregation is as if he prayed half the night." — Muslim 656</string>
     <string name="home_deck_hint">Swipe down to fan the cards</string>
 </resources>
 
