@@ -31,23 +31,29 @@ import java.time.LocalTime
 import java.util.Locale
 
 object PrayerNotifications {
-    const val CHANNEL_ID = "athar_prayer_times_v2"
+    const val CHANNEL_ID = "athar_prayer_times_v3"
     const val CHANNEL_ID_SILENT = "athar_prayer_silent"
-    private const val LEGACY_CHANNEL_ID = "athar_prayer_times"
+    private val LEGACY_CHANNEL_IDS = listOf("athar_prayer_times", "athar_prayer_times_v2")
     const val REQUEST_BASE = 4000
 
     fun getNotificationSoundUri(context: Context): Uri {
-        return Uri.parse("android.resource://${context.packageName}/${R.raw.athar_notification}")
+        // Addressed by name, not by the numeric R.raw id. A channel keeps the URI
+        // it was created with forever, while the numeric id is rebuilt with every
+        // release (it has already moved 0x7f0a0000 -> 0x7f0b0000 -> 0x7f0c0000),
+        // so channels made by older versions ended up pointing at an unrelated
+        // resource and the system fell back to the default notification sound.
+        return Uri.parse("android.resource://${context.packageName}/raw/athar_notification")
     }
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Clean up legacy channel so that the new unique custom sound is applied unconditionally
-        try {
-            manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
-        } catch (_: Exception) {}
+        // A channel's sound cannot be changed after it is created, so channels
+        // that captured a stale sound URI are removed before the new one is made.
+        LEGACY_CHANNEL_IDS.forEach { legacyId ->
+            runCatching { manager.deleteNotificationChannel(legacyId) }
+        }
 
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             val soundUri = getNotificationSoundUri(context)
