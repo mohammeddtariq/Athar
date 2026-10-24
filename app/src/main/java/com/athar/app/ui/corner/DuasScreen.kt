@@ -71,7 +71,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -263,6 +265,20 @@ fun DuasScreen(
     }
     val shouldShowTopBar = isTopBarVisible || isNearTop
 
+    // The header is as tall as its content, and that changes with display zoom and
+    // font scale, so the list is padded from the measured height instead of the
+    // constant that used to let the first banner's rule ride up into the chips.
+    val density = LocalDensity.current
+    var headerHeightPx by remember { mutableStateOf(0) }
+    val measuredHeaderHeight = with(density) { headerHeightPx.toDp() }
+    val listTopPadding = if (measuredHeaderHeight > 0.dp) {
+        measuredHeaderHeight + 10.dp
+    } else {
+        if (selectedCategoryId == "after_prayer" ||
+            (selectedCategoryId == "library" && selectedLibraryChapter != null)
+        ) 244.dp else 199.dp
+    }
+
     val backToList: () -> Unit = {
         if (selectedCategoryId == "library" && selectedLibraryChapter != null) {
             selectedLibraryChapter = null
@@ -285,9 +301,7 @@ fun DuasScreen(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = if (selectedCategoryId == "after_prayer" ||
-                        (selectedCategoryId == "library" && selectedLibraryChapter != null)
-                    ) 244.dp else 199.dp,
+                    top = listTopPadding,
                     bottom = 150.dp
                 )
             ) {
@@ -483,6 +497,11 @@ fun DuasScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // Measured before the background and insets, so the reported
+                        // height covers the whole header including the status bar.
+                        .onGloballyPositioned { coordinates ->
+                            headerHeightPx = coordinates.size.height
+                        }
                         .background(
                             Brush.verticalGradient(
                                 listOf(
