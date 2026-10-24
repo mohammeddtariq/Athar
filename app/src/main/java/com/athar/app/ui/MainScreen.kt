@@ -67,7 +67,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.ui.corner.AppAnnouncementDialog
@@ -200,6 +202,9 @@ fun MainScreen(
     var isQuranReading by remember { mutableStateOf(false) }
     var targetSettingsSection by remember { mutableStateOf<String?>(null) }
     var isNavBarVisible by remember { mutableStateOf(true) }
+    // Measured height of the floating dock, so content can sit exactly on top of it
+    // instead of guessing a constant that drifts at high display zoom.
+    var navDockTopInset by remember { mutableStateOf(104.dp) }
 
     val isImmersive = isQuranReading || currentRoute == Screen.Amanah.route
 
@@ -283,7 +288,8 @@ fun MainScreen(
                     initialSurahNumber = quranSearchTarget?.first,
                     initialAyahNumber = quranSearchTarget?.second,
                     onInitialTargetConsumed = { quranSearchTarget = null },
-                    isNavBarVisible = isNavBarVisible
+                    isNavBarVisible = isNavBarVisible,
+                    navDockTopInset = navDockTopInset
                 )
             }
             composable(Screen.Duas.route) {
@@ -326,7 +332,10 @@ fun MainScreen(
             ) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            AtharNavBar(navController)
+            AtharNavBar(
+                navController = navController,
+                onTopInsetChange = { navDockTopInset = it }
+            )
         }
 
         if (showUnifiedSearch) {
@@ -399,7 +408,8 @@ private fun NavHostController.navigateToTab(screen: Screen) {
 @Composable
 fun AtharNavBar(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTopInsetChange: (Dp) -> Unit = {}
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -412,10 +422,16 @@ fun AtharNavBar(
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val effectiveBottomPadding = maxOf(navBarBottomInset, 20.dp) + 6.dp
+        val density = LocalDensity.current
 
         BoxWithConstraints(
             modifier = modifier
                 .fillMaxWidth()
+                // Measured before the padding is applied, so the reported height is
+                // the full space the dock occupies from the bottom of the screen.
+                .onGloballyPositioned { coordinates ->
+                    onTopInsetChange(with(density) { coordinates.size.height.toDp() })
+                }
                 .padding(bottom = effectiveBottomPadding),
             contentAlignment = Alignment.Center
         ) {

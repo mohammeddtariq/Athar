@@ -154,6 +154,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -345,7 +346,8 @@ fun QuranScreen(
     initialSurahNumber: Int? = null,
     initialAyahNumber: Int? = null,
     onInitialTargetConsumed: () -> Unit = {},
-    isNavBarVisible: Boolean = true
+    isNavBarVisible: Boolean = true,
+    navDockTopInset: Dp = 104.dp
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -552,8 +554,11 @@ fun QuranScreen(
                         exit = fadeOut(tween(200)) + slideOutVertically(spring(dampingRatio = 0.85f, stiffness = 350f)) { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(bottom = 104.dp)
+                            // Anchored to the dock's measured height (which already
+                            // includes the navigation-bar inset) so the gap stays the
+                            // same at any display zoom instead of growing with a
+                            // fixed dp offset.
+                            .padding(bottom = navDockTopInset + 12.dp)
                     ) {
                         LastReadFloatingCard(
                             surahName = displayName,
