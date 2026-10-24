@@ -1,0 +1,124 @@
+name: Release
+
+# Pushing a version tag is the only way to publish. The workflow refuses to run
+# if the tag disagrees with `versionName` in app/build.gradle.kts, so a release
+# can no longer be published from a commit that does not contain the version it
+# claims (the failure mode that produced the v1.0.8-beta tag pointing at 1.0.7).
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify the tag matches versionName
+        run: |
+          set -euo pipefail
+          version_name=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)
+          version_code=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts | head -n1)
+          if [ -z "${version_name}" ] || [ -z "${version_code}" ]; then
+            echo "::error::Could not read versionName/versionCode from app/build.gradle.kts."
+            exit 1
+          fi
+          if [ "v${version_name}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match versionName '${version_name}'. Bump app/build.gradle.kts or retag as v${version_name}."
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} matches versionName ${version_name} (versionCode ${version_code})."
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore the release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=""
+          [ -n "${KEYSTORE_BASE64:-}" ] || missing="${missing} ANDROID_KEYSTORE_BASE64"
+          [ -n "${KEYSTORE_PASSWORD:-}" ] || missing="${missing} ANDROID_KEYSTORE_PASSWORD"
+          [ -n "${KEY_ALIAS:-}" ] || missing="${missing} ANDROID_KEY_ALIAS"
+          [ -n "${KEY_PASSWORD:-}" ] || missing="${missing} ANDROID_KEY_PASSWORD"
+          if [ -n "${missing}" ]; then
+            echo "::error::Missing repository secrets:${missing}. Add them under Settings > Secrets and variables > Actions, then re-run this workflow."
+            exit 1
+          fi
+          printf '%s' "${KEYSTORE_BASE64}" | base64 --decode > release.keystore
+          cat > key.properties <<EOF
+          storeFile=release.keystore
+          storePassword=${KEYSTORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
+      - name: Build the signed release APK
+        run: >-
+          ./gradlew --no-daemon assembleRelease testReleaseUnitTest
+          -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8"
+
+      - name: Collect the APK
+        id: apk
+        run: |
+          set -euo pipefail
+          if find app/build/outputs/apk/release -name '*unsigned*' | grep -q .; then
+            echo "::error::Gradle produced an unsigned APK, so the signing config never activated. Check key.properties and the keystore."
+            exit 1
+          fi
+          built=$(find app/build/outputs/apk/release -name '*.apk' | head -n1)
+          if [ -z "${built}" ]; then
+            echo "::error::No APK was produced in app/build/outputs/apk/release."
+            exit 1
+          fi
+          asset="athar-${GITHUB_REF_NAME}.apk"
+          cp "${built}" "${asset}"
+          echo "asset=${asset}" >> "${GITHUB_OUTPUT}"
+          echo "Built ${asset} from ${built}"
+
+      - name: Keep the APK on the workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: athar-release-apk
+          path: ${{ steps.apk.outputs.asset }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach the APK to the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ steps.apk.outputs.asset }}
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${ASSET}" --clobber
+            echo "Replaced the APK on the existing ${GITHUB_REF_NAME} release."
+          else
+            gh release create "${GITHUB_REF_NAME}" "${ASSET}" \
+              --draft \
+              --generate-notes \
+              --title "Athar ${GITHUB_REF_NAME}"
+            echo "Created a draft ${GITHUB_REF_NAME} release. Review the notes, then publish it."
+          fi
