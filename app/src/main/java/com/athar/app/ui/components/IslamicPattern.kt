@@ -12,23 +12,32 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharBackgroundState
+import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharPrimary
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Modern Islamic Geometric Lattice Pattern:
- * - 8-pointed star (khatam) rosettes with interlocking chevron/strapwork ribbons.
- * - Architectural embossed feel with delicate sage geometry.
- * - Smooth corner/edge gradient fade so text and cards remain effortlessly readable.
+ * The app-wide backdrop.
+ *
+ * Draws whichever [AtharBackgroundStyle] is currently selected — either the
+ * geometric star lattice or the Arabic letter weave. Both styles share the
+ * same hairline ink and diagonal fade so content on top always stays readable,
+ * and every surface in the app (screens, dialog scrims, the last-read card)
+ * goes through here, so one switch repaints all of them.
  */
 @Composable
 fun IslamicPatternBackground(
@@ -38,14 +47,22 @@ fun IslamicPatternBackground(
     animated: Boolean = false,
     cellDp: Float = 72f
 ) {
+    val style = AtharBackgroundState.current
+
+    // Letterforms are scaled once per size rather than rebuilt on every frame.
+    val density = LocalDensity.current
+    val cellPx = with(density) { cellDp.dp.toPx() }
+    val letterCellPx = cellPx * ARABIC_LETTER_CELL_RATIO
+    val glyphs = remember(letterCellPx) { buildArabicGlyphs(letterCellPx) }
+
     if (!animated) {
         Canvas(modifier = modifier.fillMaxSize()) {
-            drawArabesqueLattice(tint, alpha, cellPx = cellDp * density, phase = 0f)
+            drawBackdrop(style, tint, alpha, cellPx, letterCellPx, 0f, glyphs)
         }
         return
     }
 
-    val transition = rememberInfiniteTransition(label = "islamicPatternDrift")
+    val transition = rememberInfiniteTransition(label = "patternDrift")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -66,7 +83,30 @@ fun IslamicPatternBackground(
     )
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        drawArabesqueLattice(tint, alpha * breathe, cellPx = cellDp * density, phase = phase)
+        drawBackdrop(style, tint, alpha * breathe, cellPx, letterCellPx, phase, glyphs)
+    }
+}
+
+/**
+ * The letter weave sits on a tighter grid than the geometric lattice, because
+ * a single stroke covers far less of its cell than a star rosette does.
+ */
+private const val ARABIC_LETTER_CELL_RATIO = 0.74f
+
+/** Routes to the selected backdrop. */
+private fun DrawScope.drawBackdrop(
+    style: AtharBackgroundStyle,
+    tint: Color,
+    alpha: Float,
+    cellPx: Float,
+    letterCellPx: Float,
+    phase: Float,
+    glyphs: List<Path>
+) {
+    when (style) {
+        AtharBackgroundStyle.ISLAMIC -> drawArabesqueLattice(tint, alpha, cellPx, phase)
+        AtharBackgroundStyle.LETTERS ->
+            drawArabicLetterLattice(tint, alpha, letterCellPx, phase, glyphs)
     }
 }
 
@@ -74,7 +114,7 @@ fun IslamicPatternBackground(
  * Draws the Arabesque geometric star & strapwork mosaic with a smooth gradient fade
  * from top-right to bottom-left.
  */
-private fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellPx: Float, phase: Float) {
+internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellPx: Float, phase: Float) {
     val w = size.width
     val h = size.height
     val cols = (w / cellPx).toInt() + 3

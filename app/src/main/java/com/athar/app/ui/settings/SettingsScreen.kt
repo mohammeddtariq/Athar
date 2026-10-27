@@ -111,6 +111,7 @@ import java.time.LocalDate
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.data.presetCities
+import com.athar.app.ui.components.AtharBackgroundPicker
 import com.athar.app.ui.components.AtharThemePicker
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -122,6 +123,8 @@ import com.athar.app.ui.theme.AtharPrimaryMuted
 import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
+import com.athar.app.ui.theme.AtharBackgroundState
+import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.AtharThemeId
 import com.athar.app.ui.theme.AtharThemeState
@@ -239,6 +242,7 @@ fun SettingsScreen(
 
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
     val themeId by prefs.themeId.collectAsState(initial = AtharThemeId.default)
+    val backgroundStyle by prefs.backgroundStyle.collectAsState(initial = AtharBackgroundStyle.default)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val city by prefs.cityLabel.collectAsState(initial = null)
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
@@ -355,6 +359,31 @@ fun SettingsScreen(
                             // Repaint immediately, persist behind the scenes.
                             AtharThemeState.current = picked.palette
                             scope.launch { prefs.setThemeId(picked) }
+                        }
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        stringResource(R.string.settings_background),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.settings_background_sub),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    AtharBackgroundPicker(
+                        selected = backgroundStyle,
+                        isArabic = language == "ar",
+                        onPick = { picked ->
+                            AtharBackgroundState.current = picked
+                            scope.launch { prefs.setBackgroundStyle(picked) }
                         }
                     )
                 }

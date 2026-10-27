@@ -22,6 +22,8 @@ import com.athar.app.ui.MainScreen
 import com.athar.app.ui.components.AppUpdateDialog
 import com.athar.app.ui.components.BatteryOptimizationDialog
 import com.athar.app.ui.onboarding.OnboardingFlow
+import com.athar.app.ui.theme.AtharBackgroundState
+import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.ui.theme.AtharThemeId
 import com.athar.app.ui.theme.AtharThemeState
@@ -75,6 +77,15 @@ class MainActivity : ComponentActivity() {
         }.getOrNull() ?: AtharThemeId.default
         AtharThemeState.current = initialTheme.palette
 
+        val initialBackdrop = runCatching {
+            runBlocking {
+                withTimeoutOrNull(250) {
+                    appPreferences.backgroundStyle.first()
+                }
+            }
+        }.getOrNull() ?: AtharBackgroundStyle.default
+        AtharBackgroundState.current = initialBackdrop
+
         pendingUpdatePrompt = intent?.getBooleanExtra(AppUpdateManager.EXTRA_OPEN_UPDATER, false) == true
         if (intent?.getBooleanExtra("open_widget_settings", false) == true) {
             openWidgetSettingsState.value = true
@@ -87,6 +98,14 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = "ar")
             val themeId by appPreferences.themeId
                 .collectAsState(initial = initialTheme)
+            val backgroundStyle by appPreferences.backgroundStyle
+                .collectAsState(initial = initialBackdrop)
+
+            LaunchedEffect(backgroundStyle) {
+                if (AtharBackgroundState.current != backgroundStyle) {
+                    AtharBackgroundState.current = backgroundStyle
+                }
+            }
 
             // Keeps the live palette in step with anything that changes the
             // stored theme (in-app picker, restored backup).

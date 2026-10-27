@@ -2,6 +2,7 @@ package com.athar.app.data
 
 import android.content.Context
 import com.athar.app.BuildConfig
+import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharThemeId
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -57,6 +58,7 @@ class AppPreferences(private val context: Context) {
 
         // Appearance
         private val THEME_ID_KEY = stringPreferencesKey("theme_id")
+        private val BACKGROUND_STYLE_KEY = stringPreferencesKey("background_style")
 
         // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
@@ -176,6 +178,11 @@ class AppPreferences(private val context: Context) {
     /** Selected app theme. Unknown or missing ids fall back to the default look. */
     val themeId: Flow<AtharThemeId> = context.dataStore.data.map {
         AtharThemeId.fromId(it[THEME_ID_KEY])
+    }
+
+    /** Selected backdrop pattern. */
+    val backgroundStyle: Flow<AtharBackgroundStyle> = context.dataStore.data.map {
+        AtharBackgroundStyle.fromId(it[BACKGROUND_STYLE_KEY])
     }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
@@ -523,6 +530,10 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setThemeId(theme: AtharThemeId) {
         context.dataStore.edit { it[THEME_ID_KEY] = theme.id }
+    }
+
+    suspend fun setBackgroundStyle(style: AtharBackgroundStyle) {
+        context.dataStore.edit { it[BACKGROUND_STYLE_KEY] = style.id }
     }
 
     suspend fun saveLastReadPosition(
