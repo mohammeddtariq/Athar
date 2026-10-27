@@ -79,6 +79,7 @@ import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.AtharThemePicker
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.TypewriterText
+import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
@@ -112,6 +113,7 @@ fun OnboardingFlow(
     var stepForward by remember { mutableStateOf(true) }
     var language by remember { mutableStateOf<String?>(null) }
     var theme by remember { mutableStateOf(AtharThemeId.default) }
+    var accent by remember { mutableStateOf(AtharAccentTone.GOLD) }
     var notifGranted by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf<PresetCity?>(null) }
     var gpsLabel by remember { mutableStateOf<String?>(null) }
@@ -141,6 +143,7 @@ fun OnboardingFlow(
             val lang = language ?: "ar"
             prefs.setLanguage(lang)
             prefs.setThemeId(theme)
+            prefs.setAccentTone(accent)
             if (!skipLocation) {
                 val gps = gpsLatLng
                 if (gps != null) {
@@ -197,7 +200,7 @@ fun OnboardingFlow(
         }
     }
 
-    AuroraSetupBackdrop(step = step) {
+    AuroraSetupBackdrop {
         AnimatedContent(
             targetState = step,
             modifier = Modifier.fillMaxSize(),
@@ -232,10 +235,15 @@ fun OnboardingFlow(
                 1 -> ThemeStep(
                     language = language,
                     theme = theme,
+                    accentTone = accent,
                     onPick = { picked ->
                         theme = picked
                         // Repaint the setup flow in the chosen colour immediately.
-                        AtharThemeState.current = picked.palette
+                        AtharThemeState.current = picked.paletteFor(accent)
+                    },
+                    onPickAccent = { tone ->
+                        accent = tone
+                        AtharThemeState.current = theme.paletteFor(tone)
                     },
                     onBack = { goTo(0) },
                     onNext = { goTo(2) }
@@ -1050,7 +1058,9 @@ private fun LanguageCard(
 private fun ThemeStep(
     language: String?,
     theme: AtharThemeId,
+    accentTone: AtharAccentTone,
     onPick: (AtharThemeId) -> Unit,
+    onPickAccent: (AtharAccentTone) -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit
 ) {
@@ -1089,7 +1099,9 @@ private fun ThemeStep(
             selected = theme,
             isArabic = isAr,
             onPick = onPick,
-            modifier = Modifier.revealOnEnter(2)
+            modifier = Modifier.revealOnEnter(2),
+            accentTone = accentTone,
+            onPickAccent = onPickAccent
         )
         Spacer(Modifier.height(22.dp))
         Row(

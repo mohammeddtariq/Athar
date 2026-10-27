@@ -14,6 +14,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.res.ResourcesCompat
 import com.athar.app.MainActivity
 import com.athar.app.R
@@ -31,6 +32,7 @@ import com.athar.app.data.fallbackDayPrayers
 import com.athar.app.data.findNextPrayer
 import com.athar.app.data.formatDigits
 import com.athar.app.data.prayerDateToday
+import com.athar.app.ui.theme.AtharPalette
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -136,6 +138,7 @@ object AtharWidgetUpdater {
         next: com.athar.app.data.NextPrayer
     ) {
         val isAr = (snapshot.widgetLanguage == "ar")
+        val palette = snapshot.themeId.paletteFor(snapshot.accentTone)
         val layoutRes = if (isAr) R.layout.widget_next_prayer_rtl else R.layout.widget_next_prayer
         val views = RemoteViews(context.packageName, layoutRes)
 
@@ -148,8 +151,11 @@ object AtharWidgetUpdater {
             widthDp,
             heightDp,
             snapshot.widgetBgStyle,
-            snapshot.widgetBlurIntensity
+            snapshot.widgetBlurIntensity,
+            palette.cardSurface.toArgb(),
+            palette.cardBorder.toArgb()
         )
+        tintWidgetText(views, palette, wide = false)
         if (bgBitmap != null) {
             views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
         } else {
@@ -198,14 +204,14 @@ object AtharWidgetUpdater {
                 text = prayerName,
                 fontResId = R.font.thmanyah_serif_display_bold,
                 textSizeSp = 24f,
-                textColor = android.graphics.Color.parseColor("#F4F8F3")
+                textColor = palette.textPrimary.toArgb()
             )
             val timeBmp = renderTextToBitmap(
                 context = context,
                 text = formattedTime,
                 fontResId = R.font.thmanyah_sans_bold,
                 textSizeSp = 26f,
-                textColor = android.graphics.Color.WHITE
+                textColor = palette.primaryLight.toArgb()
             )
 
             if (nameBmp != null) {
@@ -262,6 +268,7 @@ object AtharWidgetUpdater {
         next: com.athar.app.data.NextPrayer
     ) {
         val isAr = (snapshot.widgetLanguage == "ar")
+        val palette = snapshot.themeId.paletteFor(snapshot.accentTone)
         val layoutRes = if (isAr) R.layout.widget_prayers_wide_rtl else R.layout.widget_prayers_wide
         val views = RemoteViews(context.packageName, layoutRes)
 
@@ -274,8 +281,11 @@ object AtharWidgetUpdater {
             widthDp,
             heightDp,
             snapshot.widgetBgStyle,
-            snapshot.widgetBlurIntensity
+            snapshot.widgetBlurIntensity,
+            palette.cardSurface.toArgb(),
+            palette.cardBorder.toArgb()
         )
+        tintWidgetText(views, palette, wide = true)
         if (bgBitmap != null) {
             views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
         } else {
@@ -292,14 +302,14 @@ object AtharWidgetUpdater {
                 text = nextName,
                 fontResId = R.font.thmanyah_serif_display_bold,
                 textSizeSp = 14f,
-                textColor = android.graphics.Color.parseColor("#F4F8F3")
+                textColor = palette.textPrimary.toArgb()
             )
             val timeBmp = renderTextToBitmap(
                 context = context,
                 text = nextFormattedTime,
                 fontResId = R.font.thmanyah_sans_bold,
                 textSizeSp = 14f,
-                textColor = android.graphics.Color.parseColor("#A5C89E")
+                textColor = palette.primaryLight.toArgb()
             )
 
             if (nameBmp != null) {
@@ -388,13 +398,13 @@ object AtharWidgetUpdater {
             views.setTextViewText(textIds.second, formatted)
 
             if (isNext) {
-                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_chip_active)
-                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#C9D8B4"))
-                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#F4F8F3"))
+                views.setInt(containerId, "setBackgroundColor", palette.primarySubtle.toArgb())
+                views.setTextColor(textIds.first, palette.primaryLight.toArgb())
+                views.setTextColor(textIds.second, palette.textPrimary.toArgb())
             } else {
-                views.setInt(containerId, "setBackgroundResource", R.drawable.bg_widget_chip_idle)
-                views.setTextColor(textIds.first, android.graphics.Color.parseColor("#A4B8A2"))
-                views.setTextColor(textIds.second, android.graphics.Color.parseColor("#E0E6DF"))
+                views.setInt(containerId, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
+                views.setTextColor(textIds.first, palette.textSecondary.toArgb())
+                views.setTextColor(textIds.second, palette.textPrimary.toArgb())
             }
         }
 
@@ -518,12 +528,47 @@ object AtharWidgetUpdater {
         }
     }
 
+    /**
+     * Repaints every text slot in the widget from the active palette, so the
+     * widget follows the same theme as the app instead of the layout defaults.
+     */
+    private fun tintWidgetText(views: RemoteViews, palette: AtharPalette, wide: Boolean) {
+        val muted = palette.textSecondary.toArgb()
+        val strong = palette.textPrimary.toArgb()
+        val accent = palette.primaryLight.toArgb()
+
+        if (wide) {
+            listOf(
+                R.id.widget_hijri_date,
+                R.id.widget_gregorian_date,
+                R.id.widget_next_location
+            ).forEach { views.setTextColor(it, muted) }
+            views.setTextColor(R.id.widget_next_name, strong)
+            views.setTextColor(R.id.widget_next_time, accent)
+        } else {
+            listOf(
+                R.id.widget_label_next,
+                R.id.widget_remaining_label,
+                R.id.widget_hijri_date,
+                R.id.widget_gregorian_date,
+                R.id.widget_location_text,
+                R.id.widget_prayer_sub
+            ).forEach { views.setTextColor(it, muted) }
+            views.setTextColor(R.id.widget_prayer_name, strong)
+            views.setTextColor(R.id.widget_prayer_time, accent)
+        }
+        views.setTextColor(R.id.widget_countdown_chrono, accent)
+        views.setTextColor(R.id.widget_countdown_text, accent)
+    }
+
     fun generateWidgetBackground(
         context: Context,
         widthDp: Int,
         heightDp: Int,
         bgStyle: WidgetBgStyle,
-        blurIntensity: Int
+        blurIntensity: Int,
+        background: Int,
+        border: Int
     ): Bitmap? {
         return runCatching {
             val density = context.resources.displayMetrics.density
@@ -539,11 +584,16 @@ object AtharWidgetUpdater {
                 style = Paint.Style.FILL
                 when (bgStyle) {
                     WidgetBgStyle.THEME -> {
-                        color = android.graphics.Color.parseColor("#141913")
+                        color = background
                     }
                     WidgetBgStyle.TRANSLUCENT -> {
                         val alpha = ((blurIntensity / 100f) * 235).toInt().coerceIn(30, 240)
-                        color = android.graphics.Color.argb(alpha, 12, 17, 12)
+                        color = android.graphics.Color.argb(
+                            alpha,
+                            android.graphics.Color.red(background),
+                            android.graphics.Color.green(background),
+                            android.graphics.Color.blue(background)
+                        )
                     }
                 }
             }
@@ -554,7 +604,7 @@ object AtharWidgetUpdater {
                 strokeWidth = 1.2f * density
                 when (bgStyle) {
                     WidgetBgStyle.THEME -> {
-                        color = android.graphics.Color.parseColor("#263224")
+                        color = border
                     }
                     WidgetBgStyle.TRANSLUCENT -> {
                         val strokeAlpha = (((blurIntensity / 100f) * 55) + 20).toInt().coerceIn(25, 95)

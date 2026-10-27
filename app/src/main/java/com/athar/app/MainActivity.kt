@@ -22,6 +22,7 @@ import com.athar.app.ui.MainScreen
 import com.athar.app.ui.components.AppUpdateDialog
 import com.athar.app.ui.components.BatteryOptimizationDialog
 import com.athar.app.ui.onboarding.OnboardingFlow
+import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackgroundState
 import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharTheme
@@ -75,7 +76,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.getOrNull() ?: AtharThemeId.default
-        AtharThemeState.current = initialTheme.palette
+
+        val initialAccent = runCatching {
+            runBlocking {
+                withTimeoutOrNull(250) {
+                    appPreferences.accentTone.first()
+                }
+            }
+        }.getOrNull() ?: AtharAccentTone.GOLD
+        AtharThemeState.current = initialTheme.paletteFor(initialAccent)
 
         val initialBackdrop = runCatching {
             runBlocking {
@@ -98,6 +107,8 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = "ar")
             val themeId by appPreferences.themeId
                 .collectAsState(initial = initialTheme)
+            val accentTone by appPreferences.accentTone
+                .collectAsState(initial = initialAccent)
             val backgroundStyle by appPreferences.backgroundStyle
                 .collectAsState(initial = initialBackdrop)
 
@@ -108,10 +119,11 @@ class MainActivity : ComponentActivity() {
             }
 
             // Keeps the live palette in step with anything that changes the
-            // stored theme (in-app picker, restored backup).
-            LaunchedEffect(themeId) {
-                if (AtharThemeState.current != themeId.palette) {
-                    AtharThemeState.current = themeId.palette
+            // stored theme or its secondary accent.
+            LaunchedEffect(themeId, accentTone) {
+                val resolved = themeId.paletteFor(accentTone)
+                if (AtharThemeState.current != resolved) {
+                    AtharThemeState.current = resolved
                 }
             }
 

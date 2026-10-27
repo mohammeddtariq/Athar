@@ -69,6 +69,27 @@ data class AtharPalette(
 )
 
 /**
+ * Optional secondary accent offered by some themes.
+ *
+ * Burgundy is the only theme that currently ships a choice: antique gold or
+ * warm ivory. Every other theme resolves to [GOLD], which simply keeps its
+ * own palette untouched.
+ */
+enum class AtharAccentTone(
+    val id: String,
+    val labelAr: String,
+    val labelEn: String
+) {
+    GOLD("GOLD", "ذهبي", "Gold"),
+    IVORY("IVORY", "عاجي", "Ivory");
+
+    companion object {
+        fun fromId(id: String?): AtharAccentTone =
+            entries.firstOrNull { it.id == id } ?: GOLD
+    }
+}
+
+/**
  * The selectable themes, in the order they are offered.
  *
  * [nameAr] / [nameEn] are the names shown on the chooser cards.
@@ -250,6 +271,39 @@ enum class AtharThemeId(
             BURGUNDY -> "Antique gold & garnet"
             BROWN -> "Roasted coffee & gold"
             AMOLED -> "True black & light"
+        }
+
+    /** The accent choices this theme exposes on its card. */
+    val accentTones: List<AtharAccentTone>
+        get() = if (this == BURGUNDY) AtharAccentTone.entries else emptyList()
+
+    /**
+     * Resolves the palette for a chosen accent. Only Burgundy has a second
+     * variant; every other theme ignores the tone.
+     */
+    fun paletteFor(accent: AtharAccentTone): AtharPalette =
+        if (this == BURGUNDY && accent == AtharAccentTone.IVORY) {
+            palette.copy(
+                primary = Color(0xFFF2E6D8),
+                primaryMuted = Color(0xFFB69C8D),
+                primaryLight = Color(0xFFFFFAF3),
+                primarySubtle = Color(0xFF2B0D16),
+                primaryDeep = Color(0xFF52101F),
+                textOnPrimary = Color(0xFF2A0910),
+                navIconActive = Color(0xFFFFF6EC),
+                navGlow = Color(0xFFF3DFCD),
+                navPillBorder = Color(0xFF8A4356)
+            )
+        } else {
+            palette
+        }
+
+    /** Mood line for a specific accent choice. */
+    fun moodFor(accent: AtharAccentTone, isArabic: Boolean): String =
+        if (this == BURGUNDY && accent == AtharAccentTone.IVORY) {
+            if (isArabic) "عاجي وعُنّاب" else "Ivory & garnet"
+        } else {
+            if (isArabic) moodAr else moodEn
         }
 
     companion object {

@@ -51,12 +51,14 @@ fun IslamicPatternBackground(
 
     val density = LocalDensity.current
     val cellPx = with(density) { cellDp.dp.toPx() }
-    val letterCellPx = cellPx * ARABIC_LETTER_CELL_RATIO
-    val typeface = rememberCalligraphyTypeface()
+    val typeface = rememberHurufTypeface()
 
-    if (!animated) {
+    // The letter weave always breathes; the lattice only moves when asked.
+    val moving = animated || style == AtharBackgroundStyle.LETTERS
+
+    if (!moving) {
         Canvas(modifier = modifier.fillMaxSize()) {
-            drawBackdrop(style, tint, alpha, cellPx, letterCellPx, 0f, typeface)
+            drawBackdrop(style, tint, alpha, cellPx, 0f, typeface)
         }
         return
     }
@@ -82,15 +84,9 @@ fun IslamicPatternBackground(
     )
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        drawBackdrop(style, tint, alpha * breathe, cellPx, letterCellPx, phase, typeface)
+        drawBackdrop(style, tint, alpha * breathe, cellPx, phase, typeface)
     }
 }
-
-/**
- * The letter weave sits on a tighter grid than the geometric lattice, because
- * a single stroke covers far less of its cell than a star rosette does.
- */
-private const val ARABIC_LETTER_CELL_RATIO = 0.74f
 
 /** Routes to the selected backdrop. */
 private fun DrawScope.drawBackdrop(
@@ -98,14 +94,13 @@ private fun DrawScope.drawBackdrop(
     tint: Color,
     alpha: Float,
     cellPx: Float,
-    letterCellPx: Float,
     phase: Float,
     typeface: android.graphics.Typeface?
 ) {
     when (style) {
         AtharBackgroundStyle.ISLAMIC -> drawArabesqueLattice(tint, alpha, cellPx, phase)
         AtharBackgroundStyle.LETTERS ->
-            drawArabicCalligraphy(tint, alpha, letterCellPx, phase, typeface)
+            drawHurufWeave(tint, alpha, phase, typeface)
         AtharBackgroundStyle.SOLID -> Unit
     }
 }

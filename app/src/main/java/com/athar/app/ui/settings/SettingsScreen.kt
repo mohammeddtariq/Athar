@@ -113,6 +113,7 @@ import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.data.presetCities
 import com.athar.app.ui.components.AtharBackgroundPicker
 import com.athar.app.ui.components.AtharThemePicker
+import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -242,6 +243,7 @@ fun SettingsScreen(
 
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
     val themeId by prefs.themeId.collectAsState(initial = AtharThemeId.default)
+    val accentTone by prefs.accentTone.collectAsState(initial = AtharAccentTone.GOLD)
     val backgroundStyle by prefs.backgroundStyle.collectAsState(initial = AtharBackgroundStyle.default)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val city by prefs.cityLabel.collectAsState(initial = null)
@@ -365,8 +367,19 @@ fun SettingsScreen(
                         isArabic = language == "ar",
                         onPick = { picked ->
                             // Repaint immediately, persist behind the scenes.
-                            AtharThemeState.current = picked.palette
-                            scope.launch { prefs.setThemeId(picked) }
+                            AtharThemeState.current = picked.paletteFor(accentTone)
+                            scope.launch {
+                                prefs.setThemeId(picked)
+                                AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                            }
+                        },
+                        accentTone = accentTone,
+                        onPickAccent = { tone ->
+                            AtharThemeState.current = themeId.paletteFor(tone)
+                            scope.launch {
+                                prefs.setAccentTone(tone)
+                                AtharWidgetUpdater.updateAllWidgetsSuspend(context)
+                            }
                         }
                     )
 
@@ -1780,17 +1793,13 @@ fun PrayerNotifThreeWayToggle(
     onModeSelected: (PrayerNotifMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Forced LTR layout so that visually:
-    // Left: OFF (Muted Red Bell)
-    // Middle: SILENT (Quiet Amber Bell)
-    // Right: SOUND (Active Olive Bell)
-    // In Arabic reading direction (RTL): Rightmost is SOUND, Middle is SILENT, Leftmost is OFF.
+    // Fixed order: OFF, SILENT, SOUND — the reading direction never reorders it.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             modifier = modifier
                 .height(34.dp)
                 .clip(RoundedCornerShape(17.dp))
-                .background(Color(0xFF141913))
+                .background(AtharSurface)
                 .border(1.dp, AtharCardBorder, RoundedCornerShape(17.dp))
                 .padding(2.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -2229,10 +2238,10 @@ private fun WidgetLivePreviewCard(
     }
 
     val bgColor = when (bgStyle) {
-        WidgetBgStyle.THEME -> Color(0xFF14, 0xFF19, 0xFF13)
+        WidgetBgStyle.THEME -> AtharCardSurface
         WidgetBgStyle.TRANSLUCENT -> {
             val alpha = (blurIntensity / 100f).coerceIn(0.20f, 0.95f)
-            Color(0xFF0C, 0xFF11, 0xFF0C).copy(alpha = alpha)
+            AtharBackground.copy(alpha = alpha)
         }
     }
     val borderColor = when (bgStyle) {
@@ -2396,7 +2405,7 @@ private fun LiveStatusLivePreviewCard(
         )
     }
 
-    val cardBg = Color(0xFF14, 0xFF19, 0xFF13)
+    val cardBg = AtharSurface
     val borderColor = AtharCardBorder
 
     Box(
@@ -2535,7 +2544,7 @@ private fun LiveStatusLivePreviewCard(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    if (isNext) AtharPrimarySubtle else Color(0xFF1B221A)
+                                    if (isNext) AtharPrimarySubtle else AtharCardSurface
                                 )
                                 .border(
                                     1.dp,
@@ -2632,7 +2641,7 @@ private fun NowBarLivePreviewCard(
         )
     }
 
-    val cardBg = Color(0xFF14, 0xFF19, 0xFF13)
+    val cardBg = AtharSurface
     val borderColor = AtharCardBorder
 
     Box(
@@ -2767,7 +2776,7 @@ private fun NowBarLivePreviewCard(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    if (isNext) AtharPrimarySubtle else Color(0xFF1B221A)
+                                    if (isNext) AtharPrimarySubtle else AtharCardSurface
                                 )
                                 .border(
                                     1.dp,

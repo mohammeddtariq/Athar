@@ -24,7 +24,7 @@ enum class AtharBackgroundStyle(
         nameEn = "Athar lattice"
     ),
 
-    /** Flowing bismillah calligraphy, inked like a manuscript margin. */
+    /** A carved wall of outline letters above a dense, drifting filled band. */
     LETTERS(
         id = "LETTERS",
         nameAr = "نسيج الحروف",

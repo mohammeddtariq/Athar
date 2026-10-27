@@ -6,52 +6,118 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.res.ResourcesCompat
 import com.athar.app.R
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 
-// ══════════════════════════════════════════════════════════════
-// Huruf Weave — the calligraphic backdrop
-//
-// Instead of scattering synthetic letter outlines, the backdrop is
-// inked from a real manuscript glyph: the bismillah ligature drawn
-// in the app's own calligraphic face. It appears as a dense, softly
-// rotated band across the screen, with two ghosted ligatures above
-// and below it. The result reads as a page margin from a manuscript
-// rather than a texture of symbols.
-// ══════════════════════════════════════════════════════════════
+// Huruf weave: a carved wall of oversized outline letters behind a dense,
+// drifting band of filled letters.
 
-/** U+FDFD — the single-glyph bismillah ligature in `bismillah.ttf`. */
-private const val BISMILLAH_GLYPH = "\uFDFD"
+/** One letterform inside the weave, positioned in normalised space. */
+private data class HurufGlyph(
+    val text: String,
+    val nx: Float,
+    val ny: Float,
+    val size: Float,
+    val rotation: Float,
+    val alpha: Float,
+    val phase: Float
+)
 
-/**
- * Loads the manuscript face once. The bundled font contains the full
- * bismillah ligature, so the backdrop never depends on a system font.
- */
+private val wallLetters = listOf(
+    "ه", "و", "م", "ن", "ر", "ب", "ي", "ا", "ل", "س", "ق", "ت", "ع", "د", "ح", "ص"
+)
+
+private val bandLetters = listOf(
+    "هـ", "وم", "نب", "ري", "سل", "قد", "تع", "مح", "صو", "رق", "نا", "يم", "هد", "فر"
+)
+
+private val wallLayout: List<HurufGlyph> = run {
+    val random = Random(7319)
+    buildList {
+        for (row in 0 until 5) {
+            for (column in 0 until 4) {
+                add(
+                    HurufGlyph(
+                        text = wallLetters.random(random),
+                        nx = -0.05f + column * 0.29f + random.nextFloat() * 0.05f,
+                        ny = 0.13f + row * 0.205f + (random.nextFloat() - 0.5f) * 0.05f,
+                        size = 0.34f + random.nextFloat() * 0.18f,
+                        rotation = random.nextFloat() * 32f - 16f,
+                        alpha = 0.42f + random.nextFloat() * 0.42f,
+                        phase = random.nextFloat() * 360f
+                    )
+                )
+            }
+        }
+    }
+}
+
+private val bandLayout: List<HurufGlyph> = run {
+    val random = Random(1907)
+    buildList {
+        for (index in 0 until 18) {
+            add(
+                HurufGlyph(
+                    text = bandLetters.random(random),
+                    nx = index / 18f + (random.nextFloat() - 0.5f) * 0.02f,
+                    ny = 0.12f + random.nextFloat() * 0.74f,
+                    size = 0.33f + random.nextFloat() * 0.13f,
+                    rotation = random.nextFloat() * 14f - 7f,
+                    alpha = 0.55f + random.nextFloat() * 0.4f,
+                    phase = random.nextFloat() * 360f
+                )
+            )
+        }
+    }
+}
+
+private val speckLayout: List<HurufGlyph> = run {
+    val random = Random(4127)
+    buildList {
+        for (index in 0 until 14) {
+            add(
+                HurufGlyph(
+                    text = "",
+                    nx = random.nextFloat(),
+                    ny = random.nextFloat(),
+                    size = 0.010f + random.nextFloat() * 0.008f,
+                    rotation = 45f,
+                    alpha = 0.35f + random.nextFloat() * 0.35f,
+                    phase = random.nextFloat() * 360f
+                )
+            )
+        }
+    }
+}
+
+/** Loads the bundled display face the weave is drawn with. */
 @Composable
-internal fun rememberCalligraphyTypeface(): Typeface? {
+internal fun rememberHurufTypeface(): Typeface? {
     val context = LocalContext.current
     return remember(context) {
-        ResourcesCompat.getFont(context, R.font.bismillah)
+        ResourcesCompat.getFont(context, R.font.thmanyah_serif_display_black)
     }
 }
 
 /**
- * Draws the calligraphic field.
+ * Paints the two-layer weave.
  *
- * The band sits slightly above centre and repeats with a half-step offset,
- * so it feels hand-set rather than tiled. Its ink is kept to a hairline of
- * the accent colour; the ghost ligatures are stroked rather than filled so
- * they dissolve into the background instead of competing with the content.
+ * [phase] is a slowly increasing angle. It nudges every wall letter around its
+ * own centre and carries the band across the screen; the band is drawn in
+ * three laps so the loop never shows a seam.
  */
-internal fun DrawScope.drawArabicCalligraphy(
+internal fun DrawScope.drawHurufWeave(
     tint: Color,
     baseAlpha: Float,
-    cellPx: Float,
     phase: Float,
     typeface: Typeface?
 ) {
@@ -59,7 +125,8 @@ internal fun DrawScope.drawArabicCalligraphy(
 
     val w = size.width
     val h = size.height
-    val drift = (phase / 360f) * cellPx * 0.24f
+    val unit = minOf(w, h)
+    val radians = phase * PI.toFloat() / 180f
     val ink = tint.toArgb()
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -68,40 +135,70 @@ internal fun DrawScope.drawArabicCalligraphy(
         isDither = true
     }
 
-    // ── Ghosted ligatures above and below the band ──
     paint.style = Paint.Style.STROKE
-    paint.strokeWidth = (cellPx * 0.010f).coerceAtLeast(0.7f)
-    paint.textSize = cellPx * 1.72f
-    paint.alpha = (255 * baseAlpha * 0.36f).toInt().coerceIn(0, 255)
-    val ghostStep = paint.measureText(BISMILLAH_GLYPH) * 0.68f
-    listOf(0.17f to -4.5f, 0.80f to 3.5f).forEachIndexed { index, (fraction, angle) ->
-        var x = -ghostStep * (0.35f + index * 0.22f) - drift * 0.35f
-        val y = h * fraction + sin(index * 1.7f) * cellPx * 0.04f
-        while (x < w + ghostStep) {
-            drawRotated(paint, BISMILLAH_GLYPH, x, y, angle)
-            x += ghostStep
+    paint.strokeWidth = (unit * 0.0022f).coerceAtLeast(0.6f)
+    speckLayout.forEach { speck ->
+        paint.alpha = (255f * baseAlpha * speck.alpha * 1.6f)
+            .toInt()
+            .coerceIn(0, 255)
+        val half = speck.size * unit
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            val checkpoint = native.save()
+            native.rotate(speck.rotation, speck.nx * w, speck.ny * h)
+            native.drawRect(
+                speck.nx * w - half,
+                speck.ny * h - half,
+                speck.nx * w + half,
+                speck.ny * h + half,
+                paint
+            )
+            native.restoreToCount(checkpoint)
         }
     }
 
-    // ── Dense manuscript band ──
-    paint.style = Paint.Style.FILL
-    paint.textSize = cellPx * 0.46f
-    val bandStep = paint.measureText(BISMILLAH_GLYPH) * 0.90f
+    paint.strokeWidth = (unit * 0.0018f).coerceAtLeast(0.6f)
+    wallLayout.forEach { glyph ->
+        val sway = sin(radians + glyph.phase) * unit * 0.03f
+        val lift = cos(radians * 0.7f + glyph.phase) * unit * 0.02f
+        paint.textSize = glyph.size * unit
+        paint.alpha = (255f * baseAlpha * glyph.alpha * 0.95f)
+            .toInt()
+            .coerceIn(0, 255)
+        drawRotated(
+            paint = paint,
+            text = glyph.text,
+            x = glyph.nx * w + sway,
+            y = glyph.ny * h + lift,
+            angle = glyph.rotation + sin(radians * 0.55f + glyph.phase) * 2.0f
+        )
+    }
 
-    repeat(2) { row ->
-        paint.alpha = (255 * baseAlpha * if (row == 0) 1.28f else 0.82f)
-            .toInt().coerceIn(0, 255)
-        val y = h * 0.455f + row * cellPx * 0.46f
-        var x = -bandStep * (0.55f + row * 0.38f) - drift
-        while (x < w + bandStep) {
-            drawRotated(
-                paint = paint,
-                text = BISMILLAH_GLYPH,
-                x = x,
-                y = y,
-                angle = if (row == 0) -2.4f else 2.0f
-            )
-            x += bandStep
+    val bandHeight = h * 0.26f
+    val bandTop = h * 0.38f
+    // A lap is one full screen width, so the wrap point always lands on a copy.
+    val bandShift = ((phase / 360f) * w * 1.5f) % w
+
+    clipRect(left = 0f, top = bandTop, right = w, bottom = bandTop + bandHeight) {
+        paint.style = Paint.Style.FILL
+        bandLayout.forEach { glyph ->
+            paint.textSize = glyph.size * unit
+            paint.alpha = (255f * baseAlpha * glyph.alpha * 1.9f)
+                .toInt()
+                .coerceIn(0, 255)
+            val breathe = sin(radians * 1.6f + glyph.phase) * unit * 0.012f
+            val baseX = glyph.nx * w
+            val y = bandTop + glyph.ny * bandHeight + breathe
+            val angle = glyph.rotation + sin(radians * 0.9f + glyph.phase) * 1.4f
+            listOf(-w, 0f, w).forEach { lap ->
+                drawRotated(
+                    paint = paint,
+                    text = glyph.text,
+                    x = baseX + bandShift + lap,
+                    y = y,
+                    angle = angle
+                )
+            }
         }
     }
 }

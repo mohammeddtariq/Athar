@@ -2,6 +2,7 @@ package com.athar.app.data
 
 import android.content.Context
 import com.athar.app.BuildConfig
+import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharThemeId
 import androidx.datastore.core.DataStore
@@ -58,6 +59,7 @@ class AppPreferences(private val context: Context) {
 
         // Appearance
         private val THEME_ID_KEY = stringPreferencesKey("theme_id")
+        private val ACCENT_TONE_KEY = stringPreferencesKey("accent_tone")
         private val BACKGROUND_STYLE_KEY = stringPreferencesKey("background_style")
 
         // Quran Appearance & Audio
@@ -180,6 +182,11 @@ class AppPreferences(private val context: Context) {
         AtharThemeId.fromId(it[THEME_ID_KEY])
     }
 
+    /** Secondary accent chosen inside a theme that offers one. */
+    val accentTone: Flow<AtharAccentTone> = context.dataStore.data.map {
+        AtharAccentTone.fromId(it[ACCENT_TONE_KEY])
+    }
+
     /** Selected backdrop pattern. */
     val backgroundStyle: Flow<AtharBackgroundStyle> = context.dataStore.data.map {
         AtharBackgroundStyle.fromId(it[BACKGROUND_STYLE_KEY])
@@ -264,7 +271,9 @@ class AppPreferences(private val context: Context) {
             widgetBgStyle = WidgetBgStyle.fromId(data[WIDGET_BG_STYLE_KEY] ?: "THEME"),
             widgetBlurIntensity = data[WIDGET_BLUR_INTENSITY_KEY] ?: 70,
             widgetLanguage = effectiveWidgetLang,
-            widgetFontStyle = WidgetFontStyle.fromId(data[WIDGET_FONT_STYLE_KEY] ?: "APP_FONT")
+            widgetFontStyle = WidgetFontStyle.fromId(data[WIDGET_FONT_STYLE_KEY] ?: "APP_FONT"),
+            themeId = AtharThemeId.fromId(data[THEME_ID_KEY]),
+            accentTone = AtharAccentTone.fromId(data[ACCENT_TONE_KEY])
         )
     }
 
@@ -532,6 +541,10 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[THEME_ID_KEY] = theme.id }
     }
 
+    suspend fun setAccentTone(tone: AtharAccentTone) {
+        context.dataStore.edit { it[ACCENT_TONE_KEY] = tone.id }
+    }
+
     suspend fun setBackgroundStyle(style: AtharBackgroundStyle) {
         context.dataStore.edit { it[BACKGROUND_STYLE_KEY] = style.id }
     }
@@ -731,7 +744,9 @@ data class AppPrefsSnapshot(
     val widgetBgStyle: WidgetBgStyle,
     val widgetBlurIntensity: Int,
     val widgetLanguage: String = language,
-    val widgetFontStyle: WidgetFontStyle = WidgetFontStyle.APP_FONT
+    val widgetFontStyle: WidgetFontStyle = WidgetFontStyle.APP_FONT,
+    val themeId: AtharThemeId = AtharThemeId.default,
+    val accentTone: AtharAccentTone = AtharAccentTone.GOLD
 )
 
 enum class NumberStylePreference(val id: String) {

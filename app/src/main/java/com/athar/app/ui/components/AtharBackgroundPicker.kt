@@ -63,7 +63,7 @@ fun AtharBackgroundPicker(
     onPick: (AtharBackgroundStyle) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val typeface = rememberCalligraphyTypeface()
+    val typeface = rememberHurufTypeface()
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -158,10 +158,9 @@ private fun BackgroundChoiceCard(
                     phase = 0f
                 )
 
-                AtharBackgroundStyle.LETTERS -> drawArabicCalligraphy(
+                AtharBackgroundStyle.LETTERS -> drawHurufWeave(
                     tint = AtharPrimaryLight,
-                    baseAlpha = 0.42f,
-                    cellPx = previewCellPx,
+                    baseAlpha = 0.28f,
                     phase = 0f,
                     typeface = typeface
                 )

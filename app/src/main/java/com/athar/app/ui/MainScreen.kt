@@ -72,6 +72,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.ui.components.edgeMotionBlur
+import com.athar.app.ui.components.rememberMotionBlurState
 import com.athar.app.ui.corner.AppAnnouncementDialog
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -179,6 +181,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val motionBlur = rememberMotionBlurState()
     val appPrefs = remember { AppPreferences(context.applicationContext) }
     val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = null)
     val hasSeenAmanahAnnouncement by appPrefs.hasSeenAmanahAnnouncement.collectAsState(initial = null)
@@ -214,6 +217,7 @@ fun MainScreen(
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                motionBlur.onScroll(available.y)
                 if (available.y < -12f) {
                     isNavBarVisible = false
                 } else if (available.y > 12f) {
@@ -245,7 +249,9 @@ fun MainScreen(
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .edgeMotionBlur(state = motionBlur, enabled = !isImmersive),
             enterTransition = {
                 fadeIn(animationSpec = tween(260, easing = TabMotionEasing)) +
                     scaleIn(

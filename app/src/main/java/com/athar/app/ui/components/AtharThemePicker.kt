@@ -1,5 +1,6 @@
 package com.athar.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPalette
@@ -68,7 +70,9 @@ fun AtharThemePicker(
     selected: AtharThemeId,
     isArabic: Boolean,
     onPick: (AtharThemeId) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentTone: AtharAccentTone = AtharAccentTone.GOLD,
+    onPickAccent: (AtharAccentTone) -> Unit = {}
 ) {
     Column(
         modifier = modifier,
@@ -79,8 +83,84 @@ fun AtharThemePicker(
                 theme = theme,
                 isSelected = theme == selected,
                 isArabic = isArabic,
+                accentTone = if (theme == selected) accentTone else AtharAccentTone.GOLD,
                 onClick = { onPick(theme) }
             )
+            AnimatedVisibility(visible = theme == selected && theme.accentTones.isNotEmpty()) {
+                AccentToneRow(
+                    tones = theme.accentTones,
+                    selected = accentTone,
+                    isArabic = isArabic,
+                    onPick = onPickAccent,
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The secondary accent selector a theme exposes under its card. Burgundy
+ * offers antique gold or warm ivory; the chips repaint the app immediately.
+ */
+@Composable
+private fun AccentToneRow(
+    tones: List<AtharAccentTone>,
+    selected: AtharAccentTone,
+    isArabic: Boolean,
+    onPick: (AtharAccentTone) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptics = LocalHapticFeedback.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        tones.forEach { tone ->
+            val isSelected = tone == selected
+            val swatch = if (tone == AtharAccentTone.GOLD) Color(0xFFD9A45C) else Color(0xFFF2E6D8)
+            val shape = RoundedCornerShape(11.dp)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(38.dp)
+                    .clip(shape)
+                    .background(
+                        if (isSelected) swatch.copy(alpha = 0.12f) else Color.Transparent
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected) swatch.copy(alpha = 0.85f) else AtharCardBorder,
+                        shape = shape
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            if (!isSelected) {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onPick(tone)
+                            }
+                        }
+                    )
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(swatch)
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    text = if (isArabic) tone.labelAr else tone.labelEn,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = if (isSelected) AtharTextPrimary else AtharTextSecondary
+                )
+            }
         }
     }
 }
@@ -90,9 +170,10 @@ private fun ThemeChoiceCard(
     theme: AtharThemeId,
     isSelected: Boolean,
     isArabic: Boolean,
+    accentTone: AtharAccentTone,
     onClick: () -> Unit
 ) {
-    val palette = theme.palette
+    val palette = theme.paletteFor(accentTone)
     val haptics = LocalHapticFeedback.current
     val shape = RoundedCornerShape(18.dp)
 
@@ -183,7 +264,7 @@ private fun ThemeChoiceCard(
                 )
                 Spacer(Modifier.height(1.dp))
                 Text(
-                    text = if (isArabic) theme.moodAr else theme.moodEn,
+                    text = theme.moodFor(accentTone, isArabic),
                     fontFamily = ThmanyahSerifDisplay,
                     fontWeight = FontWeight.Medium,
                     fontSize = 11.5.sp,
