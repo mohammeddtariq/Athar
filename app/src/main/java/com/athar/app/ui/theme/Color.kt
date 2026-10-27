@@ -352,21 +352,11 @@ val AtharPrimaryLight: Color get() = AtharThemeState.current.primaryLight
 val AtharPrimarySubtle: Color get() = AtharThemeState.current.primarySubtle
 val AtharPrimaryDeep: Color get() = AtharThemeState.current.primaryDeep
 
-/** Backdrop ink: Burgundy always draws its wall in antique gold. */
-val AtharBackdropTint: Color
-    get() = if (AtharThemeState.themeId == AtharThemeId.BURGUNDY) {
-        AtharThemeId.BURGUNDY.palette.primary
-    } else {
-        AtharPrimary
-    }
+/** Backdrop ink follows the active accent, so Burgundy's ivory choice reaches the wall too. */
+val AtharBackdropTint: Color get() = AtharPrimary
 
 /** Brighter backdrop ink for small previews. */
-val AtharBackdropHighlight: Color
-    get() = if (AtharThemeState.themeId == AtharThemeId.BURGUNDY) {
-        AtharThemeId.BURGUNDY.palette.primaryLight
-    } else {
-        AtharPrimaryLight
-    }
+val AtharBackdropHighlight: Color get() = AtharPrimaryLight
 
 // ─── Text Hierarchy ───
 val AtharTextPrimary: Color get() = AtharThemeState.current.textPrimary

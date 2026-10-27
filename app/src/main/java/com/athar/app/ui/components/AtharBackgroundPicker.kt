@@ -153,7 +153,7 @@ private fun BackgroundChoiceCard(
             when (style) {
                 AtharBackgroundStyle.ISLAMIC -> drawArabesqueLattice(
                     tint = AtharBackdropHighlight,
-                    baseAlpha = 0.32f,
+                    baseAlpha = 0.20f,
                     cellPx = previewCellPx,
                     phase = 0f
                 )
