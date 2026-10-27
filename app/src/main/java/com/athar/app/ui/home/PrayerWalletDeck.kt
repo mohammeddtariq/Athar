@@ -1,7 +1,9 @@
 package com.athar.app.ui.home
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.RotateRight
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +52,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -62,6 +67,7 @@ import androidx.compose.ui.zIndex
 import com.athar.app.R
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
+import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.MihrabWatermark
 import com.athar.app.ui.components.OrnamentDivider
 import com.athar.app.ui.theme.AtharBackground
@@ -76,6 +82,9 @@ import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val deckTimeFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 
@@ -86,9 +95,16 @@ private val FannedPeek = 76.dp
 private const val HINT_PREFS = "athar_ui_hints"
 private const val HINT_SEEN_KEY = "prayer_deck_hint_seen"
 
+/** Degrees of turn per pixel of horizontal drag, once a card is picked up. */
+private const val SPIN_PER_PIXEL = 0.6f
+
 /**
- * Wallet-style stack of today's prayer times. Cards rest as an overlapping pile;
- * dragging fans them out, and tapping one lifts it above the deck.
+ * Wallet-style stack of today's prayer times. Cards rest as an overlapping
+ * pile; dragging fans them out, and tapping one lifts it above the deck.
+ *
+ * A lifted card can be turned a full 360 degrees by dragging it sideways, the
+ * way a card behaves in the hand. Its back is the app's own backdrop with the
+ * Athar wordmark printed on it.
  */
 @Composable
 fun PrayerWalletDeck(
@@ -103,6 +119,7 @@ fun PrayerWalletDeck(
     var showGestureHint by remember { mutableStateOf(!hintPrefs.getBoolean(HINT_SEEN_KEY, false)) }
     var focusedKey by rememberSaveable { mutableStateOf<String?>(null) }
     var fanTarget by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
     val fan by animateFloatAsState(
         targetValue = fanTarget,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
@@ -160,16 +177,64 @@ fun PrayerWalletDeck(
                 label = "deckCardScale"
             )
 
+            // How far the card has been turned, in degrees. Free to pass 360.
+            var spin by remember(row.key) { mutableFloatStateOf(0f) }
+            var settleJob by remember(row.key) { mutableStateOf<Job?>(null) }
+
+            // Releasing the card turns it back to face front.
+            LaunchedEffect(isFocused) {
+                settleJob?.cancel()
+                if (!isFocused && spin != 0f) {
+                    animate(
+                        initialValue = spin,
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) { value, _ -> spin = value }
+                }
+            }
+
             PrayerWalletCard(
                 row = row,
                 isArabic = isArabic,
                 numberStyle = numberStyle,
                 isFocused = isFocused,
                 glowAlpha = if (row.isNext) glowAlpha else 0f,
+                spin = spin,
                 modifier = Modifier
                     .offset(y = peek * (rows.lastIndex - index) + lift)
                     .zIndex(if (isFocused) 100f else (rows.size - index).toFloat())
                     .scale(cardScale)
+                    .then(
+                        if (isFocused) {
+                            Modifier.draggable(
+                                orientation = Orientation.Horizontal,
+                                state = rememberDraggableState { delta ->
+                                    spin += delta * SPIN_PER_PIXEL
+                                },
+                                onDragStarted = { settleJob?.cancel() },
+                                onDragStopped = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    // Square the card up to whichever face it is nearest.
+                                    val target = (spin / 180f).roundToInt() * 180f
+                                    settleJob = scope.launch {
+                                        animate(
+                                            initialValue = spin,
+                                            targetValue = target,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                                stiffness = Spring.StiffnessLow
+                                            )
+                                        ) { value, _ -> spin = value }
+                                    }
+                                }
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -235,6 +300,10 @@ private fun DeckGestureHint(
     }
 }
 
+/**
+ * One prayer card. [spin] is applied as a real 3D turn, so past a quarter turn
+ * the back face takes over, corrected by 180 degrees so it never reads mirrored.
+ */
 @Composable
 private fun PrayerWalletCard(
     row: PrayerRow,
@@ -242,15 +311,23 @@ private fun PrayerWalletCard(
     numberStyle: NumberStylePreference,
     isFocused: Boolean,
     glowAlpha: Float,
+    spin: Float,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(22.dp)
     val glowElevation = if (isFocused) 26.dp else if (row.isNext) 18.dp else 5.dp
 
+    val normalised = ((spin % 360f) + 360f) % 360f
+    val showingBack = normalised > 90f && normalised < 270f
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(CardHeight)
+            .graphicsLayer {
+                rotationY = spin
+                cameraDistance = 16f * density
+            }
             .shadow(
                 elevation = glowElevation,
                 shape = shape,
@@ -258,14 +335,6 @@ private fun PrayerWalletCard(
                 ambientColor = Color.Black.copy(alpha = 0.55f)
             )
             .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        if (row.isNext) AtharPrimarySubtle else AtharCardSurface,
-                        AtharBackground
-                    )
-                )
-            )
             .border(
                 width = if (isFocused || row.isNext) 1.2.dp else 1.dp,
                 color = when {
@@ -274,6 +343,46 @@ private fun PrayerWalletCard(
                     else -> AtharCardBorder
                 },
                 shape = shape
+            )
+    ) {
+        if (showingBack) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { rotationY = 180f }
+            ) {
+                PrayerCardBack()
+            }
+        } else {
+            PrayerCardFront(
+                row = row,
+                isArabic = isArabic,
+                numberStyle = numberStyle,
+                isFocused = isFocused,
+                glowAlpha = glowAlpha
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrayerCardFront(
+    row: PrayerRow,
+    isArabic: Boolean,
+    numberStyle: NumberStylePreference,
+    isFocused: Boolean,
+    glowAlpha: Float
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        if (row.isNext) AtharPrimarySubtle else AtharCardSurface,
+                        AtharBackground
+                    )
+                )
             )
     ) {
         MihrabWatermark(
@@ -316,13 +425,19 @@ private fun PrayerWalletCard(
                     }
                 }
 
-                Text(
-                    text = formatDigits(row.time.format(deckTimeFmt), numberStyle),
-                    color = if (row.isNext) AtharPrimaryLight else AtharTextPrimary,
-                    fontFamily = ThmanyahSerifDisplay,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 30.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = formatDigits(row.time.format(deckTimeFmt), numberStyle),
+                        color = if (row.isNext) AtharPrimaryLight else AtharTextPrimary,
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 30.sp
+                    )
+                    if (isFocused) {
+                        Spacer(Modifier.size(8.dp))
+                        FlipHint()
+                    }
+                }
             }
 
             Spacer(Modifier.weight(1f))
@@ -348,6 +463,92 @@ private fun PrayerWalletCard(
             )
         }
     }
+}
+
+/**
+ * The reverse of a prayer card: the app's own backdrop — whichever the user
+ * chose — with the Athar wordmark on top.
+ */
+@Composable
+private fun PrayerCardBack() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(AtharPrimarySubtle, AtharBackground)
+                )
+            )
+    ) {
+        IslamicPatternBackground(
+            modifier = Modifier.matchParentSize(),
+            alpha = 0.26f,
+            animated = true,
+            cellDp = 46f
+        )
+
+        // Soft vignette so the wordmark always sits on calm ground.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            AtharBackground.copy(alpha = 0.62f)
+                        )
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "أَثَر",
+                fontFamily = ThmanyahSerifDisplay,
+                fontWeight = FontWeight.Black,
+                fontSize = 42.sp,
+                color = AtharPrimaryLight,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "A T H A R",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.5.sp,
+                letterSpacing = 6.sp,
+                color = AtharTextSecondary,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/** Invites the sideways turn, with a slow swing rather than a static glyph. */
+@Composable
+private fun FlipHint() {
+    val transition = rememberInfiniteTransition(label = "flipHint")
+    val swing by transition.animateFloat(
+        initialValue = -22f,
+        targetValue = 22f,
+        animationSpec = infiniteRepeatable(
+            tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "flipHintSwing"
+    )
+
+    Icon(
+        imageVector = Icons.Rounded.RotateRight,
+        contentDescription = null,
+        tint = AtharPrimaryLight.copy(alpha = 0.8f),
+        modifier = Modifier
+            .size(17.dp)
+            .graphicsLayer { rotationZ = swing }
+    )
 }
 
 private fun noteFor(key: String): Int = when (key) {
