@@ -111,6 +111,7 @@ import java.time.LocalDate
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.data.presetCities
+import com.athar.app.ui.components.AtharThemePicker
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -122,6 +123,8 @@ import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
+import com.athar.app.ui.theme.AtharThemeId
+import com.athar.app.ui.theme.AtharThemeState
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.BuildConfig
@@ -220,13 +223,13 @@ fun SettingsScreen(
 
     LaunchedEffect(targetSection) {
         if (targetSection == "notifications") {
-            listState.animateScrollToItem(6)
+            listState.animateScrollToItem(7)
             isNotifHighlighted = true
             onTargetSectionConsumed()
             delay(2000)
             isNotifHighlighted = false
         } else if (targetSection == "widgets") {
-            listState.animateScrollToItem(7)
+            listState.animateScrollToItem(8)
             isWidgetHighlighted = true
             onTargetSectionConsumed()
             delay(2000)
@@ -235,6 +238,7 @@ fun SettingsScreen(
     }
 
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
+    val themeId by prefs.themeId.collectAsState(initial = AtharThemeId.default)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val city by prefs.cityLabel.collectAsState(initial = null)
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
@@ -332,6 +336,28 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(top = 14.dp, bottom = 16.dp)
                 )
+            }
+
+            // ── Theme — "اختر أثرك" ──
+            item {
+                SectionCard(title = stringResource(R.string.settings_theme)) {
+                    Text(
+                        stringResource(R.string.settings_theme_sub),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    AtharThemePicker(
+                        selected = themeId,
+                        isArabic = language == "ar",
+                        onPick = { picked ->
+                            // Repaint immediately, persist behind the scenes.
+                            AtharThemeState.current = picked.palette
+                            scope.launch { prefs.setThemeId(picked) }
+                        }
+                    )
+                }
             }
 
             // ── Language ──

@@ -76,6 +76,7 @@ import com.athar.app.data.CalcMethod
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.notifications.PrayerNotifications
+import com.athar.app.ui.components.AtharThemePicker
 import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.TypewriterText
 import com.athar.app.ui.theme.AtharCardBorder
@@ -84,6 +85,8 @@ import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
+import com.athar.app.ui.theme.AtharThemeId
+import com.athar.app.ui.theme.AtharThemeState
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.data.PresetCity
 import com.athar.app.data.presetCities
@@ -108,6 +111,7 @@ fun OnboardingFlow(
     var step by remember { mutableStateOf(0) }
     var stepForward by remember { mutableStateOf(true) }
     var language by remember { mutableStateOf<String?>(null) }
+    var theme by remember { mutableStateOf(AtharThemeId.default) }
     var notifGranted by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf<PresetCity?>(null) }
     var gpsLabel by remember { mutableStateOf<String?>(null) }
@@ -136,6 +140,7 @@ fun OnboardingFlow(
         scope.launch {
             val lang = language ?: "ar"
             prefs.setLanguage(lang)
+            prefs.setThemeId(theme)
             if (!skipLocation) {
                 val gps = gpsLatLng
                 if (gps != null) {
@@ -169,7 +174,7 @@ fun OnboardingFlow(
     }
 
     fun advanceFromNotifications() {
-        goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 3 else 2)
+        goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 4 else 3)
     }
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
@@ -221,7 +226,18 @@ fun OnboardingFlow(
                     onNext = { if (language != null) goTo(1) },
                     onSkip = { finish(skipLocation = true) }
                 )
-                1 -> NotificationStep(
+                1 -> ThemeStep(
+                    language = language,
+                    theme = theme,
+                    onPick = { picked ->
+                        theme = picked
+                        // Repaint the setup flow in the chosen colour immediately.
+                        AtharThemeState.current = picked.palette
+                    },
+                    onBack = { goTo(0) },
+                    onNext = { goTo(2) }
+                )
+                2 -> NotificationStep(
                     language = language,
                     onAllow = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -240,16 +256,16 @@ fun OnboardingFlow(
                         }
                     },
                     onLater = { advanceFromNotifications() },
-                    onBack = { goTo(0) }
+                    onBack = { goTo(1) }
                 )
-                2 -> BatteryStep(
+                3 -> BatteryStep(
                     language = language,
                     onAllow = {
                         BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
-                        goTo(3)
+                        goTo(4)
                     },
-                    onLater = { goTo(3) },
-                    onBack = { goTo(1) }
+                    onLater = { goTo(4) },
+                    onBack = { goTo(2) }
                 )
                 else -> SetupStep(
                     selectedCity = selectedCity,
@@ -280,7 +296,7 @@ fun OnboardingFlow(
                     school = school,
                     onPickSchool = { school = it },
                     onBack = {
-                        goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 1 else 2)
+                        goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 2 else 3)
                     },
                     onStart = { finish(skipLocation = false) }
                 )
@@ -289,7 +305,7 @@ fun OnboardingFlow(
 
         SetupStepRail(
             current = step,
-            total = 4,
+            total = 5,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
@@ -1020,5 +1036,82 @@ private fun LanguageCard(
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+/**
+ * Applies the chosen colours to the whole app before the user has even
+ * finished setup, so picking a theme is something they can see immediately.
+ */
+@Composable
+private fun ThemeStep(
+    language: String?,
+    theme: AtharThemeId,
+    onPick: (AtharThemeId) -> Unit,
+    onBack: () -> Unit,
+    onNext: () -> Unit
+) {
+    val isAr = language != "en"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(top = 74.dp, bottom = 32.dp)
+    ) {
+        Text(
+            text = if (isAr) "اختر أثرك" else "Choose your Athar",
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Black,
+            fontSize = 26.sp,
+            color = AtharTextPrimary,
+            modifier = Modifier.revealOnEnter(0)
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = if (isAr) "اختر اللون الذي يُرسم به أَثَر، ويمكنك تغييره لاحقًا من الإعدادات."
+                else "Pick the colour Athar is painted in. You can change it later in Settings.",
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 12.5.sp,
+            lineHeight = 19.sp,
+            color = AtharTextSecondary,
+            modifier = Modifier.revealOnEnter(1)
+        )
+        Spacer(Modifier.height(18.dp))
+        AtharThemePicker(
+            selected = theme,
+            isArabic = isAr,
+            onPick = onPick,
+            modifier = Modifier.revealOnEnter(2)
+        )
+        Spacer(Modifier.height(22.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TextButton(
+                onClick = onBack,
+                modifier = Modifier.height(52.dp)
+            ) {
+                Text(
+                    text = if (isAr) "رجوع" else "Back",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = AtharTextSecondary
+                )
+            }
+            SetupPrimaryButton(
+                text = if (isAr) "التالي" else "Next",
+                onClick = onNext,
+                modifier = Modifier.weight(1f),
+                height = 52.dp,
+                shape = RoundedCornerShape(26.dp)
+            )
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }

@@ -23,6 +23,8 @@ import com.athar.app.ui.components.AppUpdateDialog
 import com.athar.app.ui.components.BatteryOptimizationDialog
 import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharTheme
+import com.athar.app.ui.theme.AtharThemeId
+import com.athar.app.ui.theme.AtharThemeState
 import com.athar.app.updater.AppReleaseInfo
 import com.athar.app.updater.AppUpdateManager
 import com.athar.app.updater.UpdateAlarmScheduler
@@ -62,6 +64,17 @@ class MainActivity : ComponentActivity() {
         }.getOrNull() ?: "ar"
         applyLocale(initialLang)
 
+        // Resolve the saved theme before the first frame so the app never
+        // opens in one palette and repaints into another.
+        val initialTheme = runCatching {
+            runBlocking {
+                withTimeoutOrNull(250) {
+                    appPreferences.themeId.first()
+                }
+            }
+        }.getOrNull() ?: AtharThemeId.default
+        AtharThemeState.current = initialTheme.palette
+
         pendingUpdatePrompt = intent?.getBooleanExtra(AppUpdateManager.EXTRA_OPEN_UPDATER, false) == true
         if (intent?.getBooleanExtra("open_widget_settings", false) == true) {
             openWidgetSettingsState.value = true
@@ -72,6 +85,16 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = null)
             val selectedLanguage by appPreferences.selectedLanguage
                 .collectAsState(initial = "ar")
+            val themeId by appPreferences.themeId
+                .collectAsState(initial = initialTheme)
+
+            // Keeps the live palette in step with anything that changes the
+            // stored theme (in-app picker, restored backup).
+            LaunchedEffect(themeId) {
+                if (AtharThemeState.current != themeId.palette) {
+                    AtharThemeState.current = themeId.palette
+                }
+            }
 
             var updateInfo by remember { mutableStateOf<AppReleaseInfo?>(null) }
             var showUpdateDialog by remember { mutableStateOf(false) }

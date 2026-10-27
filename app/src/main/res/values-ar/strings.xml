@@ -118,6 +118,8 @@
 
     <!-- Settings -->
     <string name="settings_title">الإعدادات</string>
+    <string name="settings_theme">اختر أثرك</string>
+    <string name="settings_theme_sub">اختر اللون الذي يُرسم به أَثَر، فيسري في التطبيق كله فورًا.</string>
     <string name="settings_language">اللغة</string>
     <string name="settings_number_format">نمط الأرقام</string>
     <string name="number_format_western">1 2 3 (غربية)</string>

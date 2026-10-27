@@ -2,6 +2,7 @@ package com.athar.app.data
 
 import android.content.Context
 import com.athar.app.BuildConfig
+import com.athar.app.ui.theme.AtharThemeId
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -53,6 +54,9 @@ class AppPreferences(private val context: Context) {
 
         // Number formatting preference
         private val NUMBER_STYLE_KEY = stringPreferencesKey("number_style")
+
+        // Appearance
+        private val THEME_ID_KEY = stringPreferencesKey("theme_id")
 
         // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
@@ -168,6 +172,11 @@ class AppPreferences(private val context: Context) {
         NumberStylePreference.fromId(it[NUMBER_STYLE_KEY] ?: "western")
     }
     val isOnboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_COMPLETED_KEY] ?: false }
+
+    /** Selected app theme. Unknown or missing ids fall back to the default look. */
+    val themeId: Flow<AtharThemeId> = context.dataStore.data.map {
+        AtharThemeId.fromId(it[THEME_ID_KEY])
+    }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
     val longitude: Flow<Double?> = context.dataStore.data.map { it[LNG_KEY] }
@@ -510,6 +519,10 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setNumberStyle(style: NumberStylePreference) {
         context.dataStore.edit { it[NUMBER_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setThemeId(theme: AtharThemeId) {
+        context.dataStore.edit { it[THEME_ID_KEY] = theme.id }
     }
 
     suspend fun saveLastReadPosition(
