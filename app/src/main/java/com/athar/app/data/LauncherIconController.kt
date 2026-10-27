@@ -29,6 +29,19 @@ object LauncherIconController {
             .forEach { other -> setState(manager, packageName, other, enabled = false) }
     }
 
+    /** The alias currently enabled, or null when the manifest default is live. */
+    fun current(context: Context): AtharIconStyle? {
+        val manager = context.packageManager
+        val packageName = context.packageName
+        return AtharIconStyle.entries.firstOrNull { style ->
+            runCatching {
+                manager.getComponentEnabledSetting(
+                    ComponentName(packageName, "$NAMESPACE.${style.alias}")
+                ) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            }.getOrDefault(false)
+        }
+    }
+
     private fun setState(
         manager: PackageManager,
         packageName: String,

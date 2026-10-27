@@ -26,7 +26,6 @@ import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackgroundState
 import com.athar.app.ui.theme.AtharBackgroundStyle
-import com.athar.app.ui.theme.AtharIconStyle
 import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.ui.theme.AtharThemeId
 import com.athar.app.ui.theme.AtharThemeState
@@ -86,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.getOrNull() ?: AtharAccentTone.GOLD
-        AtharThemeState.current = initialTheme.paletteFor(initialAccent)
+        AtharThemeState.apply(initialTheme, initialAccent)
 
         val initialBackdrop = runCatching {
             runBlocking {
@@ -116,11 +115,12 @@ class MainActivity : ComponentActivity() {
             val iconStyleChoice by appPreferences.appIconStyle
                 .collectAsState(initial = null)
 
-            // Keep the launcher entry in the same palette as the app. Until the
-            // user picks an icon colour, it follows the current theme.
-            LaunchedEffect(themeId, iconStyleChoice) {
-                val iconStyle = iconStyleChoice ?: AtharIconStyle.forTheme(themeId)
-                LauncherIconController.apply(this@MainActivity, iconStyle)
+            // Re-apply only a colourway the user picked themselves. Theme
+            // changes leave the launcher entry untouched.
+            LaunchedEffect(iconStyleChoice) {
+                iconStyleChoice?.let { chosen ->
+                    LauncherIconController.apply(this@MainActivity, chosen)
+                }
             }
 
             LaunchedEffect(backgroundStyle) {
@@ -133,8 +133,11 @@ class MainActivity : ComponentActivity() {
             // stored theme or its secondary accent.
             LaunchedEffect(themeId, accentTone) {
                 val resolved = themeId.paletteFor(accentTone)
-                if (AtharThemeState.current != resolved) {
-                    AtharThemeState.current = resolved
+                if (AtharThemeState.current != resolved ||
+                    AtharThemeState.themeId != themeId ||
+                    AtharThemeState.accentTone != accentTone
+                ) {
+                    AtharThemeState.apply(themeId, accentTone)
                 }
             }
 

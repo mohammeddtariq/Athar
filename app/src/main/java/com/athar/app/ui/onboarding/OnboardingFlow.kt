@@ -239,11 +239,11 @@ fun OnboardingFlow(
                     onPick = { picked ->
                         theme = picked
                         // Repaint the setup flow in the chosen colour immediately.
-                        AtharThemeState.current = picked.paletteFor(accent)
+                        AtharThemeState.apply(picked, accent)
                     },
                     onPickAccent = { tone ->
                         accent = tone
-                        AtharThemeState.current = theme.paletteFor(tone)
+                        AtharThemeState.apply(theme, tone)
                     },
                     onBack = { goTo(0) },
                     onNext = { goTo(2) }

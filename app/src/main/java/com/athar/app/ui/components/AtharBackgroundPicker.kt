@@ -42,11 +42,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.athar.app.ui.theme.AtharBackdropHighlight
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
-import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharSurface
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
@@ -152,14 +152,14 @@ private fun BackgroundChoiceCard(
         Canvas(modifier = Modifier.matchParentSize()) {
             when (style) {
                 AtharBackgroundStyle.ISLAMIC -> drawArabesqueLattice(
-                    tint = AtharPrimaryLight,
+                    tint = AtharBackdropHighlight,
                     baseAlpha = 0.32f,
                     cellPx = previewCellPx,
                     phase = 0f
                 )
 
                 AtharBackgroundStyle.LETTERS -> drawHurufWeave(
-                    tint = AtharPrimaryLight,
+                    tint = AtharBackdropHighlight,
                     baseAlpha = 0.28f,
                     phase = 0f,
                     typeface = typeface,

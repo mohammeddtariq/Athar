@@ -45,11 +45,9 @@ internal fun rememberHurufTypeface(): Typeface? {
 /**
  * Paints the letter wall across the whole canvas.
  *
- * The canvas is divided into cells, but the cells are only a starting point:
- * every letter is jittered, turned, and scaled past its own cell so the
- * letterforms touch and overlap the way hand-set calligraphy does. A second
- * scatter of dots and diamonds drops into the gaps, and the whole wall drifts
- * on a loop that stays seamless when it wraps.
+ * Cells are deliberately smaller than the glyphs so the large forms spill into
+ * their neighbours, with a scatter of small letters and marks in the gaps. The
+ * wall drifts on a slow, seamless loop.
  */
 internal fun DrawScope.drawHurufWeave(
     tint: Color,
@@ -70,18 +68,21 @@ internal fun DrawScope.drawHurufWeave(
         color = ink
         isDither = true
         textAlign = Paint.Align.CENTER
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
     }
 
-    val columns = ceil(w / (cellPx * 0.94f)).toInt().coerceIn(3, 14)
+    val columns = ceil(w / (cellPx * 0.72f)).toInt().coerceIn(4, 18)
     val cellW = w / columns
-    val cellH = cellW * 1.04f
-    val rows = ceil(h / cellH).toInt() + 3
+    val cellH = cellW * 1.06f
+    val rows = ceil(h / cellH).toInt() + 4
 
     // A gentle drift that closes the loop cleanly at 360 degrees.
-    val driftX = cos(radians) * cellW * 0.12f
-    val driftY = sin(radians) * cellH * 0.18f
+    val driftX = cos(radians) * cellW * 0.10f
+    val driftY = sin(radians) * cellH * 0.16f
 
     for (row in -2 until rows) {
+        val stagger = (row and 1) * cellW * 0.5f
         for (column in 0 until columns) {
             val index = (row + 2) * columns + column
             val r1 = noise(index, 17)
@@ -91,24 +92,34 @@ internal fun DrawScope.drawHurufWeave(
             val r5 = noise(index, 197)
 
             val letter = huruf[(index * 5 + (r3 * huruf.size).toInt()) % huruf.size]
-            val cx = (column + 0.5f) * cellW + (r1 - 0.5f) * cellW * 0.42f + driftX
-            val cy = (row + 0.5f) * cellH + (r2 - 0.5f) * cellH * 0.38f + driftY
+            val cx = (column + 0.5f) * cellW + stagger +
+                (r1 - 0.5f) * cellW * 0.56f + driftX
+            val cy = (row + 0.5f) * cellH + (r2 - 0.5f) * cellH * 0.50f + driftY
 
-            // Most letters sit inside their cell; a good number grow across
-            // their neighbours, which is what breaks up any hint of a grid.
+            // Most cells hold a form larger than the cell itself; the smallest
+            // ones sit in the gaps between the big letters.
             val spread = when {
-                r5 > 0.88f -> 1.72f
-                r5 > 0.62f -> 1.28f
-                else -> 0.78f + r4 * 0.34f
+                r5 > 0.80f -> 2.05f + r4 * 0.55f
+                r5 > 0.38f -> 1.26f + r4 * 0.54f
+                else -> 0.54f + r4 * 0.36f
             }
-            paint.textSize = fitTextSize(paint, letter, cellW * spread, cellH * spread)
-            paint.style = if (r3 > 0.80f) Paint.Style.STROKE else Paint.Style.FILL
-            paint.strokeWidth = (paint.textSize * 0.018f).coerceAtLeast(0.8f)
-            paint.alpha = (255f * baseAlpha * (0.48f + r4 * 0.52f) * 1.6f)
+            paint.textSize = fitTextSize(
+                paint,
+                letter,
+                cellW * spread * 0.94f,
+                cellH * spread * 0.94f
+            )
+            paint.style = Paint.Style.FILL_AND_STROKE
+            paint.strokeWidth = (paint.textSize * 0.028f).coerceAtLeast(0.9f)
+            paint.alpha = (255f * baseAlpha * (0.68f + r4 * 0.56f) * 1.55f)
                 .toInt()
                 .coerceIn(0, 255)
 
-            val angle = (r4 - 0.5f) * 52f + sin(radians + index) * 3.5f
+            val angle = if (r3 > 0.90f) {
+                (r5 - 0.5f) * 150f + sin(radians + index) * 3.5f
+            } else {
+                (r4 - 0.5f) * 38f + sin(radians + index) * 3.5f
+            }
             drawLetter(paint, letter, cx, cy, angle)
         }
     }
@@ -135,7 +146,7 @@ private fun DrawScope.drawHurufAccents(
             val r1 = noise(index, 211)
             val r2 = noise(index, 269)
             val r3 = noise(index, 331)
-            if (r3 < 0.52f) continue
+            if (r3 < 0.42f) continue
 
             val cx = (column + 0.5f) * cellW + (r1 - 0.5f) * cellW * 0.94f + driftX * 1.35f
             val cy = (row + 0.5f) * cellH + (r2 - 0.5f) * cellH * 0.94f + driftY * 1.35f

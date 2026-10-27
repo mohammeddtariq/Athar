@@ -106,6 +106,7 @@ object AtharWidgetUpdater {
             val prefs = AppPreferences(appContext)
             val snapshot = prefs.getPreferencesSnapshot()
             val isAr = (snapshot.widgetLanguage == "ar")
+            val palette = snapshot.themeId.paletteFor(snapshot.accentTone)
             for (widgetId in widgetIds) {
                 val layoutRes = if (isWide) {
                     if (isAr) R.layout.widget_prayers_wide_rtl else R.layout.widget_prayers_wide
@@ -113,6 +114,8 @@ object AtharWidgetUpdater {
                     if (isAr) R.layout.widget_next_prayer_rtl else R.layout.widget_next_prayer
                 }
                 val views = RemoteViews(appContext.packageName, layoutRes)
+                tintWidgetText(views, palette, wide = isWide)
+                tintCountdownPill(appContext, views, palette)
                 if (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC) {
                     views.setViewVisibility(R.id.widget_countdown_chrono, View.GONE)
                     views.setViewVisibility(R.id.widget_countdown_text, View.VISIBLE)
@@ -156,6 +159,7 @@ object AtharWidgetUpdater {
             palette.cardBorder.toArgb()
         )
         tintWidgetText(views, palette, wide = false)
+        tintCountdownPill(context, views, palette)
         if (bgBitmap != null) {
             views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
         } else {
@@ -286,6 +290,7 @@ object AtharWidgetUpdater {
             palette.cardBorder.toArgb()
         )
         tintWidgetText(views, palette, wide = true)
+        tintCountdownPill(context, views, palette)
         if (bgBitmap != null) {
             views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
         } else {
@@ -559,6 +564,39 @@ object AtharWidgetUpdater {
         }
         views.setTextColor(R.id.widget_countdown_chrono, accent)
         views.setTextColor(R.id.widget_countdown_text, accent)
+        views.setInt(R.id.widget_btn_settings, "setColorFilter", palette.primaryMuted.toArgb())
+    }
+
+    /** Paints the countdown capsule from the palette instead of the XML default. */
+    private fun tintCountdownPill(context: Context, views: RemoteViews, palette: AtharPalette) {
+        val bitmap = runCatching {
+            val density = context.resources.displayMetrics.density
+            val width = (120f * density).toInt().coerceAtLeast(1)
+            val height = (44f * density).toInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = palette.primary.copy(alpha = 0.20f).toArgb()
+                style = Paint.Style.FILL
+            }
+            val radius = height / 2f
+            canvas.drawRoundRect(
+                RectF(0f, 0f, width.toFloat(), height.toFloat()),
+                radius,
+                radius,
+                paint
+            )
+            bitmap
+        }.getOrNull()
+
+        if (bitmap != null) {
+            views.setImageViewBitmap(R.id.widget_countdown_pill, bitmap)
+        } else {
+            views.setImageViewResource(
+                R.id.widget_countdown_pill,
+                R.drawable.bg_widget_countdown_pill_neutral
+            )
+        }
     }
 
     fun generateWidgetBackground(

@@ -125,7 +125,6 @@
     <string name="settings_background_sub">الجوّ الذي يقف خلف كل شاشة.</string>
     <string name="settings_app_icon">أيقونة التطبيق</string>
     <string name="settings_app_icon_sub">اختر لون أَثَر على شاشتك الرئيسية، مع بقاء الرمز والخط كما هما.</string>
-    <string name="settings_motion">الحركة</string>
     <string name="settings_motion_blur">ضبابية الحركة</string>
     <string name="settings_motion_blur_sub">تُلطّف المحتوى حين ينزلق عند الحواف. أوقفها على الأجهزة الأبطأ.</string>
     <string name="settings_language">اللغة</string>

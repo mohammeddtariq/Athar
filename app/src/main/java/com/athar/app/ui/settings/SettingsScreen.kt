@@ -249,7 +249,10 @@ fun SettingsScreen(
     val accentTone by prefs.accentTone.collectAsState(initial = AtharAccentTone.GOLD)
     val backgroundStyle by prefs.backgroundStyle.collectAsState(initial = AtharBackgroundStyle.default)
     val iconStyleChoice by prefs.appIconStyle.collectAsState(initial = null)
-    val effectiveIconStyle = iconStyleChoice ?: AtharIconStyle.forTheme(themeId)
+    val installedIconStyle = remember {
+        LauncherIconController.current(context.applicationContext)
+    }
+    val effectiveIconStyle = iconStyleChoice ?: installedIconStyle ?: AtharIconStyle.OLIVE
     val motionBlurEnabled by prefs.motionBlurEnabled.collectAsState(initial = true)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val city by prefs.cityLabel.collectAsState(initial = null)
@@ -373,7 +376,7 @@ fun SettingsScreen(
                         isArabic = language == "ar",
                         onPick = { picked ->
                             // Repaint immediately, persist behind the scenes.
-                            AtharThemeState.current = picked.paletteFor(accentTone)
+                            AtharThemeState.apply(picked, accentTone)
                             scope.launch {
                                 prefs.setThemeId(picked)
                                 AtharWidgetUpdater.updateAllWidgetsSuspend(context)
@@ -381,7 +384,7 @@ fun SettingsScreen(
                         },
                         accentTone = accentTone,
                         onPickAccent = { tone ->
-                            AtharThemeState.current = themeId.paletteFor(tone)
+                            AtharThemeState.apply(themeId, tone)
                             scope.launch {
                                 prefs.setAccentTone(tone)
                                 AtharWidgetUpdater.updateAllWidgetsSuspend(context)
@@ -440,12 +443,8 @@ fun SettingsScreen(
                             }
                         }
                     )
-                }
-            }
 
-            // ── Motion ──
-            item {
-                SectionCard(title = stringResource(R.string.settings_motion)) {
+                    Spacer(Modifier.height(18.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,

@@ -20,10 +20,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.athar.app.ui.theme.AtharBackdropTint
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharBackgroundState
 import com.athar.app.ui.theme.AtharBackgroundStyle
-import com.athar.app.ui.theme.AtharPrimary
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -40,7 +40,7 @@ import kotlin.math.sin
 @Composable
 fun IslamicPatternBackground(
     modifier: Modifier = Modifier,
-    tint: Color = AtharPrimary,
+    tint: Color = AtharBackdropTint,
     alpha: Float = 0.12f,
     animated: Boolean = false,
     cellDp: Float = 72f
@@ -56,13 +56,13 @@ fun IslamicPatternBackground(
 
     val transition = rememberInfiniteTransition(label = "patternDrift")
 
-    // The lattice runs on its own, much quicker clock so the stars visibly
-    // travel; the letter wall keeps a slower, calmer crawl.
+    // The lattice travels one full cell per loop, so the restart lands on an
+    // identical frame and the drift reads as continuous motion.
     val latticePhase by transition.animateFloat(
         initialValue = 0f,
-        targetValue = 360f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(4800, easing = LinearEasing),
+            animation = tween(28000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "patternLatticePhase"
@@ -127,29 +127,28 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
     val h = size.height
     val cols = (w / cellPx).toInt() + 3
     val rows = (h / cellPx).toInt() + 3
-    val radians = phase * Math.PI.toFloat() / 180f
 
-    // A wide, quick figure-eight: the whole lattice travels most of a cell
-    // every cycle instead of hanging almost still.
-    val driftX = sin(radians) * cellPx * 0.62f
-    val driftY = cos(radians * 2f) * cellPx * 0.36f
+    // Horizontal travel only: one cell per loop, starting and ending on the
+    // same frame.
+    val driftX = phase * cellPx
 
     for (r in -1..rows) {
         for (c in -1..cols) {
             val cx = c * cellPx + (if (r % 2 == 0) 0f else cellPx / 2f) - driftX
-            val cy = r * cellPx - driftY
+            val cy = r * cellPx
 
-            // Calculate gradient falloff: dense on top-right (x -> w, y -> 0), fading towards bottom-left
-            // Normalized position along the diagonal (from top-right = 1.0 to bottom-left = 0.0)
+            // Gradient falloff is anchored to the screen; the glint pattern
+            // travels with the lattice so the loop restart is invisible.
             val diagonalFactor = ((cx / w) * 0.7f + (1f - (cy / h)) * 0.3f).coerceIn(0f, 1f)
-            // Smooth curve falloff plus a lively shimmer so the stars catch light.
-            val shimmer = 0.72f + 0.28f * sin(radians * 3f + r * 0.9f + c * 1.3f)
+            val shimmer = 0.72f + 0.28f * sin(
+                (cx / cellPx) * 1.9f + (cy / cellPx) * 1.3f
+            )
             val localAlpha = baseAlpha * (diagonalFactor * diagonalFactor * 1.2f * shimmer).coerceIn(0.01f, 1f)
 
             if (localAlpha > 0.005f) {
                 val strokeColor = tint.copy(alpha = localAlpha)
                 val highlightColor = tint.copy(alpha = localAlpha * 0.45f)
-                val starRadius = cellPx * 0.38f * (1f + 0.10f * sin(radians * 2f + r + c))
+                val starRadius = cellPx * 0.38f
 
                 // 1. Central 8-pointed star rosette
                 drawEightPointedStar(Offset(cx, cy), starRadius, strokeColor, highlightColor)

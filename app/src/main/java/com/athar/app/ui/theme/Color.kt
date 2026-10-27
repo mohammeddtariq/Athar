@@ -322,6 +322,20 @@ enum class AtharThemeId(
 object AtharThemeState {
     var current: AtharPalette by mutableStateOf(AtharThemeId.default.palette)
         internal set
+
+    /** The theme the palette was resolved from. */
+    var themeId: AtharThemeId by mutableStateOf(AtharThemeId.default)
+        internal set
+
+    /** The accent variant the palette was resolved with. */
+    var accentTone: AtharAccentTone by mutableStateOf(AtharAccentTone.GOLD)
+        internal set
+
+    internal fun apply(theme: AtharThemeId, accent: AtharAccentTone) {
+        themeId = theme
+        accentTone = accent
+        current = theme.paletteFor(accent)
+    }
 }
 
 // ─── Core Backgrounds ───
@@ -337,6 +351,22 @@ val AtharPrimaryMuted: Color get() = AtharThemeState.current.primaryMuted
 val AtharPrimaryLight: Color get() = AtharThemeState.current.primaryLight
 val AtharPrimarySubtle: Color get() = AtharThemeState.current.primarySubtle
 val AtharPrimaryDeep: Color get() = AtharThemeState.current.primaryDeep
+
+/** Backdrop ink: Burgundy always draws its wall in antique gold. */
+val AtharBackdropTint: Color
+    get() = if (AtharThemeState.themeId == AtharThemeId.BURGUNDY) {
+        AtharThemeId.BURGUNDY.palette.primary
+    } else {
+        AtharPrimary
+    }
+
+/** Brighter backdrop ink for small previews. */
+val AtharBackdropHighlight: Color
+    get() = if (AtharThemeState.themeId == AtharThemeId.BURGUNDY) {
+        AtharThemeId.BURGUNDY.palette.primaryLight
+    } else {
+        AtharPrimaryLight
+    }
 
 // ─── Text Hierarchy ───
 val AtharTextPrimary: Color get() = AtharThemeState.current.textPrimary
