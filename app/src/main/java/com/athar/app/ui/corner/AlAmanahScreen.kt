@@ -40,6 +40,9 @@ import com.athar.app.ui.theme.AtharNavPillBorder
 import com.athar.app.ui.theme.AtharNavPillSelected
 import com.athar.app.ui.theme.AtharNavbarBg
 import com.athar.app.ui.theme.AtharNavbarBorder
+import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharTextOnPrimary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -2104,8 +2107,8 @@ private fun AmanahSettingsToggleCard(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF141C16),
-                    checkedTrackColor = AmoledAccent,
+                    checkedThumbColor = AtharTextOnPrimary,
+                    checkedTrackColor = AtharPrimary,
                     uncheckedThumbColor = Color.White,
                     uncheckedTrackColor = Color.White.copy(alpha = 0.16f)
                 )
@@ -2848,7 +2851,7 @@ private fun AmanahMonthlyReplayView(
                     Brush.radialGradient(
                         colors = listOf(
                             Color.White.copy(alpha = 0.12f),
-                            Color(0xFFB5DB88).copy(alpha = 0.08f),
+                            AtharPrimary.copy(alpha = 0.08f),
                             Color.Transparent
                         ),
                         center = Offset(Float.POSITIVE_INFINITY, 0f),
@@ -3004,7 +3007,7 @@ private fun AmanahMonthlyReplayView(
                                 fontFamily = QuranUthmanicHafs,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 16.sp,
-                                color = Color(0xFFD6F5AE),
+                                color = AtharPrimaryLight,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )

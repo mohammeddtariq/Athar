@@ -346,6 +346,14 @@ fun SettingsScreen(
             item {
                 SectionCard(title = stringResource(R.string.settings_theme)) {
                     Text(
+                        stringResource(R.string.settings_theme_choose),
+                        fontFamily = ThmanyahSerifDisplay,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = AtharPrimaryLight
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
                         stringResource(R.string.settings_theme_sub),
                         fontFamily = ThmanyahSans,
                         fontSize = 12.sp,

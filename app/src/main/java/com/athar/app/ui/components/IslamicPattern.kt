@@ -12,12 +12,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -49,15 +46,17 @@ fun IslamicPatternBackground(
 ) {
     val style = AtharBackgroundState.current
 
-    // Letterforms are scaled once per size rather than rebuilt on every frame.
+    // A solid surface needs no ink at all.
+    if (style == AtharBackgroundStyle.SOLID) return
+
     val density = LocalDensity.current
     val cellPx = with(density) { cellDp.dp.toPx() }
     val letterCellPx = cellPx * ARABIC_LETTER_CELL_RATIO
-    val glyphs = remember(letterCellPx) { buildArabicGlyphs(letterCellPx) }
+    val typeface = rememberCalligraphyTypeface()
 
     if (!animated) {
         Canvas(modifier = modifier.fillMaxSize()) {
-            drawBackdrop(style, tint, alpha, cellPx, letterCellPx, 0f, glyphs)
+            drawBackdrop(style, tint, alpha, cellPx, letterCellPx, 0f, typeface)
         }
         return
     }
@@ -83,7 +82,7 @@ fun IslamicPatternBackground(
     )
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        drawBackdrop(style, tint, alpha * breathe, cellPx, letterCellPx, phase, glyphs)
+        drawBackdrop(style, tint, alpha * breathe, cellPx, letterCellPx, phase, typeface)
     }
 }
 
@@ -101,12 +100,13 @@ private fun DrawScope.drawBackdrop(
     cellPx: Float,
     letterCellPx: Float,
     phase: Float,
-    glyphs: List<Path>
+    typeface: android.graphics.Typeface?
 ) {
     when (style) {
         AtharBackgroundStyle.ISLAMIC -> drawArabesqueLattice(tint, alpha, cellPx, phase)
         AtharBackgroundStyle.LETTERS ->
-            drawArabicLetterLattice(tint, alpha, letterCellPx, phase, glyphs)
+            drawArabicCalligraphy(tint, alpha, letterCellPx, phase, typeface)
+        AtharBackgroundStyle.SOLID -> Unit
     }
 }
 

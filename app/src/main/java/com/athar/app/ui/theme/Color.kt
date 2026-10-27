@@ -99,11 +99,11 @@ enum class AtharThemeId(
             textSecondary = Color(0xFF93A086),
             textMuted = Color(0xFF4A5A43),
             textOnPrimary = Color(0xFF141A10),
-            navbarBg = Color(0xFF353E2C),
-            navbarBorder = Color(0xFF48543B),
-            navPillSelected = Color(0xFF556441),
-            navPillBorder = Color(0xFF6B7E52),
-            navIconActive = Color(0xFFC7EFA0),
+            navbarBg = Color(0xFF2A3322),
+            navbarBorder = Color(0xFF3E4C30),
+            navPillSelected = Color(0xFF455531),
+            navPillBorder = Color(0xFF647A48),
+            navIconActive = Color(0xFFE6EEDA),
             navIconInactive = Color(0xFFA4AA9C),
             navGlow = Color(0xFFBCE484),
             emerald = Color(0xFF417858),
@@ -124,36 +124,36 @@ enum class AtharThemeId(
         nameAr = "عُنّابي",
         nameEn = "Burgundy",
         palette = AtharPalette(
-            background = Color(0xFF0C0709),
-            surface = Color(0xFF130C0F),
-            cardSurface = Color(0xFF1A1013),
-            cardBorder = Color(0xFF2B1A20),
-            cardGlow = Color(0xFF241419),
-            primary = Color(0xFFD3A85F),
-            primaryMuted = Color(0xFF8A6C3C),
-            primaryLight = Color(0xFFF0DCA9),
-            primarySubtle = Color(0xFF241318),
-            primaryDeep = Color(0xFF3A2030),
-            textPrimary = Color(0xFFF4EAE6),
-            textSecondary = Color(0xFFA8908F),
-            textMuted = Color(0xFF5C4448),
+            background = Color(0xFF090406),
+            surface = Color(0xFF14080C),
+            cardSurface = Color(0xFF1D0B11),
+            cardBorder = Color(0xFF3A1520),
+            cardGlow = Color(0xFF2B0E17),
+            primary = Color(0xFFD9A45C),
+            primaryMuted = Color(0xFF906C36),
+            primaryLight = Color(0xFFF2DCA6),
+            primarySubtle = Color(0xFF2C0E16),
+            primaryDeep = Color(0xFF5A1526),
+            textPrimary = Color(0xFFF5EBE7),
+            textSecondary = Color(0xFFB29696),
+            textMuted = Color(0xFF6B4A50),
             textOnPrimary = Color(0xFF1B1008),
-            navbarBg = Color(0xFF3A2028),
-            navbarBorder = Color(0xFF4E2C36),
-            navPillSelected = Color(0xFF5A3340),
-            navPillBorder = Color(0xFF7A4A55),
-            navIconActive = Color(0xFFF0DCA9),
-            navIconInactive = Color(0xFFB39A99),
-            navGlow = Color(0xFFE8C078),
+            navbarBg = Color(0xFF2B0912),
+            navbarBorder = Color(0xFF521426),
+            navPillSelected = Color(0xFF4E1020),
+            navPillBorder = Color(0xFF7C2338),
+            navIconActive = Color(0xFFF2DCA6),
+            navIconInactive = Color(0xFFC0A0A5),
+            navGlow = Color(0xFFE8B96B),
             emerald = Color(0xFF4A7F63),
             amber = Color(0xFFA1854B),
             terracotta = Color(0xFFA85F4A),
             teal = Color(0xFF3B7A72),
             lavender = Color(0xFF7A6588),
-            outline = Color(0xFF2B1A20),
-            outlineVariant = Color(0xFF170D10),
-            gradientStart = Color(0xFF241318),
-            gradientEnd = Color(0xFF130C0F)
+            outline = Color(0xFF3A1520),
+            outlineVariant = Color(0xFF17090D),
+            gradientStart = Color(0xFF2C0E16),
+            gradientEnd = Color(0xFF14080C)
         )
     ),
 
@@ -177,10 +177,10 @@ enum class AtharThemeId(
             textSecondary = Color(0xFFA79680),
             textMuted = Color(0xFF5E5142),
             textOnPrimary = Color(0xFF1A1208),
-            navbarBg = Color(0xFF33291C),
-            navbarBorder = Color(0xFF463A28),
-            navPillSelected = Color(0xFF52432E),
-            navPillBorder = Color(0xFF6E5A3D),
+            navbarBg = Color(0xFF2A2015),
+            navbarBorder = Color(0xFF41311F),
+            navPillSelected = Color(0xFF493824),
+            navPillBorder = Color(0xFF6B5538),
             navIconActive = Color(0xFFEBD6A4),
             navIconInactive = Color(0xFFADA18E),
             navGlow = Color(0xFFE0BE7C),
@@ -199,7 +199,7 @@ enum class AtharThemeId(
     /** True black panels with a pure white accent, for OLED displays. */
     AMOLED(
         id = "AMOLED",
-        nameAr = "أسود حالك",
+        nameAr = "أسود نقي",
         nameEn = "AMOLED",
         palette = AtharPalette(
             background = Color(0xFF000000),
@@ -216,10 +216,10 @@ enum class AtharThemeId(
             textSecondary = Color(0xFF9E9E9E),
             textMuted = Color(0xFF4F4F4F),
             textOnPrimary = Color(0xFF0A0A0A),
-            navbarBg = Color(0xFF141414),
-            navbarBorder = Color(0xFF262626),
-            navPillSelected = Color(0xFF2E2E2E),
-            navPillBorder = Color(0xFF454545),
+            navbarBg = Color(0xFF101010),
+            navbarBorder = Color(0xFF2A2A2A),
+            navPillSelected = Color(0xFF2A2A2A),
+            navPillBorder = Color(0xFF4A4A4A),
             navIconActive = Color(0xFFFFFFFF),
             navIconInactive = Color(0xFF8E8E8E),
             navGlow = Color(0xFFFFFFFF),
@@ -234,6 +234,23 @@ enum class AtharThemeId(
             gradientEnd = Color(0xFF050505)
         )
     );
+
+    /** A short, localized mood line shown under the theme name. */
+    val moodAr: String
+        get() = when (this) {
+            OLIVE -> "فستقي وحبر"
+            BURGUNDY -> "ذهب عتيق وعُنّاب"
+            BROWN -> "قهوة وذهب محمّص"
+            AMOLED -> "سواد نقي وضوء"
+        }
+
+    val moodEn: String
+        get() = when (this) {
+            OLIVE -> "Pistachio & ink"
+            BURGUNDY -> "Antique gold & garnet"
+            BROWN -> "Roasted coffee & gold"
+            AMOLED -> "True black & light"
+        }
 
     companion object {
         /** Falls back to the original look for unknown or missing stored ids. */

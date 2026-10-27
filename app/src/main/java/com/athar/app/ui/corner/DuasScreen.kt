@@ -37,7 +37,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
@@ -731,7 +731,7 @@ private fun HisnAlMuslimHero(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Rounded.MenuBook,
+                Icons.AutoMirrored.Rounded.MenuBook,
                 contentDescription = null,
                 tint = AtharPrimaryLight,
                 modifier = Modifier.size(19.dp)

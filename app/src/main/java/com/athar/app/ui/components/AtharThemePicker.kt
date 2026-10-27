@@ -183,7 +183,7 @@ private fun ThemeChoiceCard(
                 )
                 Spacer(Modifier.height(1.dp))
                 Text(
-                    text = if (isArabic) theme.nameEn else theme.nameAr,
+                    text = if (isArabic) theme.moodAr else theme.moodEn,
                     fontFamily = ThmanyahSerifDisplay,
                     fontWeight = FontWeight.Medium,
                     fontSize = 11.5.sp,

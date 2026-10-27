@@ -197,24 +197,27 @@ fun OnboardingFlow(
         }
     }
 
-    AuroraSetupBackdrop {
+    AuroraSetupBackdrop(step = step) {
         AnimatedContent(
             targetState = step,
             modifier = Modifier.fillMaxSize(),
             transitionSpec = {
-                val incoming = fadeIn(tween(420, easing = FastOutSlowInEasing)) +
+                val incoming = fadeIn(tween(300, easing = FastOutSlowInEasing)) +
                     slideInHorizontally(
                         animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessLow
+                            dampingRatio = 0.92f,
+                            stiffness = 380f
                         )
-                    ) { width -> if (stepForward) width / 5 else -width / 5 } +
-                    scaleIn(initialScale = 0.95f)
-                val outgoing = fadeOut(tween(260, easing = FastOutSlowInEasing)) +
-                    slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { width ->
-                        if (stepForward) -width / 9 else width / 9
-                    } +
-                    scaleOut(targetScale = 0.98f)
+                    ) { width -> if (stepForward) width / 6 else -width / 6 } +
+                    scaleIn(
+                        initialScale = 0.972f,
+                        animationSpec = spring(dampingRatio = 0.92f, stiffness = 380f)
+                    )
+                val outgoing = fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                    slideOutHorizontally(
+                        spring(dampingRatio = 0.95f, stiffness = 420f)
+                    ) { width -> if (stepForward) -width / 10 else width / 10 } +
+                    scaleOut(targetScale = 0.988f, animationSpec = tween(180, easing = FastOutSlowInEasing))
                 incoming togetherWith outgoing
             },
             label = "setupStep"
@@ -1062,17 +1065,18 @@ private fun ThemeStep(
             .padding(top = 74.dp, bottom = 32.dp)
     ) {
         Text(
-            text = if (isAr) "اختر أثرك" else "Choose your Athar",
+            text = if (isAr) "اختر أثرك" else "Choose the light your Athar wears",
             fontFamily = ThmanyahSerifDisplay,
             fontWeight = FontWeight.Black,
             fontSize = 26.sp,
+            lineHeight = 32.sp,
             color = AtharTextPrimary,
             modifier = Modifier.revealOnEnter(0)
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
-            text = if (isAr) "اختر اللون الذي يُرسم به أَثَر، ويمكنك تغييره لاحقًا من الإعدادات."
-                else "Pick the colour Athar is painted in. You can change it later in Settings.",
+            text = if (isAr) "لونٌ واحد يسري في كل شاشة، ويظلّ لك أن تغيّره متى شئت."
+                else "One hue, carried through every screen. You can change it whenever you like.",
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Medium,
             fontSize = 12.5.sp,

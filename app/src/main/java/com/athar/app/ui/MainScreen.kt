@@ -110,6 +110,9 @@ import com.athar.app.ui.theme.AtharNavPillBorder
 import com.athar.app.ui.theme.AtharNavPillSelected
 import com.athar.app.ui.theme.AtharNavbarBg
 import com.athar.app.ui.theme.AtharNavbarBorder
+import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.ThmanyahSans
 
 sealed class Screen(
@@ -244,28 +247,34 @@ fun MainScreen(
             startDestination = Screen.Home.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(300, easing = TabMotionEasing)) +
-                    scaleIn(initialScale = 0.92f, animationSpec = tween(300, easing = TabMotionEasing)) +
+                fadeIn(animationSpec = tween(260, easing = TabMotionEasing)) +
+                    scaleIn(
+                        initialScale = 0.975f,
+                        animationSpec = spring(dampingRatio = 0.92f, stiffness = 420f)
+                    ) +
                     slideInVertically(
-                        initialOffsetY = { (it * 0.04f).toInt() },
-                        animationSpec = tween(300, easing = TabMotionEasing)
+                        initialOffsetY = { (it * 0.025f).toInt() },
+                        animationSpec = spring(dampingRatio = 0.92f, stiffness = 420f)
                     )
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(200, easing = TabMotionEasing)) +
-                    scaleOut(targetScale = 0.97f, animationSpec = tween(200, easing = TabMotionEasing))
+                fadeOut(animationSpec = tween(170, easing = TabMotionEasing)) +
+                    scaleOut(targetScale = 0.988f, animationSpec = tween(170, easing = TabMotionEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(300, easing = TabMotionEasing)) +
-                    scaleIn(initialScale = 0.92f, animationSpec = tween(300, easing = TabMotionEasing)) +
+                fadeIn(animationSpec = tween(260, easing = TabMotionEasing)) +
+                    scaleIn(
+                        initialScale = 0.975f,
+                        animationSpec = spring(dampingRatio = 0.92f, stiffness = 420f)
+                    ) +
                     slideInVertically(
-                        initialOffsetY = { (it * 0.04f).toInt() },
-                        animationSpec = tween(300, easing = TabMotionEasing)
+                        initialOffsetY = { (it * 0.025f).toInt() },
+                        animationSpec = spring(dampingRatio = 0.92f, stiffness = 420f)
                     )
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(200, easing = TabMotionEasing)) +
-                    scaleOut(targetScale = 0.97f, animationSpec = tween(200, easing = TabMotionEasing))
+                fadeOut(animationSpec = tween(170, easing = TabMotionEasing)) +
+                    scaleOut(targetScale = 0.988f, animationSpec = tween(170, easing = TabMotionEasing))
             }
         ) {
             composable(Screen.Home.route) {
@@ -502,6 +511,21 @@ fun AtharNavBar(
                     ),
                     label = "amanahBtnScale"
                 )
+                val amanahContainer by animateColorAsState(
+                    targetValue = if (isAmanahSelected) AtharPrimaryLight else AtharPrimary,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "amanahBtnContainer"
+                )
+                val amanahBorder by animateColorAsState(
+                    targetValue = if (isAmanahSelected) AtharPrimaryLight else AtharPrimaryLight.copy(alpha = 0.55f),
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "amanahBtnBorder"
+                )
+                val amanahInk by animateColorAsState(
+                    targetValue = AtharTextOnPrimary,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "amanahBtnInk"
+                )
 
                 Box(
                     modifier = Modifier
@@ -510,14 +534,14 @@ fun AtharNavBar(
                         .shadow(
                             elevation = 14.dp,
                             shape = RoundedCornerShape(amanahCornerRadius),
-                            spotColor = Color(0xFFC7EE7B).copy(alpha = 0.45f),
+                            spotColor = AtharPrimary.copy(alpha = 0.45f),
                             ambientColor = Color.Black.copy(alpha = 0.60f)
                         )
                         .clip(RoundedCornerShape(amanahCornerRadius))
-                        .background(if (isAmanahSelected) Color(0xFFD8F89E) else Color(0xFFC7EE7B))
+                        .background(amanahContainer)
                         .border(
                             width = 1.dp,
-                            color = if (isAmanahSelected) Color.White.copy(alpha = 0.85f) else Color(0xFFDCFAB0).copy(alpha = 0.50f),
+                            color = amanahBorder,
                             shape = RoundedCornerShape(amanahCornerRadius)
                         )
                         .clickable(
@@ -530,7 +554,7 @@ fun AtharNavBar(
                     Icon(
                         imageVector = Icons.Rounded.GraphicEq,
                         contentDescription = "Al-Amanah",
-                        tint = Color(0xFF141C16),
+                        tint = amanahInk,
                         modifier = Modifier.size(if (isCompact) 23.dp else 26.dp)
                     )
                 }
@@ -563,25 +587,25 @@ private fun NavDockItem(
 
     val pillBackground by animateColorAsState(
         targetValue = if (selected) AtharNavPillSelected else Color.Transparent,
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        animationSpec = spring(dampingRatio = 0.90f, stiffness = 650f),
         label = "pillBg"
     )
 
     val pillBorderColor by animateColorAsState(
         targetValue = if (selected) AtharNavPillBorder else Color.Transparent,
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        animationSpec = spring(dampingRatio = 0.90f, stiffness = 650f),
         label = "pillBorder"
     )
 
     val iconTint by animateColorAsState(
         targetValue = if (selected) AtharNavIconActive else AtharNavIconInactive,
-        animationSpec = tween(200, easing = FastOutSlowInEasing),
+        animationSpec = spring(dampingRatio = 0.90f, stiffness = 700f),
         label = "iconTint"
     )
 
     val labelColor by animateColorAsState(
         targetValue = if (selected) AtharNavIconActive else AtharNavIconInactive,
-        animationSpec = tween(200, easing = FastOutSlowInEasing),
+        animationSpec = spring(dampingRatio = 0.90f, stiffness = 700f),
         label = "labelColor"
     )
 

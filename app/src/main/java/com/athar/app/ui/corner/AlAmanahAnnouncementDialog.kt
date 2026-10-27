@@ -54,6 +54,7 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimaryMuted
 import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
@@ -93,9 +94,9 @@ fun AlAmanahAnnouncementDialog(
     val glowBrush = Brush.linearGradient(
         colors = listOf(
             AtharPrimaryLight.copy(alpha = borderAlpha),
-            Color(0xFFB5DB88).copy(alpha = borderAlpha * 0.90f),
+            AtharPrimary.copy(alpha = borderAlpha * 0.90f),
             AtharPrimary.copy(alpha = borderAlpha * 0.65f),
-            Color(0xFF8EB878).copy(alpha = borderAlpha * 0.85f),
+            AtharPrimaryMuted.copy(alpha = borderAlpha * 0.85f),
             AtharPrimaryLight.copy(alpha = borderAlpha)
         ),
         start = Offset(0f, 0f),
@@ -203,7 +204,7 @@ fun AlAmanahAnnouncementDialog(
                         Icon(
                             imageVector = Icons.Rounded.GraphicEq,
                             contentDescription = null,
-                            tint = Color(0xFFB5DB88),
+                            tint = AtharPrimaryLight,
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -259,7 +260,7 @@ fun AlAmanahAnnouncementDialog(
                         fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = if (isArabic) 13.sp else 11.5.sp,
-                        color = Color(0xFFB5DB88),
+                        color = AtharPrimaryLight,
                         textAlign = TextAlign.Center
                     )
 

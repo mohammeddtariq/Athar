@@ -42,6 +42,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -53,9 +54,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.components.drawArabicCalligraphy
+import com.athar.app.ui.components.rememberCalligraphyTypeface
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryDeep
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -74,40 +78,42 @@ import kotlin.math.max
 // ══════════════════════════════════════════════════════════════
 
 /**
- * Opaque base + two accent auroras drifting on long, out-of-phase cycles
- * + the lattice breathing underneath. Never restarts between steps.
+ * The setup flow's shared atmosphere.
+ *
+ * A deep, almost-black stage: one narrow halo above, a second resting on the
+ * bottom edge, a ghosted mihrab arch and a slowly turning rosette. The scrim
+ * and vignette deliberately sit *over* the light so every theme — including
+ * the pale olive one — stays dark and the content never floats on a blur.
+ * Each step shifts the halo and the rosette so the pages feel related without
+ * looking identical.
  */
 @Composable
 fun AuroraSetupBackdrop(
     modifier: Modifier = Modifier,
+    step: Int = 0,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val transition = rememberInfiniteTransition(label = "setupAurora")
+    val transition = rememberInfiniteTransition(label = "setupAtmosphere")
 
-    val driftX by transition.animateFloat(
+    val drift by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(17000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "auroraDriftX"
-    )
-    val driftY by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(23000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "auroraDriftY"
-    )
-    val counterX by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(29000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "auroraCounterX"
+        animationSpec = infiniteRepeatable(tween(26000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "atmosphereDrift"
     )
     val breathe by transition.animateFloat(
-        initialValue = 0.72f,
+        initialValue = 0.55f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(8600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "auroraBreathe"
+        animationSpec = infiniteRepeatable(tween(9200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "atmosphereBreathe"
     )
+    val spin by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(96000, easing = LinearEasing), RepeatMode.Restart),
+        label = "atmosphereSpin"
+    )
+    val typeface = rememberCalligraphyTypeface()
 
     Box(
         modifier = modifier
@@ -117,44 +123,132 @@ fun AuroraSetupBackdrop(
         Canvas(modifier = Modifier.matchParentSize()) {
             val w = size.width
             val h = size.height
-            val radius = max(w, h) * 0.78f
+            val focusX = w * (0.18f + 0.11f * (step % 4)) + w * 0.04f * drift
 
-            // Warm primary aurora, top-start corner.
-            val primaryCenter = Offset(
-                x = w * (0.12f + 0.16f * driftX),
-                y = h * (0.10f + 0.14f * driftY)
-            )
+            // A single, restrained halo along the top edge.
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(AtharPrimary.copy(alpha = 0.16f * breathe), Color.Transparent),
-                    center = primaryCenter,
-                    radius = radius
+                    colors = listOf(
+                        AtharPrimary.copy(alpha = 0.10f * breathe),
+                        Color.Transparent
+                    ),
+                    center = Offset(focusX, -h * 0.04f),
+                    radius = w * 0.72f
                 ),
-                radius = radius,
-                center = primaryCenter
+                radius = w * 0.72f,
+                center = Offset(focusX, -h * 0.04f)
             )
 
-            // Cool counterweight aurora, bottom-end corner.
-            val secondaryCenter = Offset(
-                x = w * (0.94f - 0.20f * counterX),
-                y = h * (0.92f - 0.16f * driftX)
-            )
+            // A darker pool of the theme colour at the very bottom.
+            val lowerCenter = Offset(w * (0.82f - 0.12f * drift), h * 1.06f)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(AtharPrimaryLight.copy(alpha = 0.09f * breathe), Color.Transparent),
-                    center = secondaryCenter,
-                    radius = radius * 0.86f
+                    colors = listOf(
+                        AtharPrimaryDeep.copy(alpha = 0.24f * breathe),
+                        Color.Transparent
+                    ),
+                    center = lowerCenter,
+                    radius = w * 0.92f
                 ),
-                radius = radius * 0.86f,
-                center = secondaryCenter
+                radius = w * 0.92f,
+                center = lowerCenter
+            )
+
+            // The quiet mihrab that anchors the flow.
+            val archW = w * 0.56f
+            val archBottom = h * 0.99f
+            val archTop = h * 0.52f
+            val left = size.width / 2f - archW / 2f
+            val right = size.width / 2f + archW / 2f
+            val springY = archTop + (archBottom - archTop) * 0.34f
+            val arch = Path().apply {
+                moveTo(left, archBottom)
+                lineTo(left, springY)
+                cubicTo(left, springY - (archBottom - archTop) * 0.28f, left + archW * 0.22f, archTop, size.width / 2f, archTop)
+                cubicTo(right - archW * 0.22f, archTop, right, springY - (archBottom - archTop) * 0.28f, right, springY)
+                lineTo(right, archBottom)
+            }
+            drawPath(
+                path = arch,
+                color = AtharPrimary.copy(alpha = 0.11f + 0.035f * breathe),
+                style = Stroke(width = 1.1.dp.toPx())
+            )
+
+            // A turning rosette in the upper-end corner, like a manuscript seal.
+            val rosetteCenter = Offset(w * 0.88f, h * 0.13f)
+            rotate(degrees = spin + step * 18f, pivot = rosetteCenter) {
+                val r = 42.dp.toPx()
+                drawCircle(
+                    color = AtharPrimary.copy(alpha = 0.12f),
+                    radius = r,
+                    center = rosetteCenter,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+                for (deg in listOf(0f, 45f)) {
+                    rotate(degrees = deg, pivot = rosetteCenter) {
+                        drawRect(
+                            color = AtharPrimary.copy(alpha = 0.10f),
+                            topLeft = Offset(rosetteCenter.x - r * 0.70f, rosetteCenter.y - r * 0.70f),
+                            size = Size(r * 1.4f, r * 1.4f),
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
+                }
+            }
+
+            // Hairline ornament rule under the status bar.
+            val ruleY = h * 0.105f
+            drawLine(
+                color = AtharPrimary.copy(alpha = 0.16f),
+                start = Offset(w * 0.16f, ruleY),
+                end = Offset(w * 0.84f, ruleY),
+                strokeWidth = 1.dp.toPx()
+            )
+            rotate(degrees = 45f, pivot = Offset(w / 2f, ruleY)) {
+                drawRect(
+                    color = AtharPrimary.copy(alpha = 0.28f),
+                    topLeft = Offset(w / 2f - 2.5.dp.toPx(), ruleY - 2.5.dp.toPx()),
+                    size = Size(5.dp.toPx(), 5.dp.toPx()),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+
+            // A whisper of calligraphy through the middle.
+            drawArabicCalligraphy(
+                tint = AtharPrimaryLight,
+                baseAlpha = 0.016f,
+                cellPx = 72.dp.toPx(),
+                phase = 0f,
+                typeface = typeface
+            )
+
+            // The scrim that keeps every theme genuinely dark.
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Transparent,
+                        0.48f to AtharBackground.copy(alpha = 0.42f),
+                        1f to Color.Black.copy(alpha = 0.66f)
+                    )
+                )
+            )
+
+            // Edge vignette, so the light never spills into the page margins.
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        AtharBackground.copy(alpha = 0.72f)
+                    ),
+                    center = Offset(w / 2f, h * 0.46f),
+                    radius = max(w, h) * 0.72f
+                )
             )
         }
 
-        // Lattice drawn independently so its own breathe cycle stays in sync
-        // with the aurora without re-allocating the gradient brushes.
         IslamicPatternBackground(
             modifier = Modifier.matchParentSize(),
-            alpha = 0.03f + 0.045f * breathe,
+            alpha = 0.014f + 0.012f * breathe,
             animated = false
         )
 

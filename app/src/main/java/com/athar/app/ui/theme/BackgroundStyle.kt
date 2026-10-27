@@ -5,11 +5,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * The decorative pattern drawn behind the whole app.
+ * The decorative surface drawn behind the whole app.
  *
- * Both styles follow the same rules — hairline ink, dense towards the top-end
+ * Both patterns share the same rules — hairline ink, dense towards the top-end
  * corner and fading out towards the bottom-start — so switching between them
- * never changes how readable the content on top is.
+ * never changes how readable the content on top is. [SOLID] leaves the theme's
+ * own background untouched, which is the only true-black option for AMOLED.
  */
 enum class AtharBackgroundStyle(
     val id: String,
@@ -19,15 +20,22 @@ enum class AtharBackgroundStyle(
     /** Interlocking eight-point star rosettes with strapwork ribbons. */
     ISLAMIC(
         id = "ISLAMIC",
-        nameAr = "رموز إسلامية",
-        nameEn = "Islamic symbols"
+        nameAr = "مشربية أثر",
+        nameEn = "Athar lattice"
     ),
 
-    /** Flowing Arabic letterforms scattered across the surface. */
+    /** Flowing bismillah calligraphy, inked like a manuscript margin. */
     LETTERS(
         id = "LETTERS",
-        nameAr = "حروف عربية",
-        nameEn = "Arabic letters"
+        nameAr = "نسيج الحروف",
+        nameEn = "Huruf weave"
+    ),
+
+    /** No pattern at all — just the theme's own colour, edge to edge. */
+    SOLID(
+        id = "SOLID",
+        nameAr = "لون صافٍ",
+        nameEn = "Solid colour"
     );
 
     companion object {
