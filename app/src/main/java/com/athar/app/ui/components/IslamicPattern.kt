@@ -62,7 +62,7 @@ fun IslamicPatternBackground(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(15000, easing = LinearEasing),
+            animation = tween(10000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "patternLatticePhase"
@@ -71,7 +71,7 @@ fun IslamicPatternBackground(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(38000, easing = LinearEasing),
+            animation = tween(26000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "patternLetterPhase"
@@ -140,19 +140,19 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
             // Gradient falloff is anchored to the screen; the glint pattern
             // travels with the lattice so the loop restart is invisible.
             val diagonalFactor = ((cx / w) * 0.7f + (1f - (cy / h)) * 0.3f).coerceIn(0f, 1f)
-            val shimmer = 0.72f + 0.28f * sin(
+            val shimmer = 0.86f + 0.14f * sin(
                 (cx / cellPx) * 1.9f + (cy / cellPx) * 1.3f
             )
-            // The lattice is drawn with hairline ink, so it carries a touch more
-            // weight than a plain line grid to stay present behind content. A
-            // faint floor keeps the far corner from vanishing completely.
+            // The lattice is drawn with hairline ink, so it carries more weight
+            // than a plain line grid to stay present behind content. A faint
+            // floor keeps the far corner from vanishing completely.
             val localAlpha = baseAlpha *
-                (0.32f + diagonalFactor * diagonalFactor * 1.58f) * shimmer
+                (0.42f + diagonalFactor * diagonalFactor * 2.18f) * shimmer
 
             if (localAlpha > 0.005f) {
                 val strokeColor = tint.copy(alpha = localAlpha)
-                val highlightColor = tint.copy(alpha = localAlpha * 0.5f)
-                val starRadius = cellPx * 0.40f
+                val highlightColor = tint.copy(alpha = localAlpha * 0.55f)
+                val starRadius = cellPx * 0.42f
 
                 // 1. Central 8-pointed star rosette
                 drawEightPointedStar(Offset(cx, cy), starRadius, strokeColor, highlightColor)
@@ -161,8 +161,8 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
                 drawInterlockingRibbons(Offset(cx, cy), cellPx, strokeColor)
 
                 // 3. Intermediate diamonds between stars
-                drawCornerDiamonds(Offset(cx + cellPx / 2f, cy), cellPx * 0.12f, strokeColor)
-                drawCornerDiamonds(Offset(cx, cy + cellPx / 2f), cellPx * 0.12f, strokeColor)
+                drawCornerDiamonds(Offset(cx + cellPx / 2f, cy), cellPx * 0.13f, strokeColor)
+                drawCornerDiamonds(Offset(cx, cy + cellPx / 2f), cellPx * 0.13f, strokeColor)
             }
         }
     }
@@ -174,7 +174,7 @@ private fun DrawScope.drawEightPointedStar(
     primaryColor: Color,
     highlightColor: Color
 ) {
-    val strokeWidth = (radius * 0.055f).coerceAtLeast(1.3f)
+    val strokeWidth = (radius * 0.075f).coerceAtLeast(1.5f)
     val halfSide = radius * 0.707f
 
     // Two overlapping squares rotated by 45 degrees forming the classic Khatam star
@@ -211,8 +211,8 @@ private fun DrawScope.drawInterlockingRibbons(
     cellPx: Float,
     color: Color
 ) {
-    val r = cellPx * 0.40f
-    val stroke = (cellPx * 0.020f).coerceAtLeast(1.1f)
+    val r = cellPx * 0.42f
+    val stroke = (cellPx * 0.028f).coerceAtLeast(1.3f)
     // 8 outward radiating ribbon lines reaching toward adjacent star points
     for (i in 0 until 8) {
         val angle = Math.toRadians(i * 45.0)
@@ -233,7 +233,7 @@ private fun DrawScope.drawCornerDiamonds(
     size: Float,
     color: Color
 ) {
-    val stroke = (size * 0.36f).coerceAtLeast(1.1f)
+    val stroke = (size * 0.44f).coerceAtLeast(1.2f)
     rotate(degrees = 45f, pivot = center) {
         drawRect(
             color = color,

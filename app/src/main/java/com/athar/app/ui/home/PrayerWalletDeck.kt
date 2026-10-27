@@ -495,7 +495,7 @@ private fun PrayerCardBack() {
     ) {
         IslamicPatternBackground(
             modifier = Modifier.matchParentSize(),
-            alpha = 0.26f,
+            alpha = 0.20f,
             animated = true,
             cellDp = 46f
         )

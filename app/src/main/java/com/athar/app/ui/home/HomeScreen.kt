@@ -885,7 +885,7 @@ fun AfterPrayerDuaDialog(
         ) {
             IslamicPatternBackground(
                 modifier = Modifier.fillMaxSize(),
-                alpha = 0.08f,
+                alpha = 0.10f,
                 animated = false
             )
 

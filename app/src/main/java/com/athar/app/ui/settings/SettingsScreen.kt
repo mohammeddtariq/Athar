@@ -332,7 +332,7 @@ fun SettingsScreen(
         }
     }
 
-    PatternScaffold(patternAlpha = 0.05f) {
+    PatternScaffold(patternAlpha = 0.07f) {
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
