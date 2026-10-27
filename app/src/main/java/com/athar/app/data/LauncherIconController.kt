@@ -11,6 +11,11 @@ import com.athar.app.ui.theme.AtharIconStyle
  */
 object LauncherIconController {
 
+    // AGP qualifies manifest components with the module namespace, not the
+    // runtime application id. Debug builds append a suffix to that id, so the
+    // alias class must be built from the namespace or the lookup finds nothing.
+    private const val NAMESPACE = "com.athar.app"
+
     fun apply(context: Context, style: AtharIconStyle) {
         val manager = context.packageManager
         val packageName = context.packageName
@@ -31,7 +36,7 @@ object LauncherIconController {
         enabled: Boolean
     ) {
         runCatching {
-            val component = ComponentName(packageName, "$packageName.${style.alias}")
+            val component = ComponentName(packageName, "$NAMESPACE.${style.alias}")
             val wanted = if (enabled) {
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             } else {
