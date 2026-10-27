@@ -185,6 +185,7 @@ fun MainScreen(
     val appPrefs = remember { AppPreferences(context.applicationContext) }
     val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = null)
     val hasSeenAmanahAnnouncement by appPrefs.hasSeenAmanahAnnouncement.collectAsState(initial = null)
+    val motionBlurEnabled by appPrefs.motionBlurEnabled.collectAsState(initial = true)
     var showDirayahAnnouncement by remember { mutableStateOf(false) }
     var showAmanahAnnouncement by remember { mutableStateOf(false) }
     var openDirayahDirectly by remember { mutableStateOf(false) }
@@ -251,7 +252,7 @@ fun MainScreen(
             startDestination = Screen.Home.route,
             modifier = Modifier
                 .fillMaxSize()
-                .edgeMotionBlur(state = motionBlur, enabled = !isImmersive),
+                .edgeMotionBlur(state = motionBlur, enabled = !isImmersive && motionBlurEnabled),
             enterTransition = {
                 fadeIn(animationSpec = tween(260, easing = TabMotionEasing)) +
                     scaleIn(

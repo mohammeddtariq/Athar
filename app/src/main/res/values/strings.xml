@@ -123,6 +123,11 @@
     <string name="settings_theme_sub">Pick the colour Athar is painted in. It spreads through the whole app straight away.</string>
     <string name="settings_background">Backdrop</string>
     <string name="settings_background_sub">The atmosphere behind every screen.</string>
+    <string name="settings_app_icon">App icon</string>
+    <string name="settings_app_icon_sub">Pick the colour of Athar on your home screen. The mark and lettering stay the same.</string>
+    <string name="settings_motion">Motion</string>
+    <string name="settings_motion_blur">Motion blur</string>
+    <string name="settings_motion_blur_sub">Softens content as it slides beneath the edges. Turn it off on slower devices.</string>
     <string name="settings_language">Language</string>
     <string name="settings_number_format">Number format</string>
     <string name="number_format_western">1 2 3 (Western)</string>

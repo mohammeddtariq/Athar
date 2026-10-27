@@ -16,7 +16,9 @@ data class Dua(
     val source: String,
     val repeat: Int = 1,
     val noteAr: String? = null,
-    val noteEn: String? = null
+    val noteEn: String? = null,
+    /** Arabic wording of [translation], used when the app is in Arabic. */
+    val translationAr: String? = null
 )
 
 data class DuaCategory(
@@ -25,6 +27,10 @@ data class DuaCategory(
     val titleEn: String,
     val duas: List<Dua>
 )
+
+/** The translation that matches the app language, falling back to English. */
+fun Dua.translationFor(isArabic: Boolean): String =
+    if (isArabic) translationAr ?: translation else translation
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AFTER PRAYER SUB-COLLECTIONS (Fajr, Maghrib, Other Prayers)
@@ -101,7 +107,8 @@ val afterPrayerOtherDuas: List<Dua> = listOf(
         source = "أبو داود والترمذي والنسائي / Abu Dawud & Tirmidhi",
         repeat = 1,
         noteAr = "تقرأ مرة واحدة بعد الصلوات الأخرى (الظهر، العصر، العشاء)",
-        noteEn = "Recited once after Dhuhr, Asr, and Isha prayers."
+        noteEn = "Recited once after Dhuhr, Asr, and Isha prayers.",
+        translationAr = "سورة الإخلاص (القرآن ١١٢)."
     ),
     Dua(
         id = "after_other_9",
@@ -110,7 +117,8 @@ val afterPrayerOtherDuas: List<Dua> = listOf(
         source = "أبو داود والترمذي والنسائي / Abu Dawud & Tirmidhi",
         repeat = 1,
         noteAr = "تقرأ مرة واحدة بعد الصلوات الأخرى (الظهر، العصر، العشاء)",
-        noteEn = "Recited once after Dhuhr, Asr, and Isha prayers."
+        noteEn = "Recited once after Dhuhr, Asr, and Isha prayers.",
+        translationAr = "سورة الفلق (القرآن ١١٣)."
     ),
     Dua(
         id = "after_other_10",
@@ -119,7 +127,8 @@ val afterPrayerOtherDuas: List<Dua> = listOf(
         source = "أبو داود والترمذي والنسائي / Abu Dawud & Tirmidhi",
         repeat = 1,
         noteAr = "تقرأ مرة واحدة بعد الصلوات الأخرى (الظهر، العصر، العشاء)",
-        noteEn = "Recited once after Dhuhr, Asr, and Isha prayers."
+        noteEn = "Recited once after Dhuhr, Asr, and Isha prayers.",
+        translationAr = "سورة الناس (القرآن ١١٤)."
     ),
     Dua(
         id = "after_other_11",
@@ -128,7 +137,8 @@ val afterPrayerOtherDuas: List<Dua> = listOf(
         source = "سنن النسائي / An-Nasa'i",
         repeat = 1,
         noteAr = "من قرأ آية الكرسي دبر كل صلاة مكتوبة لم يمنعه من دخول الجنة إلا أن يموت",
-        noteEn = "Whoever recites Ayat al-Kursi after every obligatory prayer, nothing stands between him and Paradise except death."
+        noteEn = "Whoever recites Ayat al-Kursi after every obligatory prayer, nothing stands between him and Paradise except death.",
+        translationAr = "آية الكرسي (القرآن ٢:٢٥٥)."
     ),
     Dua(
         id = "after_other_12",
@@ -257,7 +267,8 @@ val morningAdhkarList: List<Dua> = listOf(
         arabic = "أَعُوذُ بِاللهِ مِنْ الشَّيْطَانِ الرَّجِيمِ\nاللهُ لاَ إِلَـهَ إِلاَّ هُوَ الْحَيُّ الْقَيُّومُ لاَ تَأْخُذُهُ سِنَةٌ وَلاَ نَوْمٌ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الأَرْضِ مَن ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلاَّ بِإِذْنِهِ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ وَلاَ يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلاَّ بِمَا شَاء وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالأَرْضَ وَلاَ يَؤُودُهُ حِفْظُهُمَا وَهُوَ الْعَلِيُّ الْعَظِيمُ",
         translation = "Ayat al-Kursi (Quran 2:255). Allah - there is no deity except Him, the Ever-Living, the Sustainer of all existence...",
         source = "آية الكرسي - البقرة 255 / Quran 2:255",
-        repeat = 1
+        repeat = 1,
+        translationAr = "آية الكرسي (القرآن ٢:٢٥٥)."
     ),
     // 2/31
     Dua(
@@ -265,7 +276,8 @@ val morningAdhkarList: List<Dua> = listOf(
         arabic = "بِسْمِ اللهِ الرَّحْمنِ الرَّحِيم\nقُلْ هُوَ اللَّهُ أَحَدٌ ۞ اللَّهُ الصَّمَدُ ۞ لَمْ يَلِدْ وَلَمْ يُولَدْ ۞ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ",
         translation = "Surah Al-Ikhlas (Quran 112). Say, 'He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, Nor is there to Him any equivalent.'",
         source = "سورة الإخلاص / Quran 112",
-        repeat = 3
+        repeat = 3,
+        translationAr = "سورة الإخلاص (القرآن ١١٢)، تُقرأ ثلاث مرات."
     ),
     // 3/31
     Dua(
@@ -273,7 +285,8 @@ val morningAdhkarList: List<Dua> = listOf(
         arabic = "بِسْمِ اللهِ الرَّحْمنِ الرَّحِيم\nقُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ۞ مِن شَرِّ مَا خَلَقَ ۞ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ۞ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ۞ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
         translation = "Surah Al-Falaq (Quran 113). Say, 'I seek refuge in the Lord of daybreak From the evil of that which He created...'",
         source = "سورة الفلق / Quran 113",
-        repeat = 3
+        repeat = 3,
+        translationAr = "سورة الفلق (القرآن ١١٣)، تُقرأ ثلاث مرات."
     ),
     // 4/31
     Dua(
@@ -281,7 +294,8 @@ val morningAdhkarList: List<Dua> = listOf(
         arabic = "بِسْمِ اللهِ الرَّحْمنِ الرَّحِيم\nقُلْ أَعُوذُ بِرَبِّ النَّاسِ ۞ مَلِكِ النَّاسِ ۞ إِلَهِ النَّاسِ ۞ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ۞ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ۞ مِنَ الْجِنَّةِ وَالنَّاسِ",
         translation = "Surah An-Nas (Quran 114). Say, 'I seek refuge in the Lord of mankind, The Sovereign of mankind, The God of mankind...'",
         source = "سورة الناس / Quran 114",
-        repeat = 3
+        repeat = 3,
+        translationAr = "سورة الناس (القرآن ١١٤)، تُقرأ ثلاث مرات."
     ),
     // 5/31
     Dua(
@@ -512,7 +526,8 @@ val eveningAdhkarList: List<Dua> = listOf(
         arabic = "أَعُوذُ بِاللهِ مِنْ الشَّيْطَانِ الرَّجِيمِ\nاللهُ لاَ إِلَـهَ إِلاَّ هُوَ الْحَيُّ الْقَيُّومُ لاَ تَأْخُذُهُ سِنَةٌ وَلاَ نَوْمٌ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الأَرْضِ مَن ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلاَّ بِإِذْنِهِ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ وَلاَ يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلاَّ بِمَا شَاء وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالأَرْضَ وَلاَ يَؤُودُهُ حِفْظُهُمَا وَهُوَ الْعَلِيُّ الْعَظِيمُ",
         translation = "Ayat al-Kursi (Quran 2:255). Whoever recites it in the evening is protected from the jinn until morning.",
         source = "آية الكرسي - البقرة 255 / Quran 2:255",
-        repeat = 1
+        repeat = 1,
+        translationAr = "آية الكرسي (القرآن ٢:٢٥٥). من قرأها في المساء عُصم من الجن حتى يصبح."
     ),
     // 2/30
     Dua(
@@ -520,7 +535,8 @@ val eveningAdhkarList: List<Dua> = listOf(
         arabic = "آمَنَ الرَّسُولُ بِمَا أُنزِلَ إِلَيْهِ مِن رَّبِّهِ وَالْمُؤْمِنُونَ ۚ كُلٌّ آمَنَ بِاللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ لَا نُفَرِّقُ بَيْنَ أَحَدٍ مِّن رُّسُلِهِ ۚ وَقَالُوا سَمِعْنَا وَأَطَعْنَا ۖ غُفْرَانَكَ رَبَّنَا وَإِلَيْكَ الْمَصِيرُ ۞ لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا اكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ ۖ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا ۚ أَنتَ مَوْلَانَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
         translation = "The last two verses of Surah Al-Baqarah (285-286). Whoever recites them at night, they suffice him against all harm.",
         source = "البقرة ٢٨٥-٢٨٦ / Bukhari & Muslim",
-        repeat = 1
+        repeat = 1,
+        translationAr = "آخر آيتين من سورة البقرة (٢٨٥-٢٨٦). من قرأهما في الليل كفتاه."
     ),
     // 3/30
     Dua(
@@ -528,7 +544,8 @@ val eveningAdhkarList: List<Dua> = listOf(
         arabic = "بِسْمِ اللهِ الرَّحْمنِ الرَّحِيم\nقُلْ هُوَ اللَّهُ أَحَدٌ ۞ اللَّهُ الصَّمَدُ ۞ لَمْ يَلِدْ وَلَمْ يُولَدْ ۞ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ",
         translation = "Surah Al-Ikhlas (Quran 112). Recite three times in the evening.",
         source = "سورة الإخلاص / Quran 112",
-        repeat = 3
+        repeat = 3,
+        translationAr = "سورة الإخلاص (القرآن ١١٢)، تُقرأ ثلاث مرات في المساء."
     ),
     // 4/30
     Dua(
@@ -536,7 +553,8 @@ val eveningAdhkarList: List<Dua> = listOf(
         arabic = "بِسْمِ اللهِ الرَّحْمنِ الرَّحِيم\nقُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ۞ مِن شَرِّ مَا خَلَقَ ۞ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ۞ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ۞ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
         translation = "Surah Al-Falaq (Quran 113). Recite three times in the evening.",
         source = "سورة الفلق / Quran 113",
-        repeat = 3
+        repeat = 3,
+        translationAr = "سورة الفلق (القرآن ١١٣)، تُقرأ ثلاث مرات في المساء."
     ),
     // 5/30
     Dua(
@@ -544,7 +562,8 @@ val eveningAdhkarList: List<Dua> = listOf(
         arabic = "بِسْمِ اللهِ الرَّحْمنِ الرَّحِيم\nقُلْ أَعُوذُ بِرَبِّ النَّاسِ ۞ مَلِكِ النَّاسِ ۞ إِلَهِ النَّاسِ ۞ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ۞ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ۞ مِنَ الْجِنَّةِ وَالنَّاسِ",
         translation = "Surah An-Nas (Quran 114). Recite three times in the evening.",
         source = "سورة الناس / Quran 114",
-        repeat = 3
+        repeat = 3,
+        translationAr = "سورة الناس (القرآن ١١٤)، تُقرأ ثلاث مرات في المساء."
     ),
     // 6/30
     Dua(

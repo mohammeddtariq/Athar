@@ -462,7 +462,7 @@ fun DuasScreen(
                                             ShareCardRenderer.renderDua(
                                                 context = context,
                                                 arabic = dua.arabic,
-                                                translation = dua.translation,
+                                                translation = dua.translationFor(isArabic),
                                                 note = if (isArabic) dua.noteAr else dua.noteEn,
                                                 source = dua.source,
                                                 isArabic = isArabic
@@ -1207,6 +1207,7 @@ private fun DuaItemCard(
 ) {
     val shape = RoundedCornerShape(26.dp)
     val noteText = if (isArabic) dua.noteAr ?: dua.noteEn else dua.noteEn ?: dua.noteAr
+    val translationText = dua.translationFor(isArabic)
 
     Box(
         modifier = Modifier
@@ -1324,9 +1325,9 @@ private fun DuaItemCard(
 
             Spacer(Modifier.height(12.dp))
 
-            LocalizedTextDirection(dua.translation) {
+            LocalizedTextDirection(translationText) {
                 Text(
-                    text = dua.translation,
+                    text = translationText,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.5.sp,

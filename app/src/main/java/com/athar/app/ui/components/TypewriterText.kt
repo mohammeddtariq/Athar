@@ -15,9 +15,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.TextUnit
 import kotlinx.coroutines.delay
 
@@ -64,6 +66,9 @@ fun TypewriterText(
     Text(
         text = text.take(visible) + cursor,
         modifier = modifier,
+        // Let the first strong character decide the paragraph direction, so
+        // the cursor always trails the text instead of the layout direction.
+        style = TextStyle(textDirection = TextDirection.Content),
         fontFamily = fontFamily,
         fontWeight = fontWeight,
         fontSize = fontSize,

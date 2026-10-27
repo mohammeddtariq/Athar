@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.BatteryOptimizationHelper
+import com.athar.app.data.LauncherIconController
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.MainScreen
 import com.athar.app.ui.components.AppUpdateDialog
@@ -25,6 +26,7 @@ import com.athar.app.ui.onboarding.OnboardingFlow
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackgroundState
 import com.athar.app.ui.theme.AtharBackgroundStyle
+import com.athar.app.ui.theme.AtharIconStyle
 import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.ui.theme.AtharThemeId
 import com.athar.app.ui.theme.AtharThemeState
@@ -111,6 +113,15 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = initialAccent)
             val backgroundStyle by appPreferences.backgroundStyle
                 .collectAsState(initial = initialBackdrop)
+            val iconStyleChoice by appPreferences.appIconStyle
+                .collectAsState(initial = null)
+
+            // Keep the launcher entry in the same palette as the app. Until the
+            // user picks an icon colour, it follows the current theme.
+            LaunchedEffect(themeId, iconStyleChoice) {
+                val iconStyle = iconStyleChoice ?: AtharIconStyle.forTheme(themeId)
+                LauncherIconController.apply(this@MainActivity, iconStyle)
+            }
 
             LaunchedEffect(backgroundStyle) {
                 if (AtharBackgroundState.current != backgroundStyle) {

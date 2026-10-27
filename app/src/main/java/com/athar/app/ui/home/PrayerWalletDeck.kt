@@ -394,6 +394,14 @@ private fun PrayerCardFront(
             color = AtharPrimaryLight
         )
 
+        if (isFocused) {
+            FlipHint(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 20.dp, bottom = 14.dp)
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -425,19 +433,13 @@ private fun PrayerCardFront(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = formatDigits(row.time.format(deckTimeFmt), numberStyle),
-                        color = if (row.isNext) AtharPrimaryLight else AtharTextPrimary,
-                        fontFamily = ThmanyahSerifDisplay,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 30.sp
-                    )
-                    if (isFocused) {
-                        Spacer(Modifier.size(8.dp))
-                        FlipHint()
-                    }
-                }
+                Text(
+                    text = formatDigits(row.time.format(deckTimeFmt), numberStyle),
+                    color = if (row.isNext) AtharPrimaryLight else AtharTextPrimary,
+                    fontFamily = ThmanyahSerifDisplay,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 30.sp
+                )
             }
 
             Spacer(Modifier.weight(1f))
@@ -459,7 +461,8 @@ private fun PrayerCardFront(
                 lineHeight = 18.sp,
                 textAlign = TextAlign.Start,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = if (isFocused) 20.dp else 0.dp)
             )
         }
     }
@@ -529,7 +532,7 @@ private fun PrayerCardBack() {
 
 /** Invites the sideways turn, with a slow swing rather than a static glyph. */
 @Composable
-private fun FlipHint() {
+private fun FlipHint(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "flipHint")
     val swing by transition.animateFloat(
         initialValue = -22f,
@@ -545,7 +548,7 @@ private fun FlipHint() {
         imageVector = Icons.Rounded.RotateRight,
         contentDescription = null,
         tint = AtharPrimaryLight.copy(alpha = 0.8f),
-        modifier = Modifier
+        modifier = modifier
             .size(17.dp)
             .graphicsLayer { rotationZ = swing }
     )

@@ -97,6 +97,7 @@ import com.athar.app.R
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.CalcMethod
 import com.athar.app.data.HijriDateHelper
+import com.athar.app.data.LauncherIconController
 import com.athar.app.data.LocationHelper
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.WidgetBgStyle
@@ -112,6 +113,7 @@ import com.athar.app.ui.components.HanafiAsrSetting
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.data.presetCities
 import com.athar.app.ui.components.AtharBackgroundPicker
+import com.athar.app.ui.components.AtharIconPicker
 import com.athar.app.ui.components.AtharThemePicker
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackground
@@ -126,6 +128,7 @@ import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharBackgroundState
 import com.athar.app.ui.theme.AtharBackgroundStyle
+import com.athar.app.ui.theme.AtharIconStyle
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.AtharThemeId
 import com.athar.app.ui.theme.AtharThemeState
@@ -227,13 +230,13 @@ fun SettingsScreen(
 
     LaunchedEffect(targetSection) {
         if (targetSection == "notifications") {
-            listState.animateScrollToItem(7)
+            listState.animateScrollToItem(8)
             isNotifHighlighted = true
             onTargetSectionConsumed()
             delay(2000)
             isNotifHighlighted = false
         } else if (targetSection == "widgets") {
-            listState.animateScrollToItem(8)
+            listState.animateScrollToItem(9)
             isWidgetHighlighted = true
             onTargetSectionConsumed()
             delay(2000)
@@ -245,6 +248,9 @@ fun SettingsScreen(
     val themeId by prefs.themeId.collectAsState(initial = AtharThemeId.default)
     val accentTone by prefs.accentTone.collectAsState(initial = AtharAccentTone.GOLD)
     val backgroundStyle by prefs.backgroundStyle.collectAsState(initial = AtharBackgroundStyle.default)
+    val iconStyleChoice by prefs.appIconStyle.collectAsState(initial = null)
+    val effectiveIconStyle = iconStyleChoice ?: AtharIconStyle.forTheme(themeId)
+    val motionBlurEnabled by prefs.motionBlurEnabled.collectAsState(initial = true)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val city by prefs.cityLabel.collectAsState(initial = null)
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
@@ -407,6 +413,74 @@ fun SettingsScreen(
                             scope.launch { prefs.setBackgroundStyle(picked) }
                         }
                     )
+
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        stringResource(R.string.settings_app_icon),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.settings_app_icon_sub),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    AtharIconPicker(
+                        selected = effectiveIconStyle,
+                        isArabic = language == "ar",
+                        onPick = { picked ->
+                            scope.launch {
+                                prefs.setAppIconStyle(picked)
+                                LauncherIconController.apply(context.applicationContext, picked)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // ── Motion ──
+            item {
+                SectionCard(title = stringResource(R.string.settings_motion)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.settings_motion_blur),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                stringResource(R.string.settings_motion_blur_sub),
+                                fontFamily = ThmanyahSans,
+                                fontSize = 11.5.sp,
+                                color = AtharTextSecondary
+                            )
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Switch(
+                            checked = motionBlurEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch { prefs.setMotionBlurEnabled(enabled) }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AtharTextOnPrimary,
+                                checkedTrackColor = AtharPrimary,
+                                uncheckedThumbColor = AtharTextSecondary,
+                                uncheckedTrackColor = AtharCardBorder
+                            )
+                        )
+                    }
                 }
             }
 

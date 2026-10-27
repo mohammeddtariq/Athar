@@ -31,7 +31,8 @@ import kotlin.math.sin
  * The app-wide backdrop.
  *
  * Draws whichever [AtharBackgroundStyle] is currently selected — either the
- * geometric star lattice or the Arabic letter weave. Both styles share the
+ * geometric star lattice or the Arabic letter weave. Both styles are alive:
+ * the lattice drifts and shimmers while the weave scrolls. They share the
  * same hairline ink and diagonal fade so content on top always stays readable,
  * and every surface in the app (screens, dialog scrims, the last-read card)
  * goes through here, so one switch repaints all of them.
@@ -52,16 +53,6 @@ fun IslamicPatternBackground(
     val density = LocalDensity.current
     val cellPx = with(density) { cellDp.dp.toPx() }
     val typeface = rememberHurufTypeface()
-
-    // The letter weave always breathes; the lattice only moves when asked.
-    val moving = animated || style == AtharBackgroundStyle.LETTERS
-
-    if (!moving) {
-        Canvas(modifier = modifier.fillMaxSize()) {
-            drawBackdrop(style, tint, alpha, cellPx, 0f, typeface)
-        }
-        return
-    }
 
     val transition = rememberInfiniteTransition(label = "patternDrift")
     val phase by transition.animateFloat(
@@ -114,10 +105,11 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
     val h = size.height
     val cols = (w / cellPx).toInt() + 3
     val rows = (h / cellPx).toInt() + 3
+    val radians = phase * Math.PI.toFloat() / 180f
 
-    // Very subtle drift
-    val driftX = (phase / 360f) * cellPx * 0.15f
-    val driftY = (phase / 360f) * cellPx * 0.10f
+    // The whole lattice breathes along a slow figure so the loop never seams.
+    val driftX = sin(radians) * cellPx * 0.22f
+    val driftY = cos(radians) * cellPx * 0.16f
 
     for (r in -1..rows) {
         for (c in -1..cols) {
@@ -127,15 +119,17 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
             // Calculate gradient falloff: dense on top-right (x -> w, y -> 0), fading towards bottom-left
             // Normalized position along the diagonal (from top-right = 1.0 to bottom-left = 0.0)
             val diagonalFactor = ((cx / w) * 0.7f + (1f - (cy / h)) * 0.3f).coerceIn(0f, 1f)
-            // Smooth curve falloff
-            val localAlpha = baseAlpha * (diagonalFactor * diagonalFactor * 1.2f).coerceIn(0.01f, 1f)
+            // Smooth curve falloff plus a slow shimmer so the stars catch light.
+            val shimmer = 0.82f + 0.18f * sin(radians * 1.4f + r * 0.9f + c * 1.3f)
+            val localAlpha = baseAlpha * (diagonalFactor * diagonalFactor * 1.2f * shimmer).coerceIn(0.01f, 1f)
 
             if (localAlpha > 0.005f) {
                 val strokeColor = tint.copy(alpha = localAlpha)
                 val highlightColor = tint.copy(alpha = localAlpha * 0.45f)
+                val starRadius = cellPx * 0.38f * (1f + 0.045f * sin(radians + r + c))
 
                 // 1. Central 8-pointed star rosette
-                drawEightPointedStar(Offset(cx, cy), cellPx * 0.38f, strokeColor, highlightColor)
+                drawEightPointedStar(Offset(cx, cy), starRadius, strokeColor, highlightColor)
 
                 // 2. Interlocking diagonal strapwork ribbons connecting nodes
                 drawInterlockingRibbons(Offset(cx, cy), cellPx, strokeColor)

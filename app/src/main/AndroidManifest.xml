@@ -30,13 +30,68 @@
             android:exported="true"
             android:configChanges="locale|layoutDirection"
             android:label="${appName}"
-            android:theme="@style/Theme.Atharأَثَر">
+            android:theme="@style/Theme.Atharأَثَر" />
+
+        <!-- Launcher entries, one per icon colourway. Only one stays enabled. -->
+        <activity-alias
+            android:name=".MainActivityOlive"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_olive"
+            android:label="${appName}"
+            android:roundIcon="@mipmap/ic_launcher_olive"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityBurgundy"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_burgundy"
+            android:label="${appName}"
+            android:roundIcon="@mipmap/ic_launcher_burgundy"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityBrown"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_brown"
+            android:label="${appName}"
+            android:roundIcon="@mipmap/ic_launcher_brown"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityAmoled"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_amoled"
+            android:label="${appName}"
+            android:roundIcon="@mipmap/ic_launcher_amoled"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <receiver
             android:name=".notifications.PrayerAlarmReceiver"

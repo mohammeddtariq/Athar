@@ -7,4 +7,10 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Launcher icon plates, one per theme. -->
+    <color name="ic_launcher_plate_olive">#FF0A0C08</color>
+    <color name="ic_launcher_plate_burgundy">#FF090406</color>
+    <color name="ic_launcher_plate_brown">#FF0B0805</color>
+    <color name="ic_launcher_plate_amoled">#FF000000</color>
 </resources>

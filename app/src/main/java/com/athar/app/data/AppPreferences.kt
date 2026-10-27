@@ -4,6 +4,7 @@ import android.content.Context
 import com.athar.app.BuildConfig
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackgroundStyle
+import com.athar.app.ui.theme.AtharIconStyle
 import com.athar.app.ui.theme.AtharThemeId
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -61,6 +62,8 @@ class AppPreferences(private val context: Context) {
         private val THEME_ID_KEY = stringPreferencesKey("theme_id")
         private val ACCENT_TONE_KEY = stringPreferencesKey("accent_tone")
         private val BACKGROUND_STYLE_KEY = stringPreferencesKey("background_style")
+        private val APP_ICON_STYLE_KEY = stringPreferencesKey("app_icon_style")
+        private val MOTION_BLUR_ENABLED_KEY = booleanPreferencesKey("motion_blur_enabled")
 
         // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
@@ -190,6 +193,16 @@ class AppPreferences(private val context: Context) {
     /** Selected backdrop pattern. */
     val backgroundStyle: Flow<AtharBackgroundStyle> = context.dataStore.data.map {
         AtharBackgroundStyle.fromId(it[BACKGROUND_STYLE_KEY])
+    }
+
+    /** Chosen launcher icon colour, or null while it still follows the theme. */
+    val appIconStyle: Flow<AtharIconStyle?> = context.dataStore.data.map { prefs ->
+        prefs[APP_ICON_STYLE_KEY]?.let { AtharIconStyle.fromId(it) }
+    }
+
+    /** Edge motion blur while scrolling. On by default; can be turned off on slow devices. */
+    val motionBlurEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[MOTION_BLUR_ENABLED_KEY] ?: true
     }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
@@ -547,6 +560,14 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setBackgroundStyle(style: AtharBackgroundStyle) {
         context.dataStore.edit { it[BACKGROUND_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setAppIconStyle(style: AtharIconStyle) {
+        context.dataStore.edit { it[APP_ICON_STYLE_KEY] = style.id }
+    }
+
+    suspend fun setMotionBlurEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[MOTION_BLUR_ENABLED_KEY] = enabled }
     }
 
     suspend fun saveLastReadPosition(

@@ -333,7 +333,7 @@ private fun GreetingStep(
     onNext: () -> Unit,
     onSkip: () -> Unit
 ) {
-    val tagline = if (language == "ar") "رفيقك المسلم" else "\u2066Your Muslim companion app\u2069"
+    val tagline = if (language == "ar") "رفيقك المسلم" else "Your Muslim companion app"
 
     Column(
         modifier = Modifier
