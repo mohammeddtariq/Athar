@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,9 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.ui.theme.AtharCardBorder
@@ -43,11 +46,11 @@ import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.AtharIconStyle
 import com.athar.app.ui.theme.ThmanyahSans
-import com.athar.app.ui.theme.ThmanyahSerifDisplay
 
 /**
- * Launcher icon colour picker. Every swatch previews the plate and ink of the
- * matching theme, so the choice on the home screen is never a surprise.
+ * Launcher icon colour picker. Every swatch shows the real recoloured stock
+ * artwork on its matching plate, so the choice on the home screen is never a
+ * surprise.
  */
 @Composable
 fun AtharIconPicker(
@@ -126,26 +129,12 @@ private fun IconSwatch(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "أثر",
-                    fontFamily = ThmanyahSerifDisplay,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 17.sp,
-                    color = style.ink,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(1.dp))
-                Text(
-                    text = "ATHAR",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 4.5.sp,
-                    letterSpacing = 1.1.sp,
-                    color = style.ink.copy(alpha = 0.72f),
-                    textAlign = TextAlign.Center
-                )
-            }
+            Image(
+                painter = painterResource(style.foregroundRes),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
 
             if (isSelected) {
                 Box(

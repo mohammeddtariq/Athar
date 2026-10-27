@@ -162,7 +162,8 @@ private fun BackgroundChoiceCard(
                     tint = AtharPrimaryLight,
                     baseAlpha = 0.28f,
                     phase = 0f,
-                    typeface = typeface
+                    typeface = typeface,
+                    cellPx = previewCellPx
                 )
 
                 AtharBackgroundStyle.SOLID -> drawSolidPreview()

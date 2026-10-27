@@ -55,27 +55,47 @@ fun IslamicPatternBackground(
     val typeface = rememberHurufTypeface()
 
     val transition = rememberInfiniteTransition(label = "patternDrift")
-    val phase by transition.animateFloat(
+
+    // The lattice runs on its own, much quicker clock so the stars visibly
+    // travel; the letter wall keeps a slower, calmer crawl.
+    val latticePhase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(60000, easing = LinearEasing),
+            animation = tween(4800, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "patternPhase"
+        label = "patternLatticePhase"
+    )
+    val letterPhase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(52000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "patternLetterPhase"
     )
     val breathe by transition.animateFloat(
         initialValue = 0.85f,
         targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
+            animation = tween(4600, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "patternBreathe"
     )
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        drawBackdrop(style, tint, alpha * breathe, cellPx, phase, typeface)
+        drawBackdrop(
+            style = style,
+            tint = tint,
+            alpha = alpha * breathe,
+            cellPx = cellPx,
+            letterPhase = letterPhase,
+            latticePhase = latticePhase,
+            typeface = typeface
+        )
     }
 }
 
@@ -85,13 +105,15 @@ private fun DrawScope.drawBackdrop(
     tint: Color,
     alpha: Float,
     cellPx: Float,
-    phase: Float,
+    letterPhase: Float,
+    latticePhase: Float,
     typeface: android.graphics.Typeface?
 ) {
     when (style) {
-        AtharBackgroundStyle.ISLAMIC -> drawArabesqueLattice(tint, alpha, cellPx, phase)
+        AtharBackgroundStyle.ISLAMIC ->
+            drawArabesqueLattice(tint, alpha, cellPx, latticePhase)
         AtharBackgroundStyle.LETTERS ->
-            drawHurufWeave(tint, alpha, phase, typeface)
+            drawHurufWeave(tint, alpha, letterPhase, typeface, cellPx)
         AtharBackgroundStyle.SOLID -> Unit
     }
 }
@@ -107,9 +129,10 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
     val rows = (h / cellPx).toInt() + 3
     val radians = phase * Math.PI.toFloat() / 180f
 
-    // The whole lattice breathes along a slow figure so the loop never seams.
-    val driftX = sin(radians) * cellPx * 0.22f
-    val driftY = cos(radians) * cellPx * 0.16f
+    // A wide, quick figure-eight: the whole lattice travels most of a cell
+    // every cycle instead of hanging almost still.
+    val driftX = sin(radians) * cellPx * 0.62f
+    val driftY = cos(radians * 2f) * cellPx * 0.36f
 
     for (r in -1..rows) {
         for (c in -1..cols) {
@@ -119,14 +142,14 @@ internal fun DrawScope.drawArabesqueLattice(tint: Color, baseAlpha: Float, cellP
             // Calculate gradient falloff: dense on top-right (x -> w, y -> 0), fading towards bottom-left
             // Normalized position along the diagonal (from top-right = 1.0 to bottom-left = 0.0)
             val diagonalFactor = ((cx / w) * 0.7f + (1f - (cy / h)) * 0.3f).coerceIn(0f, 1f)
-            // Smooth curve falloff plus a slow shimmer so the stars catch light.
-            val shimmer = 0.82f + 0.18f * sin(radians * 1.4f + r * 0.9f + c * 1.3f)
+            // Smooth curve falloff plus a lively shimmer so the stars catch light.
+            val shimmer = 0.72f + 0.28f * sin(radians * 3f + r * 0.9f + c * 1.3f)
             val localAlpha = baseAlpha * (diagonalFactor * diagonalFactor * 1.2f * shimmer).coerceIn(0.01f, 1f)
 
             if (localAlpha > 0.005f) {
                 val strokeColor = tint.copy(alpha = localAlpha)
                 val highlightColor = tint.copy(alpha = localAlpha * 0.45f)
-                val starRadius = cellPx * 0.38f * (1f + 0.045f * sin(radians + r + c))
+                val starRadius = cellPx * 0.38f * (1f + 0.10f * sin(radians * 2f + r + c))
 
                 // 1. Central 8-pointed star rosette
                 drawEightPointedStar(Offset(cx, cy), starRadius, strokeColor, highlightColor)

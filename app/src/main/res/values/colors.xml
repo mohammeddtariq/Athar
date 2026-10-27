@@ -9,8 +9,8 @@
     <color name="white">#FFFFFFFF</color>
 
     <!-- Launcher icon plates, one per theme. -->
-    <color name="ic_launcher_plate_olive">#FF0A0C08</color>
-    <color name="ic_launcher_plate_burgundy">#FF090406</color>
-    <color name="ic_launcher_plate_brown">#FF0B0805</color>
-    <color name="ic_launcher_plate_amoled">#FF000000</color>
+    <color name="ic_launcher_plate_olive">#FF2A3322</color>
+    <color name="ic_launcher_plate_burgundy">#FF2B0912</color>
+    <color name="ic_launcher_plate_brown">#FF2A2015</color>
+    <color name="ic_launcher_plate_amoled">#FF101010</color>
 </resources>

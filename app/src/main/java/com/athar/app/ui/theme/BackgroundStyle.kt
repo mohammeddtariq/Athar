@@ -20,11 +20,11 @@ enum class AtharBackgroundStyle(
     /** Interlocking eight-point star rosettes with strapwork ribbons. */
     ISLAMIC(
         id = "ISLAMIC",
-        nameAr = "كوكبة أثر",
-        nameEn = "Athar constellation"
+        nameAr = "بريق أثر",
+        nameEn = "Athar glimmer"
     ),
 
-    /** A screen-filling field of connected Naskh words in slow drift. */
+    /** A screen-filling wall of isolated Naskh letterforms in slow drift. */
     LETTERS(
         id = "LETTERS",
         nameAr = "نسيج الحروف",

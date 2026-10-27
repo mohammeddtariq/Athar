@@ -56,11 +56,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -395,10 +397,18 @@ private fun PrayerCardFront(
         )
 
         if (isFocused) {
+            // Keep the hint on the physical bottom-left of the card in every
+            // language. In RTL, BottomStart/start padding would mirror it to
+            // the right, so swap to the end side to land on the left again.
+            val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
             FlipHint(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 20.dp, bottom = 14.dp)
+                    .align(if (isRtl) Alignment.BottomEnd else Alignment.BottomStart)
+                    .padding(
+                        start = if (isRtl) 0.dp else 20.dp,
+                        end = if (isRtl) 20.dp else 0.dp,
+                        bottom = 14.dp
+                    )
             )
         }
 

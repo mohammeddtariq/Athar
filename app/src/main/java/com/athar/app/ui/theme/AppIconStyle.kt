@@ -1,6 +1,7 @@
 package com.athar.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import com.athar.app.R
 
 /**
  * Launcher icon colourways. Each one mirrors a theme so the icon on the home
@@ -21,13 +22,22 @@ enum class AtharIconStyle(
     BROWN("BROWN", AtharThemeId.BROWN, "MainActivityBrown", "بُنّي", "Brown"),
     AMOLED("AMOLED", AtharThemeId.AMOLED, "MainActivityAmoled", "أسود نقي", "AMOLED");
 
-    /** Ink colour of the icon plate, matching the theme's background. */
+    /** Colour of the icon plate — the dock tone, so each colourway is legible. */
     val plate: Color
-        get() = theme.paletteFor(AtharAccentTone.GOLD).background
+        get() = theme.paletteFor(AtharAccentTone.GOLD).navbarBg
 
     /** Colour of the calligraphic mark and wordmark on the icon. */
     val ink: Color
         get() = theme.paletteFor(AtharAccentTone.GOLD).primaryLight
+
+    /** The stock foreground artwork recoloured for this colourway. */
+    val foregroundRes: Int
+        get() = when (this) {
+            OLIVE -> R.drawable.ic_launcher_foreground_olive
+            BURGUNDY -> R.drawable.ic_launcher_foreground_burgundy
+            BROWN -> R.drawable.ic_launcher_foreground_brown
+            AMOLED -> R.drawable.ic_launcher_foreground_amoled
+        }
 
     companion object {
         fun fromId(id: String?): AtharIconStyle? =
