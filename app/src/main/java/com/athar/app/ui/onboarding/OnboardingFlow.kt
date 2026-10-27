@@ -5,9 +5,19 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,8 +47,6 @@ import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,9 +77,7 @@ import com.athar.app.data.LocationHelper
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.components.HanafiAsrSetting
-import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.TypewriterText
-import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
@@ -100,6 +106,7 @@ fun OnboardingFlow(
     val prefs = remember { AppPreferences(context.applicationContext) }
 
     var step by remember { mutableStateOf(0) }
+    var stepForward by remember { mutableStateOf(true) }
     var language by remember { mutableStateOf<String?>(null) }
     var notifGranted by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf<PresetCity?>(null) }
@@ -155,12 +162,14 @@ fun OnboardingFlow(
         }
     }
 
+    /** Moves between steps, remembering the direction for the transition. */
+    fun goTo(target: Int) {
+        stepForward = target >= step
+        step = target
+    }
+
     fun advanceFromNotifications() {
-        if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
-            step = 3
-        } else {
-            step = 2
-        }
+        goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 3 else 2)
     }
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
@@ -183,89 +192,110 @@ fun OnboardingFlow(
         }
     }
 
-    // Solid dark base with the Islamic lattice — the system theme can't wash it out.
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AtharBackground)
-    ) {
-        IslamicPatternBackground(
+    AuroraSetupBackdrop {
+        AnimatedContent(
+            targetState = step,
             modifier = Modifier.fillMaxSize(),
-            alpha = 0.07f,
-            animated = false
-        )
-
-        when (step) {
-            0 -> GreetingStep(
-                language = language,
-                onPickLanguage = { language = it },
-                onNext = { if (language != null) step = 1 },
-                onSkip = { finish(skipLocation = true) }
-            )
-            1 -> NotificationStep(
-                language = language,
-                onAllow = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val granted = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (granted) {
+            transitionSpec = {
+                val incoming = fadeIn(tween(420, easing = FastOutSlowInEasing)) +
+                    slideInHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) { width -> if (stepForward) width / 5 else -width / 5 } +
+                    scaleIn(initialScale = 0.95f)
+                val outgoing = fadeOut(tween(260, easing = FastOutSlowInEasing)) +
+                    slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { width ->
+                        if (stepForward) -width / 9 else width / 9
+                    } +
+                    scaleOut(targetScale = 0.98f)
+                incoming togetherWith outgoing
+            },
+            label = "setupStep"
+        ) { currentStep ->
+            when (currentStep) {
+                0 -> GreetingStep(
+                    language = language,
+                    onPickLanguage = { language = it },
+                    onNext = { if (language != null) goTo(1) },
+                    onSkip = { finish(skipLocation = true) }
+                )
+                1 -> NotificationStep(
+                    language = language,
+                    onAllow = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val granted = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (granted) {
+                                notifGranted = true
+                                advanceFromNotifications()
+                            } else {
+                                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        } else {
                             notifGranted = true
                             advanceFromNotifications()
-                        } else {
-                            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
-                    } else {
-                        notifGranted = true
-                        advanceFromNotifications()
-                    }
-                },
-                onLater = { advanceFromNotifications() },
-                onBack = { step = 0 }
-            )
-            2 -> BatteryStep(
-                language = language,
-                onAllow = {
-                    BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
-                    step = 3
-                },
-                onLater = { step = 3 },
-                onBack = { step = 1 }
-            )
-            else -> SetupStep(
-                selectedCity = selectedCity,
-                onPickCity = {
-                    selectedCity = it
-                    gpsLatLng = null
-                    gpsLabel = null
-                },
-                gpsActive = gpsLatLng != null,
-                gpsLocating = gpsLocating,
-                gpsLabel = gpsLabel,
-                language = language,
-                onUseGps = {
-                    if (LocationHelper.hasPermission(context)) {
-                        // Pops the one-tap dialog if providers are off, then takes a fresh fix.
-                        requestEnableLocation()
-                    } else {
-                        locationPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
+                    },
+                    onLater = { advanceFromNotifications() },
+                    onBack = { goTo(0) }
+                )
+                2 -> BatteryStep(
+                    language = language,
+                    onAllow = {
+                        BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                        goTo(3)
+                    },
+                    onLater = { goTo(3) },
+                    onBack = { goTo(1) }
+                )
+                else -> SetupStep(
+                    selectedCity = selectedCity,
+                    onPickCity = {
+                        selectedCity = it
+                        gpsLatLng = null
+                        gpsLabel = null
+                    },
+                    gpsActive = gpsLatLng != null,
+                    gpsLocating = gpsLocating,
+                    gpsLabel = gpsLabel,
+                    language = language,
+                    onUseGps = {
+                        if (LocationHelper.hasPermission(context)) {
+                            // Pops the one-tap dialog if providers are off, then takes a fresh fix.
+                            requestEnableLocation()
+                        } else {
+                            locationPermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
                             )
-                        )
-                    }
-                },
-                method = method,
-                onPickMethod = { method = it },
-                school = school,
-                onPickSchool = { school = it },
-                onBack = {
-                    step = if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 1 else 2
-                },
-                onStart = { finish(skipLocation = false) }
-            )
+                        }
+                    },
+                    method = method,
+                    onPickMethod = { method = it },
+                    school = school,
+                    onPickSchool = { school = it },
+                    onBack = {
+                        goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 1 else 2)
+                    },
+                    onStart = { finish(skipLocation = false) }
+                )
+            }
         }
+
+        SetupStepRail(
+            current = step,
+            total = 4,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 18.dp, start = 28.dp, end = 28.dp)
+                .revealOnEnter(0, baseDelayMillis = 140)
+        )
     }
 }
 
@@ -294,7 +324,8 @@ private fun GreetingStep(
             fontWeight = FontWeight.Medium,
             fontSize = 16.sp,
             color = AtharPrimaryLight,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.revealOnEnter(0)
         )
         Spacer(Modifier.height(26.dp))
         Text(
@@ -304,7 +335,8 @@ private fun GreetingStep(
             fontSize = 24.sp,
             lineHeight = 36.sp,
             color = AtharTextPrimary,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.revealOnEnter(1)
         )
         Spacer(Modifier.height(10.dp))
         Text(
@@ -313,7 +345,8 @@ private fun GreetingStep(
             fontWeight = FontWeight.Medium,
             fontSize = 12.sp,
             color = AtharTextSecondary,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.revealOnEnter(1)
         )
         Spacer(Modifier.height(20.dp))
         Text(
@@ -322,7 +355,10 @@ private fun GreetingStep(
             fontWeight = FontWeight.Black,
             fontSize = 50.sp,
             color = AtharPrimaryLight,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .revealOnEnter(2)
+                .breathingHalo()
         )
         Spacer(Modifier.height(2.dp))
         Text(
@@ -332,7 +368,8 @@ private fun GreetingStep(
             fontSize = 13.sp,
             color = AtharTextSecondary,
             letterSpacing = 6.sp,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.revealOnEnter(2)
         )
         Spacer(Modifier.height(14.dp))
         // Streaming bio — replays when the language changes.
@@ -344,12 +381,15 @@ private fun GreetingStep(
             color = AtharPrimaryLight,
             textAlign = TextAlign.Center,
             modifier = Modifier
+                .revealOnEnter(3)
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
         )
         Spacer(Modifier.height(30.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .revealOnEnter(4),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             LanguageCard(
@@ -369,37 +409,23 @@ private fun GreetingStep(
         }
         Spacer(Modifier.height(28.dp))
         val enabled = language != null
-        val bg by animateColorAsState(
-            targetValue = if (enabled) AtharPrimary else AtharCardBorder,
-            animationSpec = spring(stiffness = Spring.StiffnessLow),
-            label = "nextBg"
-        )
-        Button(
+        SetupPrimaryButton(
+            text = if (language == "ar") "التالي" else "Next",
             onClick = onNext,
             enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(26.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = bg,
-                contentColor = AtharTextOnPrimary,
-                disabledContainerColor = AtharCardBorder,
-                disabledContentColor = AtharTextSecondary.copy(alpha = 0.5f)
-            )
-        ) {
-            Text(
-                text = if (language == "ar") "التالي" else "Next",
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 15.sp
-            )
-        }
+                .revealOnEnter(5),
+            height = 52.dp,
+            shape = RoundedCornerShape(26.dp)
+        )
         if (language != null) {
             Spacer(Modifier.height(8.dp))
             TextButton(
                 onClick = onSkip,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .revealOnEnter(5)
             ) {
                 Text(
                     text = if (language == "ar") "تخطَّ الإعداد وابدأ" else "Skip setup & start",
@@ -439,20 +465,10 @@ private fun NotificationStep(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(88.dp)
-                .background(AtharPrimary.copy(alpha = 0.14f), CircleShape)
-                .border(1.dp, AtharPrimary.copy(alpha = 0.4f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Rounded.NotificationsActive,
-                contentDescription = null,
-                tint = AtharPrimaryLight,
-                modifier = Modifier.size(38.dp)
-            )
-        }
+        IconHalo(
+            icon = Icons.Rounded.NotificationsActive,
+            modifier = Modifier.revealOnEnter(0)
+        )
         Spacer(Modifier.height(24.dp))
         Text(
             text = title,
@@ -460,7 +476,8 @@ private fun NotificationStep(
             fontWeight = FontWeight.Black,
             fontSize = 22.sp,
             color = AtharTextPrimary,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.revealOnEnter(1)
         )
         Spacer(Modifier.height(8.dp))
         Text(
@@ -471,27 +488,20 @@ private fun NotificationStep(
             lineHeight = 20.sp,
             color = AtharTextSecondary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier
+                .revealOnEnter(1)
+                .padding(horizontal = 8.dp)
         )
         Spacer(Modifier.height(32.dp))
-        Button(
+        SetupPrimaryButton(
+            text = allow,
             onClick = onAllow,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(26.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = AtharPrimary,
-                contentColor = AtharTextOnPrimary
-            )
-        ) {
-            Text(
-                text = allow,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 15.sp
-            )
-        }
+                .revealOnEnter(2),
+            height = 52.dp,
+            shape = RoundedCornerShape(26.dp)
+        )
         Spacer(Modifier.height(6.dp))
         TextButton(onClick = onLater) {
             Text(
@@ -539,20 +549,10 @@ private fun BatteryStep(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(88.dp)
-                .background(AtharPrimary.copy(alpha = 0.14f), CircleShape)
-                .border(1.dp, AtharPrimary.copy(alpha = 0.4f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Rounded.BatteryChargingFull,
-                contentDescription = null,
-                tint = AtharPrimaryLight,
-                modifier = Modifier.size(38.dp)
-            )
-        }
+        IconHalo(
+            icon = Icons.Rounded.BatteryChargingFull,
+            modifier = Modifier.revealOnEnter(0)
+        )
         Spacer(Modifier.height(24.dp))
         Text(
             text = title,
@@ -560,7 +560,8 @@ private fun BatteryStep(
             fontWeight = FontWeight.Black,
             fontSize = 22.sp,
             color = AtharTextPrimary,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.revealOnEnter(1)
         )
         Spacer(Modifier.height(8.dp))
         Text(
@@ -571,27 +572,20 @@ private fun BatteryStep(
             lineHeight = 20.sp,
             color = AtharTextSecondary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier
+                .revealOnEnter(1)
+                .padding(horizontal = 8.dp)
         )
         Spacer(Modifier.height(32.dp))
-        Button(
+        SetupPrimaryButton(
+            text = allow,
             onClick = onAllow,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(26.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = AtharPrimary,
-                contentColor = AtharTextOnPrimary
-            )
-        ) {
-            Text(
-                text = allow,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Black,
-                fontSize = 15.sp
-            )
-        }
+                .revealOnEnter(2),
+            height = 52.dp,
+            shape = RoundedCornerShape(26.dp)
+        )
         Spacer(Modifier.height(6.dp))
         TextButton(onClick = onLater) {
             Text(
@@ -754,24 +748,13 @@ private fun SetupStep(
                         color = AtharTextSecondary
                     )
                 }
-                Button(
+                SetupPrimaryButton(
+                    text = bidiBilingual("ابدأ", "Begin"),
                     onClick = onStart,
-                    modifier = Modifier
-                        .weight(2f)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AtharPrimary,
-                        contentColor = AtharTextOnPrimary
-                    )
-                ) {
-                    Text(
-                        text = bidiBilingual("ابدأ", "Begin"),
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp
-                    )
-                }
+                    modifier = Modifier.weight(2f),
+                    height = 52.dp,
+                    shape = RoundedCornerShape(26.dp)
+                )
             }
             Spacer(Modifier.height(40.dp))
         }
