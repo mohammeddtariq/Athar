@@ -61,9 +61,10 @@ fun IslamicPatternBackground(
     tint: Color = AtharBackdropTint,
     alpha: Float = 0.12f,
     animated: Boolean = false,
-    cellDp: Float = 54f
+    cellDp: Float = 54f,
+    styleOverride: AtharBackgroundStyle? = null
 ) {
-    val style = AtharBackgroundState.current
+    val style = styleOverride ?: AtharBackgroundState.current
 
     val density = LocalDensity.current
     val cellPx = with(density) { cellDp.dp.toPx() }

@@ -177,6 +177,9 @@ fun AlDirayahSheet(
     var showSurahPicker by remember { mutableStateOf(startWithSurahIndex) }
     var uiState by remember { mutableStateOf<TafsirUiState>(TafsirUiState.Loading) }
 
+    // The share card awaiting a backdrop and palette, if any.
+    var shareSpec by remember { mutableStateOf<com.athar.app.ui.share.ShareCardSpec?>(null) }
+
     val effectiveArabic = !isEnglishMode
     val sheetLayoutDirection = if (effectiveArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
 
@@ -482,42 +485,33 @@ fun AlDirayahSheet(
                                         if (effectiveArabic) state.tafsir.arabicTafsir else state.tafsir.englishTafsir
                                     val sourceLabel =
                                         if (effectiveArabic) state.tafsir.edition.arabicName else state.tafsir.edition.englishName
-                                    val reference =
-                                        "${state.tafsir.surahNameArabic} · ${state.tafsir.ayahNumber}"
-                                    shareScope.launch {
-                                        val rendered = withContext(Dispatchers.IO) {
-                                            runCatching {
-                                                ShareCardRenderer.renderTafsir(
-                                                    context = context,
-                                                    ayahArabic = state.tafsir.verseTextArabic,
-                                                    reference = reference,
-                                                    tafsir = tafsirText,
-                                                    source = sourceLabel,
-                                                    isArabic = effectiveArabic
-                                                )
-                                            }
-                                        }
-                                        val shared = rendered.getOrNull()?.let { bitmap ->
-                                            ShareCardRenderer.shareBitmap(
-                                                context = context,
-                                                bitmap = bitmap,
-                                                subject = context.getString(R.string.share_tafsir_subject),
-                                                chooserTitle = context.getString(R.string.share_tafsir_subject)
-                                            )
-                                        } ?: false
-                                        if (!shared) {
-                                            Toast.makeText(
-                                                context,
-                                                R.string.share_failed,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
+                                    shareSpec = com.athar.app.ui.share.ShareCardSpec(
+                                        arabic = state.tafsir.verseTextArabic,
+                                        translation = tafsirText.take(1400).let {
+                                            if (tafsirText.length > 1400) "$it…" else it
+                                        },
+                                        note = "${state.tafsir.surahNameArabic} · ${state.tafsir.ayahNumber}",
+                                        source = sourceLabel,
+                                        footerLabel = context.getString(R.string.al_marifah_name),
+                                        subject = context.getString(R.string.share_tafsir_subject),
+                                        chooserTitle = context.getString(R.string.share_tafsir_subject)
+                                    )
                                 }
                             }
                         )
                     }
                 }
+            }
+
+            shareSpec?.let { spec ->
+                com.athar.app.ui.share.ShareCardSheet(
+                    spec = spec,
+                    isArabic = effectiveArabic,
+                    initialTheme = com.athar.app.ui.theme.AtharThemeState.themeId,
+                    initialTone = com.athar.app.ui.theme.AtharThemeState.accentTone,
+                    initialStyle = com.athar.app.ui.theme.AtharBackgroundState.current,
+                    onDismiss = { shareSpec = null }
+                )
             }
         }
     }

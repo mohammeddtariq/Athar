@@ -99,7 +99,10 @@ import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.components.QuranAwareText
-import com.athar.app.ui.share.ShareCardRenderer
+import com.athar.app.ui.share.ShareCardSheet
+import com.athar.app.ui.share.ShareCardSpec
+import com.athar.app.ui.theme.AtharBackgroundState
+import com.athar.app.ui.theme.AtharThemeState
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -231,6 +234,9 @@ fun DuasScreen(
 
     // Congratulate when the tap completes the last remaining dua of the visible collection
     var showCelebration by remember(activeDuas) { mutableStateOf(false) }
+
+    // The dua whose share card is open, if any.
+    var shareTarget by remember { mutableStateOf<Dua?>(null) }
 
     // Scroll state & scroll-aware floating top bar
     val listState = rememberLazyListState()
@@ -457,33 +463,7 @@ fun DuasScreen(
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                             },
-                            onShare = {
-                                scope.launch {
-                                    val rendered = withContext(Dispatchers.IO) {
-                                        runCatching {
-                                            ShareCardRenderer.renderDua(
-                                                context = context,
-                                                arabic = dua.arabic,
-                                                translation = dua.translationFor(isArabic),
-                                                note = if (isArabic) dua.noteAr else dua.noteEn,
-                                                source = dua.source,
-                                                isArabic = isArabic
-                                            )
-                                        }
-                                    }
-                                    val shared = rendered.getOrNull()?.let { bitmap ->
-                                        ShareCardRenderer.shareBitmap(
-                                            context = context,
-                                            bitmap = bitmap,
-                                            subject = shareDuaSubject,
-                                            chooserTitle = shareChooserTitle
-                                        )
-                                    } ?: false
-                                    if (!shared) {
-                                        Toast.makeText(context, R.string.share_failed, Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
+                            onShare = { shareTarget = dua }
                         )
                     }
                 }
@@ -679,6 +659,25 @@ fun DuasScreen(
                     onDismiss = { showCelebration = false }
                 )
             }
+        }
+
+        shareTarget?.let { dua ->
+            ShareCardSheet(
+                spec = ShareCardSpec(
+                    arabic = dua.arabic,
+                    translation = dua.translationFor(isArabic),
+                    note = if (isArabic) dua.noteAr else dua.noteEn,
+                    source = dua.source,
+                    footerLabel = if (isArabic) "دعاء" else "Dua",
+                    subject = shareDuaSubject,
+                    chooserTitle = shareChooserTitle
+                ),
+                isArabic = isArabic,
+                initialTheme = AtharThemeState.themeId,
+                initialTone = AtharThemeState.accentTone,
+                initialStyle = AtharBackgroundState.current,
+                onDismiss = { shareTarget = null }
+            )
         }
     }
 }
