@@ -98,6 +98,7 @@ import com.athar.app.data.search
 import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.components.QuranAwareText
 import com.athar.app.ui.share.ShareCardRenderer
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -1304,14 +1305,10 @@ private fun DuaItemCard(
 
             Spacer(Modifier.height(16.dp))
 
-            Text(
+            // Supplications often quote ayat; those stretches are set in the
+            // mushaf face with their ayah marker, the rest stays prose.
+            QuranAwareText(
                 text = dua.arabic,
-                fontFamily = ThmanyahSerifText,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 21.sp,
-                lineHeight = 40.sp,
-                color = AtharTextPrimary,
-                textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
 
