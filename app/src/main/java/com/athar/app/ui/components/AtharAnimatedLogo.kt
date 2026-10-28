@@ -1,15 +1,20 @@
 package com.athar.app.ui.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,8 +36,17 @@ import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import kotlinx.coroutines.delay
 
 /**
- * Animated app logo alternating smoothly between wide-spaced English ("A T H A R")
- * and calligraphic Arabic ("أَثَـــــر") with full unclipped diacritics.
+ * The wordmark, breathing.
+ *
+ * It alternates between the wide-set English mark and the calligraphic Arabic
+ * one, but the two never slide past each other: the outgoing mark settles back
+ * while the incoming one blooms from just under full size, so the header keeps a
+ * single steady baseline. A very slow opacity bloom underneath keeps the mark
+ * alive while it waits.
+ *
+ * The Arabic string is deliberately written plain — `أَثَر` — matching the mark
+ * used across the app. Stretching it with tatweel distorted the final ر in the
+ * Naskh face, which is why it no longer does.
  */
 @Composable
 fun AtharAnimatedLogo(
@@ -42,68 +57,85 @@ fun AtharAnimatedLogo(
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(3800)
+            delay(4200)
             isArabic = !isArabic
         }
     }
 
+    val bloom by rememberInfiniteTransition(label = "logoBloom").animateFloat(
+        initialValue = 0.88f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "logoBloomAlpha"
+    )
+    val ink by animateColorAsState(
+        targetValue = color,
+        animationSpec = tween(600, easing = FastOutSlowInEasing),
+        label = "logoInk"
+    )
+
     Box(
-        modifier = modifier,
+        modifier = modifier.height(44.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         AnimatedContent(
             targetState = isArabic,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(400, easing = FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)) { -it / 3 })
-                    .togetherWith(
-                        fadeOut(animationSpec = tween(280, easing = FastOutSlowInEasing)) +
-                            slideOutVertically(animationSpec = tween(280, easing = FastOutSlowInEasing)) { it / 3 }
-                    )
+                (
+                    fadeIn(tween(460, easing = FastOutSlowInEasing)) +
+                        scaleIn(
+                            initialScale = 0.93f,
+                            animationSpec = tween(520, easing = FastOutSlowInEasing)
+                        )
+                    ).togetherWith(
+                    fadeOut(tween(300, easing = FastOutSlowInEasing)) +
+                        scaleOut(
+                            targetScale = 1.05f,
+                            animationSpec = tween(360, easing = FastOutSlowInEasing)
+                        )
+                )
             },
             label = "AtharLogoTransition"
         ) { arabic ->
             if (arabic) {
-                AnimatedArabicLogo(color = color)
+                ArabicMark(ink = ink, alpha = bloom)
             } else {
-                AnimatedEnglishLogo(color = color)
+                EnglishMark(ink = ink, alpha = bloom)
             }
         }
     }
 }
 
 @Composable
-private fun AnimatedArabicLogo(
-    modifier: Modifier = Modifier,
-    color: Color = AtharTextPrimary
-) {
+private fun ArabicMark(ink: Color, alpha: Float) {
     Text(
-        text = "أَثَـــــر",
+        text = "أَثَر",
         fontFamily = ThmanyahSerifDisplay,
         fontWeight = FontWeight.Black,
-        fontSize = 32.sp,
-        lineHeight = 44.sp,
-        letterSpacing = 1.sp,
-        color = color,
+        fontSize = 31.sp,
+        lineHeight = 40.sp,
+        color = ink,
         maxLines = 1,
-        modifier = modifier.padding(top = 4.dp, bottom = 2.dp)
+        modifier = Modifier
+            .padding(top = 2.dp)
+            .graphicsLayer { this.alpha = alpha }
     )
 }
 
 @Composable
-private fun AnimatedEnglishLogo(
-    modifier: Modifier = Modifier,
-    color: Color = AtharTextPrimary
-) {
+private fun EnglishMark(ink: Color, alpha: Float) {
     Text(
         text = "A T H A R",
         fontFamily = ThmanyahSans,
         fontWeight = FontWeight.Black,
-        fontSize = 22.sp,
-        lineHeight = 44.sp,
+        fontSize = 20.sp,
+        lineHeight = 40.sp,
         letterSpacing = 4.sp,
-        color = color,
+        color = ink,
         maxLines = 1,
-        modifier = modifier.padding(vertical = 4.dp)
+        modifier = Modifier.graphicsLayer { this.alpha = alpha }
     )
 }
