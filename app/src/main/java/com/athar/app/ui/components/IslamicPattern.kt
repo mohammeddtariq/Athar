@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -64,9 +65,6 @@ fun IslamicPatternBackground(
 ) {
     val style = AtharBackgroundState.current
 
-    // A solid surface needs no ink at all.
-    if (style == AtharBackgroundStyle.SOLID) return
-
     val density = LocalDensity.current
     val cellPx = with(density) { cellDp.dp.toPx() }
     val typeface = rememberHurufTypeface()
@@ -116,7 +114,13 @@ fun IslamicPatternBackground(
         label = "patternBreathe"
     )
 
+    // The canvas is keyed on the style so switching to solid rebuilds the
+    // node instead of retiring one mid-composition. Retiring it used to leave
+    // the previous pattern's tiles behind as pale boxes.
+    key(style) {
     Canvas(modifier = modifier.fillMaxSize()) {
+        if (style == AtharBackgroundStyle.SOLID) return@Canvas
+
         drawBackdrop(
             style = style,
             tint = tint,
@@ -128,6 +132,7 @@ fun IslamicPatternBackground(
             typeface = typeface,
             arcadeCache = arcadeCache
         )
+    }
     }
 }
 
@@ -151,6 +156,8 @@ private fun DrawScope.drawBackdrop(
         AtharBackgroundStyle.SOLID -> Unit
     }
 }
+
+
 
 // ─── Mihrab arcade ─────────────────────────────────────────────
 
