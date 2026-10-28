@@ -190,6 +190,7 @@ import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharNavGlow
 import com.athar.app.ui.theme.AtharNavbarBg
 import com.athar.app.ui.theme.AtharNavbarBorder
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimarySubtle
@@ -4046,7 +4047,7 @@ private fun SurahReader(
                                         Icon(
                                             imageVector = Icons.Rounded.PlayArrow,
                                             contentDescription = null,
-                                            tint = AtharPrimary,
+                                            tint = AtharAccentInk,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Text(
@@ -4054,7 +4055,7 @@ private fun SurahReader(
                                             fontFamily = ThmanyahSans,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 11.5.sp,
-                                            color = AtharPrimary,
+                                            color = AtharAccentInk,
                                             letterSpacing = 0.5.sp
                                         )
                                     }
@@ -4189,7 +4190,7 @@ private fun SurahReader(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(
-                                color = AtharPrimary,
+                                color = AtharAccentInk,
                                 strokeWidth = 3.dp,
                                 modifier = Modifier.size(32.dp)
                             )

@@ -102,6 +102,7 @@ import com.athar.app.ui.share.ShareCardRenderer
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimarySubtle
@@ -711,7 +712,7 @@ private fun HisnAlMuslimHero(
             )
             .border(
                 width = if (isSelected) 1.4.dp else 1.dp,
-                color = AtharPrimary.copy(alpha = accent),
+                color = AtharAccentInk.copy(alpha = accent),
                 shape = shape
             )
             .clickable(

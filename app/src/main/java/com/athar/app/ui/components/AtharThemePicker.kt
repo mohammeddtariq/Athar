@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.ink
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPalette
 import com.athar.app.ui.theme.AtharTextPrimary
@@ -118,7 +119,7 @@ private fun AccentToneRow(
     ) {
         tones.forEach { tone ->
             val isSelected = tone == selected
-            val swatch = if (tone == AtharAccentTone.GOLD) Color(0xFFD9A45C) else Color(0xFFF2E6D8)
+            val swatch = tone.swatch
             val shape = RoundedCornerShape(11.dp)
             Row(
                 modifier = Modifier
@@ -186,7 +187,7 @@ private fun ThemeChoiceCard(
         label = "themeCardScale"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) palette.primary else AtharCardBorder,
+        targetValue = if (isSelected) palette.ink else AtharCardBorder,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "themeCardBorder"
     )
@@ -235,7 +236,7 @@ private fun ThemeChoiceCard(
                 if (progress < 1f) {
                     val radius = size.width * (0.16f + 1.05f * progress)
                     drawCircle(
-                        color = palette.primary.copy(alpha = 0.16f * (1f - progress)),
+                        color = palette.ink.copy(alpha = 0.16f * (1f - progress)),
                         radius = radius,
                         center = Offset(size.width * 0.16f, size.height / 2f)
                     )
@@ -276,7 +277,7 @@ private fun ThemeChoiceCard(
             Spacer(Modifier.size(10.dp))
             SelectionMark(
                 isSelected = isSelected,
-                accent = palette.primary,
+                accent = palette.ink,
                 ink = palette.textOnPrimary
             )
         }
@@ -308,7 +309,7 @@ private fun ThemeSwatch(
             .background(palette.background)
             .border(
                 width = if (isSelected) 1.4.dp else 1.dp,
-                color = if (isSelected) palette.primary.copy(alpha = 0.75f) else palette.cardBorder,
+                color = if (isSelected) palette.ink.copy(alpha = 0.75f) else palette.cardBorder,
                 shape = shape
             )
     ) {
@@ -318,7 +319,7 @@ private fun ThemeSwatch(
 
             // Header line.
             drawRoundRect(
-                color = palette.primary.copy(alpha = 0.9f),
+                color = palette.ink.copy(alpha = 0.9f),
                 topLeft = Offset(w * 0.18f, h * 0.16f),
                 size = Size(w * 0.40f, h * 0.075f),
                 cornerRadius = CornerRadius(3f, 3f)
@@ -331,7 +332,7 @@ private fun ThemeSwatch(
                 cornerRadius = CornerRadius(5f, 5f)
             )
             drawRoundRect(
-                color = palette.primary.copy(alpha = 0.5f),
+                color = palette.ink.copy(alpha = 0.5f),
                 topLeft = Offset(w * 0.20f, h * 0.40f),
                 size = Size(w * 0.34f, h * 0.06f),
                 cornerRadius = CornerRadius(2f, 2f)
@@ -349,7 +350,7 @@ private fun ThemeSwatch(
                 center = Offset(w * 0.35f, h * 0.76f)
             )
             drawCircle(
-                color = palette.primary.copy(alpha = 0.55f),
+                color = palette.ink.copy(alpha = 0.55f),
                 radius = w * 0.05f,
                 center = Offset(w * 0.62f, h * 0.76f)
             )
@@ -379,7 +380,7 @@ private fun SwatchDots(palette: AtharPalette) {
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         listOf(
             palette.background,
-            palette.primary,
+            palette.ink,
             palette.surface
         ).forEach { color ->
             Box(

@@ -55,6 +55,7 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharGradientEnd
 import com.athar.app.ui.theme.AtharGradientStart
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.ThmanyahSans
@@ -238,7 +239,7 @@ private fun FeaturedQuranCard(onClick: () -> Unit) {
                 Icon(
                     Icons.Outlined.AutoStories,
                     contentDescription = null,
-                    tint = AtharPrimary,
+                    tint = AtharAccentInk,
                     modifier = Modifier.size(21.dp)
                 )
             }
@@ -288,7 +289,7 @@ fun ToolListItem(
                     .background(AtharPrimary.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = AtharPrimary, modifier = Modifier.size(19.dp))
+                Icon(icon, contentDescription = null, tint = AtharAccentInk, modifier = Modifier.size(19.dp))
             }
             Spacer(Modifier.width(12.dp))
             Text(

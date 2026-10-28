@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
@@ -371,7 +372,7 @@ fun IconHalo(
 
             listOf(rippleA, rippleB).forEach { progress ->
                 drawCircle(
-                    color = AtharPrimary.copy(alpha = 0.30f * (1f - progress)),
+                    color = AtharAccentInk.copy(alpha = 0.30f * (1f - progress)),
                     radius = maxRadius * (0.62f + 0.38f * progress),
                     center = middle,
                     style = Stroke(width = 1.4.dp.toPx())
@@ -381,7 +382,7 @@ fun IconHalo(
             val ringRadius = maxRadius * 0.88f
             rotate(degrees = spin, pivot = middle) {
                 drawArc(
-                    color = AtharPrimary.copy(alpha = 0.45f),
+                    color = AtharAccentInk.copy(alpha = 0.45f),
                     startAngle = 0f,
                     sweepAngle = 240f,
                     useCenter = false,

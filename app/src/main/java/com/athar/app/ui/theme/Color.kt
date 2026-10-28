@@ -65,23 +65,32 @@ data class AtharPalette(
     val outline: Color,
     val outlineVariant: Color,
     val gradientStart: Color,
-    val gradientEnd: Color
+    val gradientEnd: Color,
+
+    /**
+     * The ink used wherever the accent is *text* rather than a fill. Accents
+     * that are darker than the page (the onyx choice) set this to their light
+     * companion so labels never sink into the background.
+     */
+    val accentInk: Color = Color.Unspecified
 )
 
 /**
  * Optional secondary accent offered by some themes.
  *
- * Burgundy is the only theme that currently ships a choice: antique gold or
- * warm ivory. Every other theme resolves to [GOLD], which simply keeps its
- * own palette untouched.
+ * Burgundy offers antique gold, ivory and onyx; Brown offers gold and onyx.
+ * Every other theme resolves to [GOLD], which simply keeps its own palette
+ * untouched.
  */
 enum class AtharAccentTone(
     val id: String,
     val labelAr: String,
-    val labelEn: String
+    val labelEn: String,
+    val swatch: Color
 ) {
-    GOLD("GOLD", "ذهبي", "Gold"),
-    IVORY("IVORY", "عاجي", "Ivory");
+    GOLD("GOLD", "ذهبي", "Gold", Color(0xFFD9A45C)),
+    BLACK("BLACK", "أسود", "Onyx", Color(0xFF191416)),
+    IVORY("IVORY", "عاجي", "Ivory", Color(0xFFF2E6D8));
 
     companion object {
         fun fromId(id: String?): AtharAccentTone =
@@ -273,38 +282,75 @@ enum class AtharThemeId(
             AMOLED -> "True black & light"
         }
 
-    /** The accent choices this theme exposes on its card. */
+/** The accent tones a theme offers, in the order its card lists them. */
     val accentTones: List<AtharAccentTone>
-        get() = if (this == BURGUNDY) AtharAccentTone.entries else emptyList()
+        get() = when (this) {
+        AtharThemeId.BURGUNDY -> listOf(AtharAccentTone.GOLD, AtharAccentTone.BLACK, AtharAccentTone.IVORY)
+        AtharThemeId.BROWN -> listOf(AtharAccentTone.GOLD, AtharAccentTone.BLACK)
+        else -> emptyList()
+    }
 
     /**
-     * Resolves the palette for a chosen accent. Only Burgundy has a second
-     * variant; every other theme ignores the tone.
-     */
-    fun paletteFor(accent: AtharAccentTone): AtharPalette =
-        if (this == BURGUNDY && accent == AtharAccentTone.IVORY) {
-            palette.copy(
-                primary = Color(0xFFF2E6D8),
-                primaryMuted = Color(0xFFB69C8D),
-                primaryLight = Color(0xFFFFFAF3),
-                primarySubtle = Color(0xFF2B0D16),
-                primaryDeep = Color(0xFF52101F),
-                textOnPrimary = Color(0xFF2A0910),
-                navIconActive = Color(0xFFFFF6EC),
-                navGlow = Color(0xFFF3DFCD),
-                navPillBorder = Color(0xFF8A4356)
-            )
-        } else {
-            palette
-        }
+ * Resolves the palette for a chosen accent.
+ *
+ * The onyx choice flips the accent from a light ink to a near-black fill, so
+ * every fill that carried dark text keeps doing so, while anything written in
+ * the accent [AtharPalette.accentInk] moves to a silver companion.
+ */
+    fun paletteFor(accent: AtharAccentTone): AtharPalette = when {
+    this == AtharThemeId.BURGUNDY && accent == AtharAccentTone.IVORY -> palette.copy(
+        primary = Color(0xFFF2E6D8),
+        primaryMuted = Color(0xFFB69C8D),
+        primaryLight = Color(0xFFFFFAF3),
+        primarySubtle = Color(0xFF2B0D16),
+        primaryDeep = Color(0xFF52101F),
+        textOnPrimary = Color(0xFF2A0910),
+        navIconActive = Color(0xFFFFF6EC),
+        navGlow = Color(0xFFF3DFCD),
+        navPillBorder = Color(0xFF8A4356)
+    )
+
+    this == AtharThemeId.BURGUNDY && accent == AtharAccentTone.BLACK -> palette.copy(
+        primary = Color(0xFF0B0709),
+        primaryMuted = Color(0xFF9A8E95),
+        primaryLight = Color(0xFFE9E2E6),
+        primarySubtle = Color(0xFF150A0F),
+        primaryDeep = Color(0xFF2A1119),
+        textOnPrimary = Color(0xFFF2DCA6),
+        navPillSelected = Color(0xFF3B1A25),
+        navPillBorder = Color(0xFF9A8E95),
+        navIconActive = Color(0xFFF2ECEF),
+        navGlow = Color(0xFFD9D2D6),
+        accentInk = Color(0xFFE9E2E6)
+    )
+
+    this == AtharThemeId.BROWN && accent == AtharAccentTone.BLACK -> palette.copy(
+        primary = Color(0xFF0A0806),
+        primaryMuted = Color(0xFF9C9387),
+        primaryLight = Color(0xFFEDE7DD),
+        primarySubtle = Color(0xFF17120D),
+        primaryDeep = Color(0xFF33271A),
+        textOnPrimary = Color(0xFFEBD6A4),
+        navPillSelected = Color(0xFF3B2D1D),
+        navPillBorder = Color(0xFF9C9387),
+        navIconActive = Color(0xFFF6F1E9),
+        navGlow = Color(0xFFDAD2C4),
+        accentInk = Color(0xFFEDE7DD)
+    )
+
+    else -> palette
+}
 
     /** Mood line for a specific accent choice. */
-    fun moodFor(accent: AtharAccentTone, isArabic: Boolean): String =
-        if (this == BURGUNDY && accent == AtharAccentTone.IVORY) {
-            if (isArabic) "عاجي وعُنّاب" else "Ivory & garnet"
-        } else {
-            if (isArabic) moodAr else moodEn
-        }
+    fun moodFor(accent: AtharAccentTone, isArabic: Boolean): String = when {
+    this == AtharThemeId.BURGUNDY && accent == AtharAccentTone.IVORY ->
+        if (isArabic) "عاجي وعُنّاب" else "Ivory & garnet"
+    this == AtharThemeId.BURGUNDY && accent == AtharAccentTone.BLACK ->
+        if (isArabic) "أونكس وعُنّاب" else "Onyx & garnet"
+    this == AtharThemeId.BROWN && accent == AtharAccentTone.BLACK ->
+        if (isArabic) "أونكس وقهوة" else "Onyx & coffee"
+    else -> if (isArabic) moodAr else moodEn
+}
 
     companion object {
         /** Falls back to the original look for unknown or missing stored ids. */
@@ -347,16 +393,30 @@ val AtharCardGlow: Color get() = AtharThemeState.current.cardGlow
 
 // ─── Accent ───
 val AtharPrimary: Color get() = AtharThemeState.current.primary
+
+/**
+ * The accent used for text, icons and hairlines. Equals [AtharPrimary] on
+ * every tone that is already light, and switches to the silver companion for
+ * the onyx tone so labels stay legible.
+ */
+val AtharAccentInk: Color
+    get() = AtharThemeState.current.accentInk.let { ink ->
+        if (ink == Color.Unspecified) AtharThemeState.current.primary else ink
+    }
 val AtharPrimaryMuted: Color get() = AtharThemeState.current.primaryMuted
 val AtharPrimaryLight: Color get() = AtharThemeState.current.primaryLight
 val AtharPrimarySubtle: Color get() = AtharThemeState.current.primarySubtle
 val AtharPrimaryDeep: Color get() = AtharThemeState.current.primaryDeep
 
-/** Backdrop ink follows the active accent, so Burgundy's ivory choice reaches the wall too. */
-val AtharBackdropTint: Color get() = AtharPrimary
+/** Backdrop ink follows the active accent, so every tone reaches the wall too. */
+val AtharBackdropTint: Color get() = AtharAccentInk
 
 /** Brighter backdrop ink for small previews. */
 val AtharBackdropHighlight: Color get() = AtharPrimaryLight
+
+/** The accent ink of a palette, for previews drawn outside the live theme. */
+val AtharPalette.ink: Color
+    get() = if (accentInk == Color.Unspecified) primary else accentInk
 
 // ─── Text Hierarchy ───
 val AtharTextPrimary: Color get() = AtharThemeState.current.textPrimary

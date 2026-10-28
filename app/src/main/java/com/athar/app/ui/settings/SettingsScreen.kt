@@ -120,6 +120,7 @@ import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharSurface
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharPrimaryMuted
@@ -1767,13 +1768,13 @@ fun SettingsScreen(
                                     else updateStatusMessage ?: stringResource(R.string.settings_check_updates_sub),
                                     fontFamily = ThmanyahSans,
                                     fontSize = 11.5.sp,
-                                    color = if (updateStatusMessage != null) AtharPrimary else AtharTextSecondary
+                                    color = if (updateStatusMessage != null) AtharAccentInk else AtharTextSecondary
                                 )
                             }
                             if (isCheckingUpdate) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
-                                    color = AtharPrimary,
+                                    color = AtharAccentInk,
                                     strokeWidth = 2.dp
                                 )
                             } else {
@@ -2164,7 +2165,7 @@ private fun SectionCard(
     content: @Composable () -> Unit
 ) {
     val borderColor by animateColorAsState(
-        targetValue = if (isHighlighted) AtharPrimary else AtharCardBorder,
+        targetValue = if (isHighlighted) AtharAccentInk else AtharCardBorder,
         animationSpec = tween(500),
         label = "cardBorder"
     )

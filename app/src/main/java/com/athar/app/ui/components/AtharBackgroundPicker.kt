@@ -46,6 +46,7 @@ import com.athar.app.ui.theme.AtharBackdropHighlight
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharBackgroundStyle
 import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharSurface
 import com.athar.app.ui.theme.AtharTextOnPrimary
@@ -126,7 +127,7 @@ private fun BackgroundChoiceCard(
         label = "backgroundCardScale"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) AtharPrimary else AtharCardBorder,
+        targetValue = if (isSelected) AtharAccentInk else AtharCardBorder,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "backgroundCardBorder"
     )
@@ -209,7 +210,7 @@ private fun BackgroundChoiceCard(
                     .padding(8.dp)
                     .size(20.dp)
                     .clip(CircleShape)
-                    .background(AtharPrimary),
+                    .background(AtharAccentInk),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -236,7 +237,7 @@ private fun SolidChoiceCard(
     val haptics = LocalHapticFeedback.current
     val shape = RoundedCornerShape(16.dp)
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) AtharPrimary else AtharCardBorder,
+        targetValue = if (isSelected) AtharAccentInk else AtharCardBorder,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "solidCardBorder"
     )
@@ -298,8 +299,8 @@ private fun SolidChoiceCard(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) AtharPrimary else Color.Transparent)
-                    .border(1.dp, if (isSelected) AtharPrimary else AtharCardBorder, CircleShape),
+                    .background(if (isSelected) AtharAccentInk else Color.Transparent)
+                    .border(1.dp, if (isSelected) AtharAccentInk else AtharCardBorder, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {

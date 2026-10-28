@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextOnPrimary
@@ -93,7 +94,7 @@ private fun IconSwatch(
         label = "iconSwatchScale"
     )
     val ringColor by animateColorAsState(
-        targetValue = if (isSelected) AtharPrimary else AtharCardBorder,
+        targetValue = if (isSelected) AtharAccentInk else AtharCardBorder,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "iconSwatchRing"
     )
@@ -151,7 +152,7 @@ private fun IconSwatch(
                         .padding(4.dp)
                         .size(15.dp)
                         .clip(CircleShape)
-                        .background(AtharPrimary),
+                        .background(AtharAccentInk),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

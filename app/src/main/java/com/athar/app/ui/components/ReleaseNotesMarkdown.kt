@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.ui.theme.AtharCardBorder
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextPrimary
@@ -134,7 +135,7 @@ fun ReleaseNotesMarkdown(
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.5.sp,
-                            color = AtharPrimary,
+                            color = AtharAccentInk,
                             modifier = Modifier.padding(top = 1.dp)
                         )
                         Spacer(Modifier.width(6.dp))

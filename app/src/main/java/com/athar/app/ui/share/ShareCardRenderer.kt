@@ -17,6 +17,7 @@ import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import com.athar.app.R
 import com.athar.app.ui.theme.AtharBackground
+import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
@@ -136,7 +137,7 @@ object ShareCardRenderer {
             width = WIDTH,
             height = height,
             cellPx = 220f,
-            tint = AtharPrimary.toArgb(),
+            tint = AtharAccentInk.toArgb(),
             baseAlpha = 0.09f
         )
 
@@ -153,7 +154,7 @@ object ShareCardRenderer {
         val brandPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = serifBlack
             textSize = 74f
-            color = AtharPrimary.toArgb()
+            color = AtharAccentInk.toArgb()
             textAlign = Paint.Align.CENTER
         }
         canvas.drawText("أثر", WIDTH / 2f, 148f, brandPaint)
@@ -181,7 +182,7 @@ object ShareCardRenderer {
         val centerX = WIDTH / 2f
         canvas.drawLine(centerX - 70f, y + 24f, centerX + 70f, y + 24f, dividerPaint)
         canvas.drawCircle(centerX, y + 24f, 5.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = AtharPrimary.toArgb()
+            color = AtharAccentInk.toArgb()
         })
         y += dividerHeight
 
