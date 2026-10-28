@@ -129,11 +129,19 @@ private fun IconSwatch(
                 ),
             contentAlignment = Alignment.Center
         ) {
+            // The stock artwork is padded for the launcher's safe zone, which
+            // leaves the mark floating small inside a swatch. Enlarging it here
+            // fills the tile the way the launcher mask does on the home screen.
             Image(
                 painter = painterResource(style.foregroundRes),
                 contentDescription = null,
                 contentScale = ContentScale.FillBounds,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = 1.46f
+                        scaleY = 1.46f
+                    }
             )
 
             if (isSelected) {
