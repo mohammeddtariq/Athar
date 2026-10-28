@@ -41,18 +41,8 @@ data class LibrarySearchHit(
     val dua: LibraryDua?
 )
 
-private val ARABIC_DIACRITICS = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]")
-private val NON_ARABIC_LETTERS = Regex("[^\\u0621-\\u064A\\s]")
-private val EXTRA_SPACES = Regex("\\s+")
-
 /** Folds tashkeel, alef/ya/ta-marbuta variants and punctuation so Arabic queries match loosely. */
-internal fun normalizeArabicForSearch(text: String): String {
-    var s = text.replace(ARABIC_DIACRITICS, "")
-    s = s.replace('\u0623', '\u0627').replace('\u0625', '\u0627').replace('\u0622', '\u0627')
-        .replace('\u0649', '\u064A').replace('\u0629', '\u0647')
-    s = NON_ARABIC_LETTERS.replace(s, " ")
-    return EXTRA_SPACES.replace(s, " ").trim()
-}
+internal fun normalizeArabicForSearch(text: String): String = foldForSearch(text)
 
 /**
  * Offline search across chapter titles and dua bodies, in Arabic and English.
@@ -61,29 +51,34 @@ internal fun normalizeArabicForSearch(text: String): String {
 fun DuaLibrary.search(query: String, limit: Int = 60): List<LibrarySearchHit> {
     val raw = query.trim()
     if (raw.isEmpty()) return emptyList()
+    val queryWords = searchWords(raw)
     val english = raw.lowercase()
-    val arabic = normalizeArabicForSearch(raw)
-    val hits = ArrayList<LibrarySearchHit>()
+    if (queryWords.isEmpty() && english.length < 2) return emptyList()
+
+    val scored = ArrayList<Pair<LibrarySearchHit, Float>>()
     for (chapter in chapters) {
-        if (hits.size >= limit) break
-        val titleAr = normalizeArabicForSearch(chapter.titleAr)
-        val titleEn = chapter.titleEn.lowercase()
-        val titleHit = (arabic.isNotEmpty() && titleAr.contains(arabic)) || titleEn.contains(english)
-        if (titleHit) {
-            hits.add(LibrarySearchHit(chapter = chapter, duaIndex = null, dua = null))
-            if (hits.size >= limit) break
+        val titleScore = maxOf(
+            passageScore(queryWords, searchWords(chapter.titleAr)),
+            if (english.length >= 2 && chapter.titleEn.lowercase().contains(english)) 1f else 0f
+        )
+        if (titleScore >= 0.80f) {
+            scored.add(LibrarySearchHit(chapter = chapter, duaIndex = null, dua = null) to titleScore + 0.05f)
         }
         chapter.duas.forEachIndexed { index, dua ->
-            if (hits.size >= limit) return@forEachIndexed
-            val matches =
-                (arabic.isNotEmpty() && normalizeArabicForSearch(dua.arabic).contains(arabic)) ||
-                    dua.translation.lowercase().contains(english)
-            if (matches) {
-                hits.add(LibrarySearchHit(chapter = chapter, duaIndex = index, dua = dua))
+            val arabicScore = passageScore(queryWords, searchWords(dua.arabic))
+            val englishScore =
+                if (english.length >= 2 && dua.translation.lowercase().contains(english)) 1f else 0f
+            val score = maxOf(arabicScore, englishScore)
+            if (score >= 0.55f) {
+                scored.add(LibrarySearchHit(chapter = chapter, duaIndex = index, dua = dua) to score)
             }
         }
     }
-    return hits
+
+    return scored
+        .sortedByDescending { it.second }
+        .take(limit)
+        .map { it.first }
 }
 
 /**
