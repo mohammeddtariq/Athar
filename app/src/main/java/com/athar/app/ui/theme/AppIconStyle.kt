@@ -22,9 +22,18 @@ enum class AtharIconStyle(
     BROWN("BROWN", AtharThemeId.BROWN, "MainActivityBrown", "بُنّي", "Brown"),
     AMOLED("AMOLED", AtharThemeId.AMOLED, "MainActivityAmoled", "أسود نقي", "AMOLED");
 
-    /** Colour of the icon plate — the dock tone, so each colourway is legible. */
-    val plate: Color
-        get() = theme.paletteFor(AtharAccentTone.GOLD).navbarBg
+    /**
+     * The exact plate colour the launcher artwork is drawn on. The foreground
+     * PNGs carry their own plate inset, so a swatch has to use this rather than
+     * the dock tone or the inset shows as a darker square inside the tile.
+     */
+    val plateRes: Int
+        get() = when (this) {
+            OLIVE -> R.color.ic_launcher_plate_olive
+            BURGUNDY -> R.color.ic_launcher_plate_burgundy
+            BROWN -> R.color.ic_launcher_plate_brown
+            AMOLED -> R.color.ic_launcher_plate_amoled
+        }
 
     /** Colour of the calligraphic mark and wordmark on the icon. */
     val ink: Color

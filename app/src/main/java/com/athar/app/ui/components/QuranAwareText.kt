@@ -53,37 +53,22 @@ fun rememberQuranPassages(text: String): List<QuranPassage> {
  * A body of Arabic that may quote the Quran.
  *
  * Verses are swapped for their canonical Uthmani wording, set in the mushaf
- * face used by the reader, and closed with the ornate ayah marker and the verse
- * number — so a supplication reads as prose with the Quran quoted in it, rather
- * than as one undifferentiated block.
+ * face used by the reader and closed with the ornate ayah number — so a
+ * supplication reads as prose with the Quran quoted in it, rather than as one
+ * undifferentiated block.
  */
 @Composable
 fun QuranAwareText(
     text: String,
     modifier: Modifier = Modifier,
     color: Color = AtharTextPrimary,
-    fontSize: TextUnit = 21.sp,
-    lineHeight: TextUnit = 40.sp,
+    fontSize: TextUnit = 22.sp,
+    lineHeight: TextUnit = 42.sp,
     textAlign: TextAlign = TextAlign.End
 ) {
     val passages = rememberQuranPassages(text)
     val annotated = remember(text, passages) {
-        buildAnnotatedString {
-            var cursor = 0
-            for (passage in passages) {
-                if (passage.start > cursor) {
-                    append(text.substring(cursor, passage.start))
-                }
-                withStyle(SpanStyle(fontFamily = QuranUthmanicHafs, fontSize = 22.sp)) {
-                    append(passage.text)
-                    append(" ")
-                    append("\u06DD")
-                    append(with(QuranRepository) { passage.ayah.toArabicIndic() })
-                }
-                cursor = passage.end
-            }
-            if (cursor < text.length) append(text.substring(cursor))
-        }
+        quranAwareAnnotated(text, passages, quranSize = 26.sp)
     }
 
     Text(
@@ -102,18 +87,41 @@ fun QuranAwareText(
 @Composable
 fun ayahMarkerColor(): Color = AtharPrimaryLight.copy(alpha = 0.9f)
 
-/** Convenience for plain annotated output, used by the share renderer. */
-fun buildQuranAware(text: String, passages: List<QuranPassage>): AnnotatedString =
-    buildAnnotatedString {
-        var cursor = 0
-        for (passage in passages) {
-            if (passage.start > cursor) append(text.substring(cursor, passage.start))
-            withStyle(SpanStyle(fontFamily = QuranUthmanicHafs, fontSize = 22.sp)) {
-                append(passage.text)
-                append(" \u06DD")
-                append(with(QuranRepository) { passage.ayah.toArabicIndic() })
-            }
-            cursor = passage.end
+/**
+ * Builds [text] with every Quranic passage reset in the mushaf face and
+ * followed by its ayah number in the ornate brackets the mushaf uses.
+ *
+ * The prose between verses is kept word for word, minus the rosettes it used to
+ * separate ayat with — those would otherwise survive next to the ayah number as
+ * a pair of empty ornaments.
+ */
+fun quranAwareAnnotated(
+    text: String,
+    passages: List<QuranPassage>,
+    quranSize: TextUnit = 26.sp
+): AnnotatedString = buildAnnotatedString {
+    var cursor = 0
+    for (passage in passages) {
+        if (passage.start > cursor) append(proseGap(text.substring(cursor, passage.start)))
+        withStyle(
+            SpanStyle(
+                fontFamily = QuranUthmanicHafs,
+                fontSize = quranSize,
+                fontWeight = FontWeight.Bold
+            )
+        ) {
+            append(passage.text)
+            append(" ")
+            append("\uFD3F")
+            append(with(QuranRepository) { passage.ayah.toArabicIndic() })
+            append("\uFD3E")
         }
-        if (cursor < text.length) append(text.substring(cursor))
+        cursor = passage.end
     }
+    if (cursor < text.length) append(proseGap(text.substring(cursor)))
+}
+
+/** Drops the rosette the prose used between ayat, and the spaces around it. */
+private fun proseGap(gap: String): String = gap.replace(VERSE_SEPARATOR, " ")
+
+private val VERSE_SEPARATOR = Regex("[ \\t]*\u06DE[ \\t]*")

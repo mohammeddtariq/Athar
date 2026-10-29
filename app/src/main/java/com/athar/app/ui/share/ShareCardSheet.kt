@@ -47,18 +47,15 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.athar.app.data.QuranRepository
-import com.athar.app.ui.components.ArcadeCache
+import com.athar.app.ui.components.GirihCache
 import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.components.drawGirihWall
 import com.athar.app.ui.components.drawHurufWeave
-import com.athar.app.ui.components.drawMihrabArcade
+import com.athar.app.ui.components.quranAwareAnnotated
 import com.athar.app.ui.components.rememberHurufTypeface
 import com.athar.app.ui.components.rememberQuranPassages
 import com.athar.app.ui.theme.AtharAccentTone
@@ -71,7 +68,6 @@ import com.athar.app.ui.theme.AtharTextOnPrimary
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.AtharThemeId
-import com.athar.app.ui.theme.QuranUthmanicHafs
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
@@ -301,19 +297,7 @@ private fun ShareCard(
 ) {
     val passages = rememberQuranPassages(spec.arabic)
     val body = remember(spec.arabic, passages) {
-        buildAnnotatedString {
-            var cursor = 0
-            for (passage in passages) {
-                if (passage.start > cursor) append(spec.arabic.substring(cursor, passage.start))
-                withStyle(SpanStyle(fontFamily = QuranUthmanicHafs, fontSize = 21.sp)) {
-                    append(passage.text)
-                    append(" \u06DD")
-                    append(with(QuranRepository) { passage.ayah.toArabicIndic() })
-                }
-                cursor = passage.end
-            }
-            if (cursor < spec.arabic.length) append(spec.arabic.substring(cursor))
-        }
+        quranAwareAnnotated(spec.arabic, passages, quranSize = 22.sp)
     }
 
     Box(
@@ -490,7 +474,7 @@ private fun BackdropRow(
 ) {
     val haptics = LocalHapticFeedback.current
     val typeface = rememberHurufTypeface()
-    val arcadeCache = remember { ArcadeCache() }
+    val girihCache = remember { GirihCache() }
     val density = LocalDensity.current
     val cellPx = with(density) { 20.dp.toPx() }
 
@@ -528,7 +512,7 @@ private fun BackdropRow(
                         )
                 ) {
                     Canvas(modifier = Modifier.matchParentSize()) {
-                        drawBackdropPreview(style, palette.ink, cellPx, typeface, arcadeCache)
+                        drawBackdropPreview(style, palette.ink, cellPx, typeface, girihCache)
                     }
                     if (isSelected) {
                         Box(
@@ -569,16 +553,14 @@ private fun DrawScope.drawBackdropPreview(
     tint: Color,
     cellPx: Float,
     typeface: android.graphics.Typeface?,
-    arcadeCache: ArcadeCache
+    girihCache: GirihCache
 ) {
     when (style) {
-        AtharBackgroundStyle.ISLAMIC -> drawMihrabArcade(
+        AtharBackgroundStyle.ISLAMIC -> drawGirihWall(
             tint = tint,
-            baseAlpha = 0.34f,
+            baseAlpha = 0.30f,
             cellPx = cellPx,
-            phase = 0f,
-            glowPhase = 0f,
-            cache = arcadeCache
+            cache = girihCache
         )
 
         AtharBackgroundStyle.LETTERS -> drawHurufWeave(

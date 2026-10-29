@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -122,7 +123,7 @@ private fun IconSwatch(
                     scaleY = scale
                 }
                 .clip(RoundedCornerShape(15.dp))
-                .background(style.plate)
+                .background(colorResource(style.plateRes))
                 .border(
                     width = if (isSelected) 1.6.dp else 1.dp,
                     color = ringColor,
