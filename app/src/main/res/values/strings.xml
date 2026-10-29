@@ -119,7 +119,7 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_theme">Appearance</string>
-    <string name="settings_theme_choose">Choose your Athar</string>
+    <string name="settings_theme_choose">Choose the light your Athar wears</string>
     <string name="settings_theme_sub">Pick the colour Athar is painted in. It spreads through the whole app straight away.</string>
     <string name="settings_background">Backdrop</string>
     <string name="settings_background_sub">The atmosphere behind every screen.</string>
