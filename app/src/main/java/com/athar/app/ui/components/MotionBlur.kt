@@ -12,12 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -41,6 +43,9 @@ class MotionBlurState internal constructor(private val scope: CoroutineScope) {
     private var decaying = false
 
     fun onScroll(deltaY: Float) {
+        // Sub-pixel jitters are not motion; ignoring them keeps the layer from
+        // being recorded for a scroll that barely happened.
+        if (abs(deltaY) < 2f) return
         val bumped = strength + abs(deltaY) / 320f
         strength = bumped.coerceAtMost(1f)
         if (bumped > 0.01f && !decaying) {
@@ -52,7 +57,7 @@ class MotionBlurState internal constructor(private val scope: CoroutineScope) {
     private suspend fun decay() {
         while (strength > 0f) {
             withFrameNanos { }
-            strength = (strength - 0.055f).coerceAtLeast(0f)
+            strength = (strength - 0.085f).coerceAtLeast(0f)
         }
         decaying = false
     }
@@ -68,14 +73,18 @@ fun rememberMotionBlurState(): MotionBlurState {
  * Softens the content as it slides under the status bar and the navigation
  * dock. The page itself stays sharp in the middle: only the top and bottom
  * bands are replaced by a blurred copy, fading out towards the centre.
+ *
+ * Each band is composited on its own, so the layer is only as tall as the band
+ * rather than the whole screen — and no full-screen mask pass is needed. That
+ * is what keeps a fast fling from stuttering.
  */
 @Composable
 fun Modifier.edgeMotionBlur(
     state: MotionBlurState,
     enabled: Boolean = true,
-    topBand: Dp = 96.dp,
-    bottomBand: Dp = 124.dp,
-    maxBlur: Dp = 16.dp
+    topBand: Dp = 92.dp,
+    bottomBand: Dp = 112.dp,
+    maxBlur: Dp = 10.dp
 ): Modifier {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return this
 
@@ -85,36 +94,62 @@ fun Modifier.edgeMotionBlur(
         drawContent()
 
         val strength = state.strength
-        if (strength <= 0.02f) return@drawWithContent
+        if (strength <= 0.06f) return@drawWithContent
 
         layer.record { this@drawWithContent.drawContent() }
-        val radius = strength * maxBlur.toPx()
+        val radius = (strength * maxBlur.toPx()).coerceAtLeast(0.5f)
         layer.renderEffect = BlurEffect(radius, radius, TileMode.Clamp)
 
         val height = size.height
         if (height <= 0f) return@drawWithContent
 
-        val topStop = (topBand.toPx() / height).coerceIn(0.05f, 0.45f)
-        val bottomStop = 1f - (bottomBand.toPx() / height).coerceIn(0.05f, 0.45f)
-        val mask = if (topStop < bottomStop) {
-            Brush.verticalGradient(
-                0f to Color.Black,
-                topStop to Color.Transparent,
-                bottomStop to Color.Transparent,
-                1f to Color.Black
-            )
-        } else {
-            Brush.verticalGradient(
-                0f to Color.Black,
-                0.5f to Color.Transparent,
-                1f to Color.Black
-            )
-        }
+        val topPx = topBand.toPx().coerceIn(0f, height * 0.32f)
+        val bottomPx = bottomBand.toPx().coerceIn(0f, height * 0.32f)
 
-        val canvas = drawContext.canvas
-        canvas.saveLayer(Rect(Offset.Zero, size), Paint())
-        drawLayer(layer)
-        drawRect(brush = mask, blendMode = BlendMode.DstIn)
-        canvas.restore()
+        blurBand(layer, top = 0f, bottom = topPx, fadeInFromTop = true)
+        blurBand(layer, top = height - bottomPx, bottom = height, fadeInFromTop = false)
     }
+}
+
+/**
+ * Draws the blurred layer inside one band only, masked so it dissolves towards
+ * the middle of the screen instead of ending on a hard line.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.blurBand(
+    layer: GraphicsLayer,
+    top: Float,
+    bottom: Float,
+    fadeInFromTop: Boolean
+) {
+    val bandHeight = bottom - top
+    if (bandHeight <= 0f) return
+
+    val canvas = drawContext.canvas
+    canvas.saveLayer(Rect(0f, top, size.width, bottom), Paint())
+
+    drawLayer(layer)
+
+    val mask = if (fadeInFromTop) {
+        Brush.verticalGradient(
+            0f to Color.Black,
+            1f to Color.Transparent,
+            startY = top,
+            endY = bottom
+        )
+    } else {
+        Brush.verticalGradient(
+            0f to Color.Transparent,
+            1f to Color.Black,
+            startY = top,
+            endY = bottom
+        )
+    }
+    drawRect(
+        brush = mask,
+        topLeft = Offset(0f, top),
+        size = Size(size.width, bandHeight),
+        blendMode = BlendMode.DstIn
+    )
+
+    canvas.restore()
 }

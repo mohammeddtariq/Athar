@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -291,16 +292,6 @@ private fun ThemeSwatch(
     isSelected: Boolean
 ) {
     val shape = RoundedCornerShape(12.dp)
-    val transition = rememberInfiniteTransition(label = "themeSwatch")
-    val shimmer by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(durationMillis = 2600, easing = LinearEasing),
-            RepeatMode.Restart
-        ),
-        label = "themeSwatchShimmer"
-    )
 
     Box(
         modifier = Modifier
@@ -355,22 +346,42 @@ private fun ThemeSwatch(
                 center = Offset(w * 0.62f, h * 0.76f)
             )
 
-            // A slow sheen so an idle card still looks alive.
-            if (isSelected) {
-                val head = w * (shimmer * 1.6f - 0.3f)
-                drawRect(
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.10f),
-                            Color.Transparent
-                        ),
-                        startX = head - w * 0.35f,
-                        endX = head + w * 0.35f
-                    )
-                )
-            }
         }
+
+        // A slow sheen so the chosen card still looks alive. Only that one card
+        // animates, so an idle list of themes costs nothing per frame.
+        if (isSelected) {
+            SwatchSheen(modifier = Modifier.matchParentSize())
+        }
+    }
+}
+
+/** The travelling highlight over the selected swatch. */
+@Composable
+private fun SwatchSheen(modifier: Modifier = Modifier) {
+    val shimmer by rememberInfiniteTransition(label = "themeSwatch").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "themeSwatchShimmer"
+    )
+
+    Canvas(modifier = modifier) {
+        val head = size.width * (shimmer * 1.6f - 0.3f)
+        drawRect(
+            brush = Brush.horizontalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.White.copy(alpha = 0.10f),
+                    Color.Transparent
+                ),
+                startX = head - size.width * 0.35f,
+                endX = head + size.width * 0.35f
+            )
+        )
     }
 }
 

@@ -16,13 +16,20 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.athar.app.ui.theme.AtharBackdropTint
 import com.athar.app.ui.theme.AtharBackground
@@ -66,12 +73,20 @@ fun IslamicPatternBackground(
 ) {
     val style = styleOverride ?: AtharBackgroundState.current
 
-    val density = LocalDensity.current
-    val cellPx = with(density) { cellDp.dp.toPx() }
+    val cellPx = with(LocalDensity.current) { cellDp.dp.toPx() }
     val typeface = rememberHurufTypeface()
 
     // The arcade's paths are rebuilt only when the size or the cell changes.
     val arcadeCache = remember { ArcadeCache() }
+
+    // The wall is recorded once into a display list and then only moved around.
+    // Painting it directly meant rebuilding ~150 niches (and their gradients)
+    // on every single frame, on every screen, which is where the stutter came
+    // from. Now a frame costs one layer draw.
+    val baked = remember { BakedBackdrop() }
+    baked.layer = rememberGraphicsLayer()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
 
     val transition = rememberInfiniteTransition(label = "patternDrift")
 
@@ -119,42 +134,123 @@ fun IslamicPatternBackground(
     // node instead of retiring one mid-composition. Retiring it used to leave
     // the previous pattern's tiles behind as pale boxes.
     key(style) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        if (style == AtharBackgroundStyle.SOLID) return@Canvas
+        Canvas(modifier = modifier.fillMaxSize()) {
+            if (style == AtharBackgroundStyle.SOLID) return@Canvas
+            if (size.width <= 0f || size.height <= 0f) return@Canvas
 
-        drawBackdrop(
-            style = style,
-            tint = tint,
-            alpha = alpha * breathe,
-            cellPx = cellPx,
-            letterPhase = letterPhase,
-            arcadePhase = arcadePhase,
-            glowPhase = glowPhase,
-            typeface = typeface,
-            arcadeCache = arcadeCache
-        )
-    }
+            val bleed = cellPx
+            val wall = baked.ensure(
+                style = style,
+                width = size.width,
+                height = size.height,
+                cellPx = cellPx,
+                tint = tint,
+                typeface = typeface,
+                arcadeCache = arcadeCache,
+                density = density,
+                layoutDirection = layoutDirection,
+                bleed = bleed
+            ) ?: return@Canvas
+
+            val driftX: Float
+            val driftY: Float
+            if (style == AtharBackgroundStyle.ISLAMIC) {
+                driftX = arcadePhase * cellPx
+                driftY = 0f
+            } else {
+                val radians = letterPhase * PI.toFloat() / 180f
+                driftX = cos(radians) * cellPx * 0.12f
+                driftY = sin(radians) * cellPx * 0.18f
+            }
+
+            val ink = (alpha * breathe / BAKE_ALPHA).coerceIn(0f, 1f)
+            wall.alpha = ink
+            // The wall is recorded with one cell of bleed on every side so a
+            // drifted frame never uncovers a bare strip at the edges.
+            translate(left = driftX - bleed, top = driftY - bleed) {
+                drawLayer(wall)
+            }
+
+            // The niches themselves no longer re-light every frame, so a single
+            // additive wash carries the travelling light across the wall.
+            if (style == AtharBackgroundStyle.ISLAMIC) {
+                val sweep = (0.5f + 0.5f * sin(glowPhase - PI.toFloat() / 2f)) * size.width
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(tint.copy(alpha = alpha * 0.34f), Color.Transparent),
+                        center = Offset(sweep, size.height * 0.34f),
+                        radius = size.width * 0.62f
+                    ),
+                    blendMode = BlendMode.Plus
+                )
+            }
+        }
     }
 }
 
-/** Routes to the selected backdrop. */
-private fun DrawScope.drawBackdrop(
-    style: AtharBackgroundStyle,
-    tint: Color,
-    alpha: Float,
-    cellPx: Float,
-    letterPhase: Float,
-    arcadePhase: Float,
-    glowPhase: Float,
-    typeface: android.graphics.Typeface?,
-    arcadeCache: ArcadeCache
-) {
-    when (style) {
-        AtharBackgroundStyle.ISLAMIC ->
-            drawMihrabArcade(tint, alpha, cellPx, arcadePhase, glowPhase, arcadeCache)
-        AtharBackgroundStyle.LETTERS ->
-            drawHurufWeave(tint, alpha, letterPhase, typeface, cellPx)
-        AtharBackgroundStyle.SOLID -> Unit
+/**
+ * Alpha the wall is recorded at. The real opacity is applied when the layer is
+ * drawn, so one bake serves every breathe level without re-recording.
+ */
+private const val BAKE_ALPHA = 0.42f
+
+/**
+ * Holds the recorded wall and the parameters it was recorded with, so a size,
+ * accent or style change re-records exactly once.
+ */
+private class BakedBackdrop {
+    var layer: GraphicsLayer? = null
+
+    private var style: AtharBackgroundStyle? = null
+    private var width = -1f
+    private var height = -1f
+    private var cellPx = -1f
+    private var tint: Color = Color.Unspecified
+
+    fun ensure(
+        style: AtharBackgroundStyle,
+        width: Float,
+        height: Float,
+        cellPx: Float,
+        tint: Color,
+        typeface: android.graphics.Typeface?,
+        arcadeCache: ArcadeCache,
+        density: androidx.compose.ui.unit.Density,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        bleed: Float
+    ): GraphicsLayer? {
+        val target = layer ?: return null
+        val unchanged = this.style == style &&
+            this.cellPx == cellPx &&
+            this.tint == tint &&
+            this.width == width &&
+            this.height == height
+        if (unchanged) return target
+
+        val recordedWidth = (width + bleed * 2f).toInt().coerceAtLeast(1)
+        val recordedHeight = (height + bleed * 2f).toInt().coerceAtLeast(1)
+        target.record(
+            density = density,
+            layoutDirection = layoutDirection,
+            size = IntSize(recordedWidth, recordedHeight)
+        ) {
+            translate(left = bleed, top = bleed) {
+                when (style) {
+                    AtharBackgroundStyle.ISLAMIC ->
+                        drawMihrabArcade(tint, BAKE_ALPHA, cellPx, 0f, 0f, arcadeCache)
+                    AtharBackgroundStyle.LETTERS ->
+                        drawHurufWeave(tint, BAKE_ALPHA, 0f, typeface, cellPx)
+                    AtharBackgroundStyle.SOLID -> Unit
+                }
+            }
+        }
+
+        this.style = style
+        this.width = width
+        this.height = height
+        this.cellPx = cellPx
+        this.tint = tint
+        return target
     }
 }
 
