@@ -62,6 +62,7 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.components.quranAwarePlain
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
@@ -427,7 +428,7 @@ private fun DuaResultRow(
             )
             Spacer(Modifier.height(3.dp))
             Text(
-                text = hit.dua?.let { if (isArabic) it.arabic else it.translation }
+                text = hit.dua?.let { if (isArabic) quranAwarePlain(it.arabic) else it.translation }
                     ?: hit.chapter.titleEn,
                 fontFamily = if (isArabic) ThmanyahSerifText else ThmanyahSans,
                 fontWeight = FontWeight.Medium,

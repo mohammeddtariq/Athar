@@ -20,7 +20,13 @@ data class QuranPassage(
     val surah: Int,
     val ayah: Int,
     val text: String
-)
+) {
+    /**
+     * The opening basmala. It carries ayah number 1 only inside al-Fatihah;
+     * standing at the head of a quoted surah it is not numbered at all.
+     */
+    val isBasmala: Boolean get() = surah == 1 && ayah == 1
+}
 
 /**
  * Finds the verses of the Quran inside a piece of prose.
@@ -93,15 +99,25 @@ object QuranPassages {
         for (id in candidateIds) {
             val verse = index[id]
             if (verse.letters.length > letters.length) continue
-            val at = letters.indexOf(verse.letters)
-            if (at < 0) continue
-            found += QuranPassage(
-                start = map[at],
-                end = map[at + verse.letters.length - 1] + 1,
-                surah = verse.surah,
-                ayah = verse.ayah,
-                text = verse.text
-            )
+            // A supplication may quote the same verse twice — the three
+            // basmalas before al-Ikhlas, al-Falaq and an-Nas, for instance —
+            // so every occurrence is marked, not just the first.
+            var at = letters.indexOf(verse.letters)
+            while (at >= 0) {
+                // The tashkeel of the last letter sits after it in the string,
+                // so take it with the verse; otherwise it is left floating
+                // beside the ayah marker.
+                var end = map[at + verse.letters.length - 1] + 1
+                while (end < text.length && isMark(text[end])) end++
+                found += QuranPassage(
+                    start = map[at],
+                    end = end,
+                    surah = verse.surah,
+                    ayah = verse.ayah,
+                    text = verse.text
+                )
+                at = letters.indexOf(verse.letters, at + 1)
+            }
         }
         if (found.isEmpty()) return emptyList()
 
@@ -156,6 +172,13 @@ object QuranPassages {
     // ─── Letter folding ───
 
     private val DIACRITICS = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]")
+
+    /** True for a combining mark, which belongs to the letter before it. */
+    private fun isMark(c: Char): Boolean =
+        c in '\u0610'..'\u061A' ||
+            c in '\u064B'..'\u065F' ||
+            c == '\u0670' ||
+            c in '\u06D6'..'\u06ED'
 
     /** Folds one character to its bare letter, or null when it carries no letter. */
     private fun fold(c: Char): Char? = when {

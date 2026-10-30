@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.athar.app.data.QuranPassage
 import com.athar.app.data.QuranPassages
 import com.athar.app.data.QuranRepository
-import com.athar.app.ui.theme.AtharPrimaryLight
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.QuranUthmanicHafs
 import com.athar.app.ui.theme.ThmanyahSerifText
@@ -67,8 +66,8 @@ fun QuranAwareText(
     textAlign: TextAlign = TextAlign.End
 ) {
     val passages = rememberQuranPassages(text)
-    val annotated = remember(text, passages) {
-        quranAwareAnnotated(text, passages, quranSize = 26.sp)
+    val annotated = remember(text, passages, fontSize) {
+        quranAwareAnnotated(text, passages, quranSize = (fontSize.value * 1.18f).sp)
     }
 
     Text(
@@ -83,17 +82,15 @@ fun QuranAwareText(
     )
 }
 
-/** Muted accent used for the ayah marker itself. */
-@Composable
-fun ayahMarkerColor(): Color = AtharPrimaryLight.copy(alpha = 0.9f)
-
 /**
- * Builds [text] with every Quranic passage reset in the mushaf face and
- * followed by its ayah number in the ornate brackets the mushaf uses.
+ * Builds [text] with every Quranic passage reset in the mushaf face and closed
+ * with its ayah number inside the ornate rosette the mushaf uses.
  *
- * The prose between verses is kept word for word, minus the rosettes it used to
- * separate ayat with — those would otherwise survive next to the ayah number as
- * a pair of empty ornaments.
+ * The number is written on its own: the Hafs face draws an Arabic-Indic digit
+ * as that rosette, so nothing else goes around it. The prose between verses
+ * keeps its wording, minus the ornament it used to separate ayat with — the
+ * quotation brackets, the star separators and the empty rosettes — which would
+ * otherwise sit beside the number as a second, blank marker.
  */
 fun quranAwareAnnotated(
     text: String,
@@ -111,17 +108,23 @@ fun quranAwareAnnotated(
             )
         ) {
             append(passage.text)
-            append(" ")
-            append("\uFD3F")
-            append(with(QuranRepository) { passage.ayah.toArabicIndic() })
-            append("\uFD3E")
+            if (!passage.isBasmala) {
+                append(" ")
+                append(with(QuranRepository) { passage.ayah.toArabicIndic() })
+            }
         }
         cursor = passage.end
     }
     if (cursor < text.length) append(proseGap(text.substring(cursor)))
 }
 
-/** Drops the rosette the prose used between ayat, and the spaces around it. */
-private fun proseGap(gap: String): String = gap.replace(VERSE_SEPARATOR, " ")
+/**
+ * [text] with the verse ornament dropped, for the one-line snippets in search
+ * results where a full annotated card would not fit.
+ */
+fun quranAwarePlain(text: String): String = proseGap(text).trim()
 
-private val VERSE_SEPARATOR = Regex("[ \\t]*\u06DE[ \\t]*")
+/** Drops the ornament the prose used between ayat, and the spaces around it. */
+private fun proseGap(gap: String): String = gap.replace(VERSE_ORNAMENT, " ")
+
+private val VERSE_ORNAMENT = Regex("[ \\t]*[\u06DD\u06DE\uFD3F\uFD3E*][ \\t]*")

@@ -354,7 +354,7 @@ fun SettingsScreen(
                 )
             }
 
-            // ── Theme — "اختر أثرك" ──
+            // ── Theme — "أختر طابع أثرك" ──
             item {
                 SectionCard(title = stringResource(R.string.settings_theme)) {
                     Text(

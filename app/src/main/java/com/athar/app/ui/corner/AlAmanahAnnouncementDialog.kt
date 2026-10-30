@@ -253,7 +253,7 @@ fun AlAmanahAnnouncementDialog(
                     // ─── QURANIC ORIGIN ───
                     Text(
                         text = if (isArabic) {
-                            "﴿ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ ﴾ • الرعد: ٢٨"
+                            "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ • الرعد: ٢٨"
                         } else {
                             "\"Verily, in the remembrance of Allah do hearts find rest.\" • Ar-Ra'd: 28"
                         },

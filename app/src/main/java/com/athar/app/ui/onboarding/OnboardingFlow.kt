@@ -78,6 +78,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -403,9 +404,17 @@ private fun SetupWordmark(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val dockX = with(density) { 34.dp.toPx() }
+    // The mark is laid out from the start edge — the right one in Arabic — so
+    // both the centring and the docked offset flip with the layout direction.
+    val towardStart = if (rtl) -1f else 1f
+    val dockInset = with(density) { 34.dp.toPx() }
     val dockY = with(density) { (statusBar + 6.dp).toPx() }
+
+    // The greeting sits under the mark and widens the column, so the dock is
+    // measured from the mark itself, not from the column it lives in.
+    var logoWidth by remember { mutableStateOf(0f) }
 
     val dock by animateFloatAsState(
         targetValue = if (docked) 1f else 0f,
@@ -439,7 +448,12 @@ private fun SetupWordmark(
     Column(
         modifier = modifier
             .graphicsLayer {
-                translationX = lerp((frameWidth - size.width) / 2f, dockX, dock)
+                val markInset = ((size.width - logoWidth) / 2f).coerceAtLeast(0f)
+                translationX = lerp(
+                    (frameWidth - size.width) / 2f * towardStart,
+                    towardStart * (dockInset - markInset),
+                    dock
+                )
                 translationY = lerp((frameHeight - size.height) / 2f, dockY, dock)
                 scaleX = markScale
                 scaleY = markScale
@@ -463,7 +477,9 @@ private fun SetupWordmark(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            AtharAnimatedLogo()
+            AtharAnimatedLogo(
+                modifier = Modifier.onSizeChanged { logoWidth = it.width.toFloat() }
+            )
         }
 
         AnimatedVisibility(
@@ -1195,7 +1211,7 @@ private fun ThemeStep(
             .padding(top = 74.dp, bottom = 32.dp)
     ) {
         Text(
-            text = if (isAr) "اختر أثرك" else "Choose the light your Athar wears",
+            text = if (isAr) "أختر طابع أثرك" else "Pick your theme",
             fontFamily = ThmanyahSerifDisplay,
             fontWeight = FontWeight.Black,
             fontSize = 26.sp,

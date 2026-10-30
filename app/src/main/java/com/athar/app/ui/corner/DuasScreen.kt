@@ -99,6 +99,7 @@ import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.DuaCompletionCelebration
 import com.athar.app.ui.components.PatternScaffold
 import com.athar.app.ui.components.QuranAwareText
+import com.athar.app.ui.components.quranAwarePlain
 import com.athar.app.ui.share.ShareCardSheet
 import com.athar.app.ui.share.ShareCardSpec
 import com.athar.app.ui.theme.AtharBackgroundState
@@ -1081,7 +1082,7 @@ private fun LibrarySearchResultRow(
     val chapterTitle = if (isArabic) chapter.titleAr else chapter.titleEn
     val snippet = when {
         dua == null -> if (isArabic) chapter.titleEn else chapter.titleAr
-        isArabic -> dua.arabic
+        isArabic -> quranAwarePlain(dua.arabic)
         else -> dua.translation
     }
 

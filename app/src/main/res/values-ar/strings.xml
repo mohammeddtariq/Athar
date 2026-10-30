@@ -119,7 +119,7 @@
     <!-- Settings -->
     <string name="settings_title">الإعدادات</string>
     <string name="settings_theme">المظهر</string>
-    <string name="settings_theme_choose">اختر أثرك</string>
+    <string name="settings_theme_choose">أختر طابع أثرك</string>
     <string name="settings_theme_sub">اختر اللون الذي يُرسم به أَثَر، فيسري في التطبيق كله فورًا.</string>
     <string name="settings_background">الخلفية</string>
     <string name="settings_background_sub">الجوّ الذي يقف خلف كل شاشة.</string>

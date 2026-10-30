@@ -451,9 +451,8 @@ fun AlDirayahSheet(
                                 val state = uiState
                                 if (state is TafsirUiState.Success) {
                                     val textToCopy = buildString {
-                                        append("﴿ ")
                                         append(state.tafsir.verseTextArabic)
-                                        append(" ﴾ [")
+                                        append(" [")
                                         append(state.tafsir.surahNameArabic)
                                         append(": ")
                                         append(state.tafsir.ayahNumber)
@@ -1031,7 +1030,7 @@ private fun SacredAyahCard(
             if (verseText.isNotBlank()) {
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    text = "\u202B﴿ $verseText ﴾\u202C",
+                    text = "\u202B$verseText\u202C",
                     fontFamily = QuranUthmanicHafs,
                     fontSize = 22.sp,
                     lineHeight = 40.sp,

@@ -3000,7 +3000,7 @@ private fun AmanahMonthlyReplayView(
                         ) {
                             Text(
                                 text = if (isArabic) {
-                                    "﴿ قَدْ جَاءَتْكُم مَّوْعِظَةٌ مِّن رَّبِّكُمْ وَشِفَاءٌ لِّمَا فِي الصُّدُورِ ﴾"
+                                    "قَدْ جَاءَتْكُم مَّوْعِظَةٌ مِّن رَّبِّكُمْ وَشِفَاءٌ لِّمَا فِي الصُّدُورِ"
                                 } else {
                                     "\"There has come to you instruction from your Lord and healing for what is in the breasts.\""
                                 },

@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -45,11 +44,10 @@ import kotlin.math.sin
 // ATHAR — Backdrops
 //
 // Two hand-built walls sit behind every screen:
-//   ISLAMIC — a woven girih field: eight-fold khatam medallions cut
-//             into kite facets, each ringed by a sixteen-point
-//             corona, with small stars filling the gaps. Neighbouring
-//             medallions overlap, so the outlines braid into one
-//             continuous lattice.
+//   ISLAMIC — a lattice of octagons laid edge to edge, each holding an
+//             eight-lobed rosette, with a small square and bead where
+//             four of them meet. Rounded throughout, so the field
+//             braids into one continuous medallion wall.
 //   LETTERS — a woven field of isolated Naskh letters in slow drift.
 //
 // Both are drawn with hairline-to-mid inks and fade along the same
@@ -261,66 +259,35 @@ private class BakedBackdrop {
 // ─── Girih wall ────────────────────────────────────────────────
 
 /**
- * One medallion's paths, built at the current cell size. Every cell on the
- * wall is this same stamp, so the field costs one build and a translate per
- * cell instead of a rebuild per frame.
+ * One medallion, built at the current cell size. Every cell on the wall is
+ * this same stamp, so the field costs one build and a translate per cell
+ * instead of a rebuild per frame.
+ *
+ * The frame is a regular octagon. Four of them meet edge to edge around a
+ * small square, and the eight-lobed rosette inside each one carries the
+ * field — rounded, so no two tiles ever cross into a pointed star.
  */
 internal class GirihMotif(val cell: Float) {
-    private val radius = cell * 0.60f
-    private val valley = radius * 0.62f
-    private val inner = radius * 0.36f
+    // Octagon centres sit one cell apart, so their edges touch exactly and the
+    // square hole they leave between them closes itself — nothing to draw.
+    private val radius = cell * 0.5412f
 
-    val corona: Path
-    val facets: List<Path>
-    val outerStar: Path
-    val innerStar: Path
-    val octagon: Path
-    val innerOctagon: Path
-    val core: Path
-    val gapStar: Path
-
-    val hair = (cell * 0.0085f).coerceAtLeast(1f)
-    val fine = (cell * 0.0055f).coerceAtLeast(1f)
-    val dot = (cell * 0.011f).coerceAtLeast(1f)
-
-    init {
-        corona = Path().apply {
-            for (k in 0 until 32) {
-                val r = when {
-                    k % 4 == 0 -> radius * 1.06f
-                    k % 2 == 0 -> radius * 0.94f
-                    else -> radius * 0.88f
-                }
-                val angle = (PI * k / 16f - PI / 2f).toFloat()
-                val px = r * cos(angle)
-                val py = r * sin(angle)
-                if (k == 0) moveTo(px, py) else lineTo(px, py)
-            }
-            close()
-        }
-
-        facets = List(8) { k ->
-            val angle = -PI.toFloat() / 2f + k * PI.toFloat() / 4f
-            val tip = polar(radius, angle)
-            val left = polar(valley, angle + PI.toFloat() / 8f)
-            val right = polar(valley, angle - PI.toFloat() / 8f)
-            val near = polar(inner, angle)
-            Path().apply {
-                moveTo(tip.x, tip.y)
-                lineTo(left.x, left.y)
-                lineTo(near.x, near.y)
-                lineTo(right.x, right.y)
-                close()
-            }
-        }
-
-        outerStar = starPath(0f, 0f, radius, valley)
-        innerStar = starPath(0f, 0f, radius * 0.93f, valley * 0.93f)
-        octagon = polygonPath(8, inner, 0f)
-        innerOctagon = polygonPath(8, inner * 0.62f, PI.toFloat() / 8f)
-        core = starPath(0f, 0f, inner * 0.38f, inner * 0.22f)
-        gapStar = starPath(cell * 0.5f, cell * 0.5f, cell * 0.10f, cell * 0.058f)
+    val octagon: Path = polygonPath(8, radius, PI.toFloat() / 8f)
+    val ring = radius * 0.86f
+    val petalRadius = radius * 0.34f
+    val petals: List<Offset> = List(8) { k ->
+        val angle = k * PI.toFloat() / 4f
+        Offset(radius * 0.50f * cos(angle), radius * 0.50f * sin(angle))
     }
+    val innerRing = radius * 0.30f
+    val coreRing = radius * 0.12f
+    val coreDot = cell * 0.009f
+
+    /** Centre of the square hole where four octagons meet. */
+    val gapCenter = Offset(cell * 0.5f, cell * 0.5f)
+    val gapDot = cell * 0.008f
+
+    val fine = (cell * 0.0055f).coerceAtLeast(1f)
 }
 
 /** Keeps the built medallion alive across frames and recompositions. */
@@ -351,26 +318,14 @@ private fun polygonPath(sides: Int, radius: Float, rotation: Float): Path = Path
     close()
 }
 
-/** Eight-pointed star, stroked as one closed path. */
-private fun starPath(cx: Float, cy: Float, rOut: Float, rIn: Float): Path = Path().apply {
-    for (i in 0 until 16) {
-        val r = if (i % 2 == 0) rOut else rIn
-        val angle = (PI * i / 8f - PI / 2f).toFloat()
-        val px = cx + r * cos(angle)
-        val py = cy + r * sin(angle)
-        if (i == 0) moveTo(px, py) else lineTo(px, py)
-    }
-    close()
-}
-
 /**
  * Draws the girih wall.
  *
- * Each cell stamps one khatam medallion: a sixteen-point corona, eight kite
- * facets, the star outline, an octagon core with its own small star, and a
- * star in the gap between medallions. The medallions are wider than their
- * cell, so the outlines cross and braid. A slow diagonal light keeps the
- * field from reading as flat wallpaper.
+ * Each cell stamps one octagon with an eight-lobed rosette inside: an outer
+ * ring, eight overlapping petals, a pair of inner rings and a bead at the
+ * centre. Four octagons meet around a small square, which carries its own
+ * bead, so the field joins into a continuous lattice of medallions — never a
+ * cross. A slow diagonal light keeps it from reading as flat wallpaper.
  */
 internal fun DrawScope.drawGirihWall(
     tint: Color,
@@ -399,71 +354,48 @@ internal fun DrawScope.drawGirihWall(
             if (local <= 0.004f) continue
 
             withTransform({ translate(left = cx, top = cy) }) {
-                // Kite facets: alternating fills give the star its cut-stone
-                // depth without any gradient work.
-                for (k in 0 until 8) {
-                    val facet = motif.facets[k]
-                    drawPath(
-                        path = facet,
-                        color = tint.copy(alpha = local * if (k % 2 == 0) 0.055f else 0.022f),
-                        style = Fill
-                    )
-                    drawPath(
-                        path = facet,
-                        color = tint.copy(alpha = local * 0.24f),
-                        style = Stroke(width = motif.fine)
-                    )
-                }
-
-                drawPath(
-                    path = motif.corona,
-                    color = tint.copy(alpha = local * 0.22f),
-                    style = Stroke(width = motif.fine)
-                )
-                drawPath(
-                    path = motif.outerStar,
-                    color = tint.copy(alpha = local * 0.58f),
-                    style = Stroke(width = motif.hair)
-                )
-                drawPath(
-                    path = motif.innerStar,
-                    color = tint.copy(alpha = local * 0.14f),
-                    style = Stroke(width = motif.fine)
-                )
                 drawPath(
                     path = motif.octagon,
-                    color = tint.copy(alpha = local * 0.50f),
-                    style = Stroke(width = motif.hair)
-                )
-                drawPath(
-                    path = motif.octagon,
-                    color = tint.copy(alpha = local * 0.04f),
-                    style = Fill
-                )
-                drawPath(
-                    path = motif.innerOctagon,
-                    color = tint.copy(alpha = local * 0.20f),
-                    style = Stroke(width = motif.fine)
-                )
-                drawPath(
-                    path = motif.core,
-                    color = tint.copy(alpha = local * 0.16f),
-                    style = Fill
-                )
-                drawPath(
-                    path = motif.core,
-                    color = tint.copy(alpha = local * 0.34f),
+                    color = tint.copy(alpha = local * 0.40f),
                     style = Stroke(width = motif.fine)
                 )
                 drawCircle(
-                    color = tint.copy(alpha = local * 0.55f),
-                    radius = motif.dot,
+                    color = tint.copy(alpha = local * 0.30f),
+                    radius = motif.ring,
+                    center = Offset.Zero,
+                    style = Stroke(width = motif.fine)
+                )
+                for (petal in motif.petals) {
+                    drawCircle(
+                        color = tint.copy(alpha = local * 0.34f),
+                        radius = motif.petalRadius,
+                        center = petal,
+                        style = Stroke(width = motif.fine)
+                    )
+                }
+                drawCircle(
+                    color = tint.copy(alpha = local * 0.26f),
+                    radius = motif.innerRing,
+                    center = Offset.Zero,
+                    style = Stroke(width = motif.fine)
+                )
+                drawCircle(
+                    color = tint.copy(alpha = local * 0.18f),
+                    radius = motif.coreRing,
+                    center = Offset.Zero,
+                    style = Stroke(width = motif.fine)
+                )
+                drawCircle(
+                    color = tint.copy(alpha = local * 0.50f),
+                    radius = motif.coreDot,
                     center = Offset.Zero
                 )
-                drawPath(
-                    path = motif.gapStar,
-                    color = tint.copy(alpha = local * 0.34f),
-                    style = Stroke(width = motif.hair)
+
+                // A bead in the square hole where four octagons meet.
+                drawCircle(
+                    color = tint.copy(alpha = local * 0.32f),
+                    radius = motif.gapDot,
+                    center = motif.gapCenter
                 )
             }
         }

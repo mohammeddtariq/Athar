@@ -117,6 +117,7 @@ import com.athar.app.ui.components.MihrabWatermark
 import com.athar.app.ui.components.OrnamentDivider
 import com.athar.app.ui.components.LocalizedTextDirection
 import com.athar.app.ui.components.PatternScaffold
+import com.athar.app.ui.components.QuranAwareText
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -135,7 +136,6 @@ import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.AtharTheme
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
-import com.athar.app.ui.theme.ThmanyahSerifText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -1076,10 +1076,8 @@ fun AfterPrayerDuaDialog(
                                     .weight(1f)
                                     .verticalScroll(rememberScrollState())
                             ) {
-                                Text(
+                                QuranAwareText(
                                     text = dua.arabic,
-                                    fontFamily = ThmanyahSerifText,
-                                    fontWeight = FontWeight.SemiBold,
                                     fontSize = 18.sp,
                                     lineHeight = 34.sp,
                                     color = AtharTextPrimary,
