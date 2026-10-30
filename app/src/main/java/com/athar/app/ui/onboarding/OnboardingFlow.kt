@@ -66,6 +66,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -78,18 +80,23 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
 import androidx.core.content.ContextCompat
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
@@ -148,19 +155,33 @@ fun OnboardingFlow(
     var school by remember { mutableStateOf("SHAFII") }
     var gpsLocating by remember { mutableStateOf(false) }
 
-    // The opening beat: the mark breathes alone, the greeting joins it, then
-    // both lift into the header before the language screen is handed over.
-    var salamShown by remember { mutableStateOf(false) }
-    var markDocked by remember { mutableStateOf(false) }
-    var greetingReady by remember { mutableStateOf(false) }
+    // The opening beats: the mark holds the centre alternating between the two
+    // scripts, the greeting is then written out word by word, and only after
+    // that does setup appear with the mark docked in the top corner.
+    var opening by remember { mutableStateOf(OpeningBeat.Mark) }
+    var scrolled by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(Unit) {
-        delay(420)
-        salamShown = true
-        delay(1420)
-        markDocked = true
-        delay(780)
-        greetingReady = true
+        delay(OPENING_MARK_MILLIS)
+        opening = OpeningBeat.Salam
+        delay(SALAM_MILLIS)
+        opening = OpeningBeat.Ready
+    }
+
+    LaunchedEffect(step) {
+        scrolled = 0f
+    }
+
+    // The top bar recedes as the step is read and comes back as the reader
+    // returns to the top of it. The offset only drives a layer on the bar, so
+    // scrolling never recomposes the header.
+    val headerScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                scrolled = (scrolled - available.y).coerceIn(0f, 2_000f)
+                return Offset.Zero
+            }
+        }
     }
 
     fun fetchFreshFix() {
@@ -241,272 +262,371 @@ fun OnboardingFlow(
         }
     }
 
-    AuroraSetupBackdrop {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val frameWidth = constraints.maxWidth.toFloat()
-            val frameHeight = constraints.maxHeight.toFloat()
+    val isReady = opening == OpeningBeat.Ready
+    val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 62.dp
+    // While the greeting is on screen the stage keeps showing it, so the hand-over
+    // to the language screen is one fade instead of a flash of empty background.
+    val stageBeat = if (opening == OpeningBeat.Ready) OpeningBeat.Salam else opening
 
-            AnimatedContent(
-                targetState = step,
-                modifier = Modifier.fillMaxSize(),
-                transitionSpec = {
-                    val incoming = fadeIn(tween(300, easing = FastOutSlowInEasing)) +
-                        slideInHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = 0.92f,
-                                stiffness = 380f
+    AuroraSetupBackdrop {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(headerScroll)
+        ) {
+            AnimatedVisibility(
+                visible = isReady,
+                enter = fadeIn(tween(420, easing = FastOutSlowInEasing)) +
+                    slideInVertically(tween(560, easing = FastOutSlowInEasing)) { it / 30 },
+                exit = fadeOut(tween(200, easing = FastOutSlowInEasing))
+            ) {
+                AnimatedContent(
+                    targetState = step,
+                    modifier = Modifier.fillMaxSize(),
+                    transitionSpec = {
+                        val incoming = fadeIn(tween(300, easing = FastOutSlowInEasing)) +
+                            slideInHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = 0.92f,
+                                    stiffness = 380f
+                                )
+                            ) { width -> if (stepForward) width / 6 else -width / 6 } +
+                            scaleIn(
+                                initialScale = 0.972f,
+                                animationSpec = spring(dampingRatio = 0.92f, stiffness = 380f)
                             )
-                        ) { width -> if (stepForward) width / 6 else -width / 6 } +
-                        scaleIn(
-                            initialScale = 0.972f,
-                            animationSpec = spring(dampingRatio = 0.92f, stiffness = 380f)
+                        val outgoing = fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                            slideOutHorizontally(
+                                spring(dampingRatio = 0.95f, stiffness = 420f)
+                            ) { width -> if (stepForward) -width / 10 else width / 10 } +
+                            scaleOut(targetScale = 0.988f, animationSpec = tween(180, easing = FastOutSlowInEasing))
+                        incoming togetherWith outgoing
+                    },
+                    label = "setupStep"
+                ) { currentStep ->
+                    when (currentStep) {
+                        0 -> GreetingStep(
+                            language = language,
+                            topInset = topInset,
+                            onPickLanguage = { language = it },
+                            onNext = { if (language != null) goTo(1) },
+                            onSkip = { finish(skipLocation = true) }
                         )
-                    val outgoing = fadeOut(tween(180, easing = FastOutSlowInEasing)) +
-                        slideOutHorizontally(
-                            spring(dampingRatio = 0.95f, stiffness = 420f)
-                        ) { width -> if (stepForward) -width / 10 else width / 10 } +
-                        scaleOut(targetScale = 0.988f, animationSpec = tween(180, easing = FastOutSlowInEasing))
-                    incoming togetherWith outgoing
-                },
-                label = "setupStep"
-            ) { currentStep ->
-                when (currentStep) {
-                    0 -> GreetingStep(
-                        ready = greetingReady,
-                        language = language,
-                        onPickLanguage = { language = it },
-                        onNext = { if (language != null) goTo(1) },
-                        onSkip = { finish(skipLocation = true) }
-                    )
-                    1 -> ThemeStep(
-                        language = language,
-                        theme = theme,
-                        accentTone = accent,
-                        onPick = { picked ->
-                            theme = picked
-                            // Repaint the setup flow in the chosen colour immediately.
-                            AtharThemeState.apply(picked, accent)
-                        },
-                        onPickAccent = { tone ->
-                            accent = tone
-                            AtharThemeState.apply(theme, tone)
-                        },
-                        onBack = { goTo(0) },
-                        onNext = { goTo(2) }
-                    )
-                    2 -> NotificationStep(
-                        language = language,
-                        onAllow = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val granted = ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.POST_NOTIFICATIONS
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (granted) {
+                        1 -> ThemeStep(
+                            language = language,
+                            theme = theme,
+                            accentTone = accent,
+                            topInset = topInset,
+                            onPick = { picked ->
+                                theme = picked
+                                // Repaint the setup flow in the chosen colour immediately.
+                                AtharThemeState.apply(picked, accent)
+                            },
+                            onPickAccent = { tone ->
+                                accent = tone
+                                AtharThemeState.apply(theme, tone)
+                            },
+                            onBack = { goTo(0) },
+                            onNext = { goTo(2) }
+                        )
+                        2 -> NotificationStep(
+                            language = language,
+                            onAllow = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val granted = ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (granted) {
+                                        notifGranted = true
+                                        advanceFromNotifications()
+                                    } else {
+                                        notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                } else {
                                     notifGranted = true
                                     advanceFromNotifications()
-                                } else {
-                                    notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                 }
-                            } else {
-                                notifGranted = true
-                                advanceFromNotifications()
-                            }
-                        },
-                        onLater = { advanceFromNotifications() },
-                        onBack = { goTo(1) }
-                    )
-                    3 -> BatteryStep(
-                        language = language,
-                        onAllow = {
-                            BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
-                            goTo(4)
-                        },
-                        onLater = { goTo(4) },
-                        onBack = { goTo(2) }
-                    )
-                    else -> SetupStep(
-                        selectedCity = selectedCity,
-                        onPickCity = {
-                            selectedCity = it
-                            gpsLatLng = null
-                            gpsLabel = null
-                        },
-                        gpsActive = gpsLatLng != null,
-                        gpsLocating = gpsLocating,
-                        gpsLabel = gpsLabel,
-                        language = language,
-                        onUseGps = {
-                            if (LocationHelper.hasPermission(context)) {
-                                // Pops the one-tap dialog if providers are off, then takes a fresh fix.
-                                requestEnableLocation()
-                            } else {
-                                locationPermissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                            },
+                            onLater = { advanceFromNotifications() },
+                            onBack = { goTo(1) }
+                        )
+                        3 -> BatteryStep(
+                            language = language,
+                            onAllow = {
+                                BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                                goTo(4)
+                            },
+                            onLater = { goTo(4) },
+                            onBack = { goTo(2) }
+                        )
+                        else -> SetupStep(
+                            selectedCity = selectedCity,
+                            topInset = topInset,
+                            onPickCity = {
+                                selectedCity = it
+                                gpsLatLng = null
+                                gpsLabel = null
+                            },
+                            gpsActive = gpsLatLng != null,
+                            gpsLocating = gpsLocating,
+                            gpsLabel = gpsLabel,
+                            language = language,
+                            onUseGps = {
+                                if (LocationHelper.hasPermission(context)) {
+                                    // Pops the one-tap dialog if providers are off, then takes a fresh fix.
+                                    requestEnableLocation()
+                                } else {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
                                     )
-                                )
-                            }
-                        },
-                        method = method,
-                        onPickMethod = { method = it },
-                        school = school,
-                        onPickSchool = { school = it },
-                        onBack = {
-                            goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 2 else 3)
-                        },
-                        onStart = { finish(skipLocation = false) }
-                    )
+                                }
+                            },
+                            method = method,
+                            onPickMethod = { method = it },
+                            school = school,
+                            onPickSchool = { school = it },
+                            onBack = {
+                                goTo(if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 2 else 3)
+                            },
+                            onStart = { finish(skipLocation = false) }
+                        )
+                    }
                 }
             }
 
-            val railShown = greetingReady || step > 0
-            val railAlpha by animateFloatAsState(
-                targetValue = if (railShown) 1f else 0f,
-                animationSpec = tween(420, easing = FastOutSlowInEasing),
-                label = "setupRailAlpha"
-            )
-
-            SetupStepRail(
-                current = step,
+            SetupHeader(
+                step = step,
                 total = 5,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 26.dp, end = 28.dp)
-                    .graphicsLayer { alpha = railAlpha }
+                shown = isReady,
+                scrollOffset = { scrolled },
+                modifier = Modifier.align(Alignment.TopCenter)
             )
 
-            SetupWordmark(
-                docked = markDocked || step > 0,
-                salamShown = salamShown && step == 0,
-                frameWidth = frameWidth,
-                frameHeight = frameHeight,
-                modifier = Modifier.align(Alignment.TopStart)
-            )
+            AnimatedVisibility(
+                visible = !isReady,
+                enter = fadeIn(tween(500, easing = FastOutSlowInEasing)),
+                exit = fadeOut(tween(420, easing = FastOutSlowInEasing))
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedVisibility(
+                        visible = stageBeat == OpeningBeat.Mark,
+                        enter = fadeIn(tween(760, easing = FastOutSlowInEasing)) +
+                            scaleIn(
+                                initialScale = 0.92f,
+                                animationSpec = tween(900, easing = FastOutSlowInEasing)
+                            ),
+                        exit = fadeOut(tween(320, easing = FastOutSlowInEasing)) +
+                            scaleOut(
+                                targetScale = 1.03f,
+                                animationSpec = tween(320, easing = FastOutSlowInEasing)
+                            )
+                    ) {
+                        OpeningMark()
+                    }
+                    AnimatedVisibility(
+                        visible = stageBeat == OpeningBeat.Salam,
+                        enter = fadeIn(tween(460, easing = FastOutSlowInEasing)),
+                        exit = fadeOut(tween(260, easing = FastOutSlowInEasing))
+                    ) {
+                        SalamGreeting()
+                    }
+                }
+            }
         }
     }
 }
 
+// ─── The opening beats ─────────────────────────────────────────
+
+/** What the screen is showing before setup itself begins. */
+private enum class OpeningBeat { Mark, Salam, Ready }
+
+/** How long the mark holds the centre before the greeting is written out. */
+private const val OPENING_MARK_MILLIS = 3_200L
+
+private const val SALAM_ARABIC_STEP = 280L
+private const val SALAM_ENGLISH_STEP = 170L
+private const val SALAM_PAUSE = 420L
+private const val SALAM_HOLD = 900L
+
+private val SALAM_ARABIC_WORDS =
+    listOf("السَّلَامُ", "عَلَيْكُمْ", "وَرَحْمَةُ", "اللَّهِ", "وَبَرَكَاتُهُ")
+
+private val SALAM_ENGLISH_WORDS =
+    listOf("As-salamu", "alaykum", "wa", "rahmatullahi", "wa", "barakatuh")
+
+private val SALAM_MILLIS =
+    SALAM_ARABIC_WORDS.size * SALAM_ARABIC_STEP + SALAM_PAUSE +
+        SALAM_ENGLISH_WORDS.size * SALAM_ENGLISH_STEP + SALAM_HOLD
+
+/** How far a step scrolls before the top bar has gone. */
+private val SETUP_HEADER_FADE = 150.dp
+
 /**
- * The opening mark, shared by every setup step.
- *
- * It arrives alone in the middle of the screen, breathing, then the greeting
- * settles under it and the pair lift into the same corner the home header
- * uses — where the mark stays for the rest of setup.
+ * The mark alone in the middle of the screen, alternating between the two
+ * scripts while a slow glow breathes behind it.
  */
 @Composable
-private fun SetupWordmark(
-    docked: Boolean,
-    salamShown: Boolean,
-    frameWidth: Float,
-    frameHeight: Float,
-    modifier: Modifier = Modifier
-) {
-    val density = LocalDensity.current
-    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    // The mark is laid out from the start edge — the right one in Arabic — so
-    // both the centring and the docked offset flip with the layout direction.
-    val towardStart = if (rtl) -1f else 1f
-    val dockInset = with(density) { 34.dp.toPx() }
-    val dockY = with(density) { (statusBar + 6.dp).toPx() }
-
-    // The greeting sits under the mark and widens the column, so the dock is
-    // measured from the mark itself, not from the column it lives in.
-    var logoWidth by remember { mutableStateOf(0f) }
-
-    val dock by animateFloatAsState(
-        targetValue = if (docked) 1f else 0f,
-        animationSpec = tween(820, easing = FastOutSlowInEasing),
-        label = "wordmarkDock"
-    )
-
-    val transition = rememberInfiniteTransition(label = "wordmarkBreathe")
-    val breathe by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(4600, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ),
-        label = "wordmarkBreathe"
-    )
-    val glow by transition.animateFloat(
-        initialValue = 0.09f,
+private fun OpeningMark() {
+    val glow by rememberInfiniteTransition(label = "openingGlow").animateFloat(
+        initialValue = 0.10f,
         targetValue = 0.22f,
         animationSpec = infiniteRepeatable(
             tween(4600, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
         ),
-        label = "wordmarkGlow"
+        label = "openingGlowAlpha"
     )
 
-    val centered = 1f - dock
-    val markScale = 1f + 0.52f * centered + 0.022f * breathe * centered
+    Box(
+        modifier = Modifier
+            .size(320.dp)
+            .drawBehind {
+                val radius = size.minDimension * 0.62f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(AtharPrimary.copy(alpha = glow), Color.Transparent),
+                        center = center,
+                        radius = radius
+                    ),
+                    radius = radius,
+                    center = center
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        AtharAnimatedLogo(
+            intervalMillis = 1_400L,
+            startArabic = false,
+            textScale = 1.75f
+        )
+    }
+}
+
+/**
+ * The full greeting, written out a word at a time — Arabic first, then the
+ * transliteration under it — and then gone for good.
+ *
+ * The words are spans of one string rather than a row of separate labels, so
+ * the line lays out and wraps as prose while each word still arrives on its own.
+ */
+@Composable
+private fun SalamGreeting() {
+    var revealed by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        for (i in SALAM_ARABIC_WORDS.indices) {
+            delay(SALAM_ARABIC_STEP)
+            revealed = i + 1
+        }
+        delay(SALAM_PAUSE)
+        for (i in SALAM_ENGLISH_WORDS.indices) {
+            delay(SALAM_ENGLISH_STEP)
+            revealed = SALAM_ARABIC_WORDS.size + i + 1
+        }
+    }
+
+    val arabic = remember(revealed) {
+        wordByWord(SALAM_ARABIC_WORDS, 0, revealed, AtharPrimaryLight)
+    }
+    val english = remember(revealed) {
+        wordByWord(SALAM_ENGLISH_WORDS, SALAM_ARABIC_WORDS.size, revealed, AtharTextSecondary)
+    }
 
     Column(
-        modifier = modifier
-            .graphicsLayer {
-                val markInset = ((size.width - logoWidth) / 2f).coerceAtLeast(0f)
-                translationX = lerp(
-                    (frameWidth - size.width) / 2f * towardStart,
-                    towardStart * (dockInset - markInset),
-                    dock
-                )
-                translationY = lerp((frameHeight - size.height) / 2f, dockY, dock)
-                scaleX = markScale
-                scaleY = markScale
-            }
-            .drawBehind {
-                val ink = glow * centered
-                if (ink > 0.005f) {
-                    val radius = size.maxDimension * 1.15f
-                    val middle = Offset(size.width / 2f, size.height / 2f)
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(AtharPrimary.copy(alpha = ink), Color.Transparent),
-                            center = middle,
-                            radius = radius
-                        ),
-                        radius = radius,
-                        center = middle
-                    )
-                }
-            },
+        modifier = Modifier.padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            AtharAnimatedLogo(
-                modifier = Modifier.onSizeChanged { logoWidth = it.width.toFloat() }
-            )
-        }
+        Text(
+            text = arabic,
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Bold,
+            fontSize = 23.sp,
+            lineHeight = 38.sp,
+            color = AtharPrimaryLight,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = english,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.5.sp,
+            lineHeight = 21.sp,
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
 
-        AnimatedVisibility(
-            visible = salamShown,
-            enter = fadeIn(tween(520, easing = FastOutSlowInEasing)) +
-                slideInVertically(tween(520, easing = FastOutSlowInEasing)) { it / 3 },
-            exit = fadeOut(tween(300, easing = FastOutSlowInEasing)) +
-                slideOutVertically(tween(300, easing = FastOutSlowInEasing)) { it / 3 }
-        ) {
-            Text(
-                text = "السَّلَامُ عَلَيْكُمْ",
-                fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                lineHeight = 28.sp,
-                color = AtharPrimaryLight,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 2.dp)
-            )
+/** [words] as one string, with the first [revealed] of them (after [offset]) inked. */
+private fun wordByWord(
+    words: List<String>,
+    offset: Int,
+    revealed: Int,
+    color: Color
+) = buildAnnotatedString {
+    words.forEachIndexed { index, word ->
+        if (index > 0) append(" ")
+        val shown = revealed > offset + index
+        withStyle(SpanStyle(color = color.copy(alpha = if (shown) 1f else 0f))) {
+            append(word)
         }
     }
 }
 
+/**
+ * The bar that stays for the rest of setup: the mark on the left and the step
+ * rail on the right in both reading directions, receding as the step is read.
+ *
+ * The scroll offset is read inside the layer block, so a scroll invalidates the
+ * draw and never recomposes the bar.
+ */
+@Composable
+private fun SetupHeader(
+    step: Int,
+    total: Int,
+    shown: Boolean,
+    scrollOffset: () -> Float,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = shown,
+        modifier = modifier.fillMaxWidth(),
+        enter = fadeIn(tween(440, easing = FastOutSlowInEasing)) +
+            slideInVertically(tween(520, easing = FastOutSlowInEasing)) { -it / 2 },
+        exit = fadeOut(tween(240, easing = FastOutSlowInEasing))
+    ) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(start = 18.dp, end = 20.dp, top = 6.dp)
+                    .graphicsLayer {
+                        val fade = (1f - scrollOffset() / SETUP_HEADER_FADE.toPx()).coerceIn(0f, 1f)
+                        alpha = fade
+                        translationY = (1f - fade) * -10.dp.toPx()
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                AtharAnimatedLogo(modifier = Modifier.padding(start = 4.dp))
+                SetupStepRail(current = step, total = total)
+            }
+        }
+    }
+}
 @Composable
 private fun GreetingStep(
-    ready: Boolean,
     language: String?,
+    topInset: Dp,
     onPickLanguage: (String) -> Unit,
     onNext: () -> Unit,
     onSkip: () -> Unit
@@ -515,93 +635,125 @@ private fun GreetingStep(
     val bio = if (isAr) "رفيقك المسلم" else "Your Muslim companion app"
     val title = if (isAr) "اختر لغتك" else "Choose your language"
 
-    AnimatedVisibility(
-        visible = ready,
-        modifier = Modifier.fillMaxSize(),
-        enter = fadeIn(tween(520, easing = FastOutSlowInEasing)) +
-            slideInVertically(tween(640, easing = FastOutSlowInEasing)) { it / 14 }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(top = topInset, bottom = 32.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = 100.dp, bottom = 32.dp)
+        BismillahHeader(language = language)
+        Spacer(Modifier.height(22.dp))
+        Text(
+            text = title,
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Black,
+            fontSize = 26.sp,
+            lineHeight = 32.sp,
+            color = AtharTextPrimary
+        )
+        Spacer(Modifier.height(8.dp))
+        // The bio takes the mark's place once the mark has lifted away.
+        TypewriterText(
+            text = bio,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.5.sp,
+            color = AtharPrimaryLight
+        )
+        Spacer(Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
-                fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 24.sp,
-                color = AtharPrimaryLight
+            LanguageCard(
+                languageName = "العربية",
+                languageSubtitle = "Arabic",
+                isSelected = language == "ar",
+                onClick = { onPickLanguage("ar") },
+                modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = title,
-                fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Black,
-                fontSize = 26.sp,
-                lineHeight = 32.sp,
-                color = AtharTextPrimary
+            LanguageCard(
+                languageName = "English",
+                languageSubtitle = "الإنجليزية",
+                isSelected = language == "en",
+                onClick = { onPickLanguage("en") },
+                modifier = Modifier.weight(1f)
             )
+        }
+        Spacer(Modifier.height(24.dp))
+        SetupPrimaryButton(
+            text = if (isAr) "التالي" else "Next",
+            onClick = onNext,
+            enabled = language != null,
+            modifier = Modifier.fillMaxWidth(),
+            height = 52.dp,
+            shape = RoundedCornerShape(26.dp)
+        )
+        if (language != null) {
             Spacer(Modifier.height(8.dp))
-            // The bio takes the mark's place once the mark has lifted away.
-            TypewriterText(
-                text = bio,
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.5.sp,
-                color = AtharPrimaryLight
-            )
-            Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                LanguageCard(
-                    languageName = "العربية",
-                    languageSubtitle = "Arabic",
-                    isSelected = language == "ar",
-                    onClick = { onPickLanguage("ar") },
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = if (language == "ar") "تخطَّ الإعداد وابدأ" else "Skip setup & start",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = AtharTextSecondary
                 )
-                LanguageCard(
-                    languageName = "English",
-                    languageSubtitle = "الإنجليزية",
-                    isSelected = language == "en",
-                    onClick = { onPickLanguage("en") },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(Modifier.height(24.dp))
-            SetupPrimaryButton(
-                text = if (isAr) "التالي" else "Next",
-                onClick = onNext,
-                enabled = language != null,
-                modifier = Modifier.fillMaxWidth(),
-                height = 52.dp,
-                shape = RoundedCornerShape(26.dp)
-            )
-            if (language != null) {
-                Spacer(Modifier.height(8.dp))
-                TextButton(
-                    onClick = onSkip,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = if (language == "ar") "تخطَّ الإعداد وابدأ" else "Skip setup & start",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = AtharTextSecondary
-                    )
-                }
             }
         }
     }
 }
 
+/**
+ * The basmala, centred under the header: the Arabic line, the transliteration
+ * beneath it, and — once a language other than Arabic has been chosen — the
+ * meaning as well, so it is understood and not only read out.
+ */
+@Composable
+private fun BismillahHeader(language: String?) {
+    val showMeaning = language != null && language != "ar"
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            lineHeight = 30.sp,
+            color = AtharPrimaryLight,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = "Bismillāhi r-raḥmāni r-raḥīm",
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            lineHeight = 17.sp,
+            color = AtharTextSecondary.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center
+        )
+        if (showMeaning) {
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = "In the name of Allah, the Most Gracious, the Most Merciful",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                lineHeight = 17.sp,
+                color = AtharTextSecondary.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
 @Composable
 private fun NotificationStep(
     language: String?,
@@ -782,6 +934,7 @@ private fun bidiBilingual(ar: String, en: String): String =
 @Composable
 private fun SetupStep(
     selectedCity: PresetCity?,
+    topInset: Dp,
     onPickCity: (PresetCity) -> Unit,
     gpsActive: Boolean,
     gpsLocating: Boolean,
@@ -799,7 +952,7 @@ private fun SetupStep(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp),
-        contentPadding = PaddingValues(top = 80.dp, bottom = 48.dp),
+        contentPadding = PaddingValues(top = topInset + 8.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -1195,6 +1348,7 @@ private fun ThemeStep(
     language: String?,
     theme: AtharThemeId,
     accentTone: AtharAccentTone,
+    topInset: Dp,
     onPick: (AtharThemeId) -> Unit,
     onPickAccent: (AtharAccentTone) -> Unit,
     onBack: () -> Unit,
@@ -1205,10 +1359,9 @@ private fun ThemeStep(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
-            .padding(top = 74.dp, bottom = 32.dp)
+            .padding(top = topInset, bottom = 32.dp)
     ) {
         Text(
             text = if (isAr) "أختر طابع أثرك" else "Pick your theme",
