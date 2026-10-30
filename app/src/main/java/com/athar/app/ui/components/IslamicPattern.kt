@@ -17,14 +17,15 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -44,24 +45,18 @@ import kotlin.math.sin
 // ══════════════════════════════════════════════════════════════
 // ATHAR — Backdrops
 //
-// Two hand-built walls sit behind every screen:
-//   ISLAMIC — a lattice of octagons laid edge to edge, each holding an
-//             eight-lobed rosette, with a delicate diamond and jewel bead
-//             where four of them meet. Rounded throughout, so the field
-//             braids into one continuous medallion wall.
+// Hand-built Islamic backdrops sitting behind app surfaces:
+//   ISLAMIC — interconnected Islamic geometric lines: 8-pointed star
+//             rosettes (khatam) linked across nodes by diagonal strapwork
+//             ribbons and intermediate corner diamonds, in continuous fluid motion.
 //   LETTERS — a woven field of isolated Naskh letters in slow drift.
-//
-// Both are drawn with hairline-to-mid inks and fade along the same
-// diagonal, so text on top always stays readable. Every surface in
-// the app (screens, dialogs, floating cards) routes through here, so
-// one switch repaints all of them at once.
 // ══════════════════════════════════════════════════════════════
 
 /**
  * The app-wide backdrop.
  *
  * Draws whichever [AtharBackgroundStyle] is selected. Both styles drift on
- * their own long cycles; SOLID draws nothing and lets the theme's own colour
+ * continuous smooth cycles; SOLID draws nothing and lets the theme's own colour
  * stand edge to edge.
  */
 @Composable
@@ -69,8 +64,8 @@ fun IslamicPatternBackground(
     modifier: Modifier = Modifier,
     tint: Color = AtharBackdropTint,
     alpha: Float = 0.12f,
-    animated: Boolean = false,
-    cellDp: Float = 54f,
+    animated: Boolean = true,
+    cellDp: Float = 68f,
     styleOverride: AtharBackgroundStyle? = null
 ) {
     val style = styleOverride ?: AtharBackgroundState.current
@@ -78,40 +73,33 @@ fun IslamicPatternBackground(
     val cellPx = with(LocalDensity.current) { cellDp.dp.toPx() }
     val typeface = rememberHurufTypeface()
 
-    // The medallion stamp is rebuilt only when the cell size changes.
-    val girihCache = remember { GirihCache() }
-
-    // The wall is recorded once into a display list and then only moved around.
-    // Painting it directly meant rebuilding every medallion on every frame, on
-    // every screen, which is where the stutter came from. Now a frame costs one
-    // layer draw.
     val baked = remember { BakedBackdrop() }
     baked.layer = rememberGraphicsLayer()
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
 
-    val transition = rememberInfiniteTransition(label = "patternDrift")
+    val transition = rememberInfiniteTransition(label = "patternMotion")
 
-    // Slow, seamless diagonal drift with subtle harmonic wave
-    val girihPhase by transition.animateFloat(
+    // Continuous smooth diagonal drift along the geometric lattice period
+    val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(36000, easing = LinearEasing),
+            animation = tween(32000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "girihPhase"
+        label = "patternPhase"
     )
 
-    // Ambient traveling light sweeping gracefully across the medallions in 2D
+    // Soft travelling ambient illumination sweeping across the lattice
     val glowPhase by transition.animateFloat(
         initialValue = 0f,
         targetValue = (2 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(24000, easing = LinearEasing),
+            animation = tween(22000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "girihGlow"
+        label = "patternGlow"
     )
 
     val letterPhase by transition.animateFloat(
@@ -126,23 +114,21 @@ fun IslamicPatternBackground(
 
     val breathe by transition.animateFloat(
         initialValue = 0.88f,
-        targetValue = 1f,
+        targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(7600, easing = FastOutSlowInEasing),
+            animation = tween(7200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "patternBreathe"
     )
 
-    // The canvas is keyed on the style so switching to solid rebuilds the
-    // node instead of retiring one mid-composition. Retiring it used to leave
-    // the previous pattern's tiles behind as pale boxes.
     key(style) {
         Canvas(modifier = modifier.fillMaxSize()) {
             if (style == AtharBackgroundStyle.SOLID) return@Canvas
             if (size.width <= 0f || size.height <= 0f) return@Canvas
 
-            val bleed = cellPx
+            val bleedX = cellPx
+            val bleedY = cellPx * 2f
             val wall = baked.ensure(
                 style = style,
                 width = size.width,
@@ -150,37 +136,45 @@ fun IslamicPatternBackground(
                 cellPx = cellPx,
                 tint = tint,
                 typeface = typeface,
-                cache = girihCache,
                 density = density,
                 layoutDirection = layoutDirection,
-                bleed = bleed
+                bleedX = bleedX,
+                bleedY = bleedY
             ) ?: return@Canvas
 
             val driftX: Float
             val driftY: Float
             if (style == AtharBackgroundStyle.ISLAMIC) {
-                val harmonic = sin(girihPhase * 2f * PI.toFloat()) * (cellPx * 0.038f)
-                driftX = girihPhase * cellPx + harmonic
-                driftY = girihPhase * cellPx - harmonic
+                if (animated) {
+                    driftX = phase * cellPx
+                    driftY = phase * (2f * cellPx)
+                } else {
+                    driftX = 0f
+                    driftY = 0f
+                }
             } else {
-                val radians = letterPhase * PI.toFloat() / 180f
-                driftX = cos(radians) * cellPx * 0.12f
-                driftY = sin(radians) * cellPx * 0.18f
+                if (animated) {
+                    val radians = letterPhase * PI.toFloat() / 180f
+                    driftX = cos(radians) * cellPx * 0.12f
+                    driftY = sin(radians) * cellPx * 0.18f
+                } else {
+                    driftX = 0f
+                    driftY = 0f
+                }
             }
 
-            val ink = (alpha * breathe / BAKE_ALPHA).coerceIn(0f, 1f)
+            val currentBreathe = if (animated) breathe else 1f
+            val ink = (alpha * currentBreathe / BAKE_ALPHA).coerceIn(0f, 1f)
             wall.alpha = ink
 
-            // The wall is recorded with one cell of bleed on every side so a
-            // drifted frame never uncovers a bare strip at the edges.
-            translate(left = driftX - bleed, top = driftY - bleed) {
+            translate(left = driftX - bleedX, top = driftY - bleedY) {
                 drawLayer(wall)
             }
 
-            // Enhanced 2D soft ambient light sweep across the medallions
-            if (style == AtharBackgroundStyle.ISLAMIC) {
+            // Travelling ambient light sweeping across the interconnected geometric lines
+            if (style == AtharBackgroundStyle.ISLAMIC && animated) {
                 val sweepX = (0.5f + 0.38f * sin(glowPhase)) * size.width
-                val sweepY = (0.34f + 0.18f * cos(glowPhase * 0.7f)) * size.height
+                val sweepY = (0.34f + 0.20f * cos(glowPhase * 0.7f)) * size.height
                 drawRect(
                     brush = Brush.radialGradient(
                         colors = listOf(tint.copy(alpha = alpha * 0.32f), Color.Transparent),
@@ -194,16 +188,8 @@ fun IslamicPatternBackground(
     }
 }
 
-/**
- * Alpha the wall is recorded at. The real opacity is applied when the layer is
- * drawn, so one bake serves every breathe level without re-recording.
- */
 private const val BAKE_ALPHA = 0.42f
 
-/**
- * Holds the recorded wall and the parameters it was recorded with, so a size,
- * accent or style change re-records exactly once.
- */
 private class BakedBackdrop {
     var layer: GraphicsLayer? = null
 
@@ -220,10 +206,10 @@ private class BakedBackdrop {
         cellPx: Float,
         tint: Color,
         typeface: android.graphics.Typeface?,
-        cache: GirihCache,
         density: androidx.compose.ui.unit.Density,
         layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-        bleed: Float
+        bleedX: Float,
+        bleedY: Float
     ): GraphicsLayer? {
         val target = layer ?: return null
         val unchanged = this.style == style &&
@@ -233,17 +219,17 @@ private class BakedBackdrop {
             this.height == height
         if (unchanged) return target
 
-        val recordedWidth = (width + bleed * 2f).toInt().coerceAtLeast(1)
-        val recordedHeight = (height + bleed * 2f).toInt().coerceAtLeast(1)
+        val recordedWidth = (width + bleedX * 2f).toInt().coerceAtLeast(1)
+        val recordedHeight = (height + bleedY * 2f).toInt().coerceAtLeast(1)
         target.record(
             density = density,
             layoutDirection = layoutDirection,
             size = IntSize(recordedWidth, recordedHeight)
         ) {
-            translate(left = bleed, top = bleed) {
+            translate(left = bleedX, top = bleedY) {
                 when (style) {
                     AtharBackgroundStyle.ISLAMIC ->
-                        drawGirihWall(tint, BAKE_ALPHA, cellPx, cache)
+                        drawArabesqueLattice(tint, BAKE_ALPHA, cellPx)
                     AtharBackgroundStyle.LETTERS ->
                         drawHurufWeave(tint, BAKE_ALPHA, 0f, typeface, cellPx)
                     AtharBackgroundStyle.SOLID -> Unit
@@ -260,187 +246,200 @@ private class BakedBackdrop {
     }
 }
 
-// ─── Girih medallion wall ──────────────────────────────────────
-
-internal class GirihMotif(val cell: Float) {
-    // Octagon centres sit one cell apart, so their edges touch exactly and the
-    // square hole they leave between them closes itself.
-    val radius = cell * 0.5412f
-
-    val octagon: Path = polygonPath(8, radius, PI.toFloat() / 8f)
-    val ring = radius * 0.88f
-    val petalRadius = radius * 0.34f
-    val petals: List<Offset> = List(8) { k ->
-        val angle = k * PI.toFloat() / 4f
-        Offset(radius * 0.48f * cos(angle), radius * 0.48f * sin(angle))
-    }
-    val innerRing = radius * 0.32f
-    val coreRing = radius * 0.13f
-    val coreDot = cell * 0.010f
-
-    /** Centre of the aperture where four octagons meet. */
-    val gapCenter = Offset(cell * 0.5f, cell * 0.5f)
-    val gapSquare: Path = polygonPath(4, cell * 0.082f, PI.toFloat() / 4f, at = gapCenter)
-    val gapDot = cell * 0.009f
-
-    val fine = (cell * 0.0055f).coerceAtLeast(1.1f)
-    val ultraFine = (cell * 0.0038f).coerceAtLeast(0.85f)
-}
-
-internal class GirihCache {
-    private var cellPx = -1f
-    private var motif: GirihMotif? = null
-
-    internal fun motifFor(cellPx: Float): GirihMotif {
-        val cached = motif
-        if (cached != null && this.cellPx == cellPx) return cached
-        val built = GirihMotif(cellPx)
-        this.cellPx = cellPx
-        motif = built
-        return built
-    }
-}
-
-internal typealias KhatamCache = GirihCache
-
-private fun polar(r: Float, angle: Float): Offset =
-    Offset(r * cos(angle), r * sin(angle))
-
-/** An n-gon whose vertices sit on [radius], first one at [rotation]. */
-private fun polygonPath(
-    sides: Int,
-    radius: Float,
-    rotation: Float,
-    at: Offset = Offset.Zero
-): Path = Path().apply {
-    for (k in 0 until sides) {
-        val point = polar(radius, rotation + k * 2f * PI.toFloat() / sides) + at
-        if (k == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y)
-    }
-    close()
-}
+// ─── Connected Islamic Geometric Lines ─────────────────────────
 
 /**
- * Draws the girih medallion wall.
- *
- * Each cell stamps one octagon with an eight-lobed rosette inside: an outer
- * frame, eight overlapping petals, a pair of concentric inner rings and an
- * illuminated bead at the centre. Four octagons meet around a small diamond
- * carrying its own jewel bead, weaving the surface into one unbroken,
- * balanced medallion field.
+ * Draws the Arabesque geometric star & strapwork mosaic with interconnected
+ * lines and smooth corner gradient falloff.
  */
-internal fun DrawScope.drawGirihWall(
+internal fun DrawScope.drawArabesqueLattice(
     tint: Color,
     baseAlpha: Float,
-    cellPx: Float,
-    cache: GirihCache
+    cellPx: Float
 ) {
     if (size.width <= 0f || size.height <= 0f || cellPx <= 0f) return
 
-    val motif = cache.motifFor(cellPx)
     val w = size.width
     val h = size.height
-    val columns = ceil(w / cellPx).toInt() + 2
-    val rows = ceil(h / cellPx).toInt() + 2
+    val cols = ceil(w / cellPx).toInt() + 3
+    val rows = ceil(h / cellPx).toInt() + 3
 
-    for (row in -2..rows) {
-        for (column in -2..columns) {
-            val cx = column * cellPx
-            val cy = row * cellPx
+    for (r in -2..rows) {
+        for (c in -2..cols) {
+            val cx = c * cellPx + (if (r % 2 == 0) 0f else cellPx / 2f)
+            val cy = r * cellPx
 
-            val diagonal = ((cx / w) * 0.62f + (1f - cy / h) * 0.38f).coerceIn(0f, 1f)
-            val lit = 0.82f + 0.18f * sin(column * 0.9f + row * 0.62f)
-            val local = baseAlpha * (0.58f + diagonal * 1.68f) * lit
-            if (local <= 0.004f) continue
+            // Gradient falloff: richer density on top corner, fading smoothly towards base
+            val diagonalFactor = ((cx / w) * 0.65f + (1f - (cy / h)) * 0.35f).coerceIn(0f, 1f)
+            val localAlpha = baseAlpha * (diagonalFactor * diagonalFactor * 1.35f).coerceIn(0.01f, 1f)
 
-            withTransform({ translate(left = cx, top = cy) }) {
-                // Subtle illuminated core wash
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(tint.copy(alpha = local * 0.07f), Color.Transparent),
-                        center = Offset.Zero,
-                        radius = motif.innerRing
-                    ),
-                    radius = motif.innerRing,
-                    center = Offset.Zero
-                )
+            if (localAlpha > 0.004f) {
+                val strokeColor = tint.copy(alpha = localAlpha * 0.76f)
+                val highlightColor = tint.copy(alpha = localAlpha * 0.44f)
 
-                // Outer octagon perimeter
-                drawPath(
-                    path = motif.octagon,
-                    color = tint.copy(alpha = local * 0.44f),
-                    style = Stroke(width = motif.fine)
-                )
+                // 1. Central 8-pointed star rosette
+                drawEightPointedStar(Offset(cx, cy), cellPx * 0.38f, strokeColor, highlightColor)
 
-                // Circular frame enclosing the rosette
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.30f),
-                    radius = motif.ring,
-                    center = Offset.Zero,
-                    style = Stroke(width = motif.fine)
-                )
+                // 2. Interlocking diagonal strapwork ribbons connecting nodes
+                drawInterlockingRibbons(Offset(cx, cy), cellPx, strokeColor)
 
-                // 8 radiating rosette petals
-                for (petal in motif.petals) {
-                    drawCircle(
-                        color = tint.copy(alpha = local * 0.34f),
-                        radius = motif.petalRadius,
-                        center = petal,
-                        style = Stroke(width = motif.fine)
-                    )
-                }
-
-                // Inner concentric rings
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.28f),
-                    radius = motif.innerRing,
-                    center = Offset.Zero,
-                    style = Stroke(width = motif.fine)
-                )
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.22f),
-                    radius = motif.coreRing,
-                    center = Offset.Zero,
-                    style = Stroke(width = motif.fine)
-                )
-
-                // Central medallion jewel bead
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.55f),
-                    radius = motif.coreDot,
-                    center = Offset.Zero
-                )
-
-                // Junction framing where four octagons meet:
-                // Delicate diamond frame and jewel bead
-                drawPath(
-                    path = motif.gapSquare,
-                    color = tint.copy(alpha = local * 0.26f),
-                    style = Stroke(width = motif.ultraFine)
-                )
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.36f),
-                    radius = motif.gapDot,
-                    center = motif.gapCenter
-                )
+                // 3. Intermediate diamonds between stars
+                drawCornerDiamonds(Offset(cx + cellPx / 2f, cy), cellPx * 0.11f, strokeColor)
+                drawCornerDiamonds(Offset(cx, cy + cellPx / 2f), cellPx * 0.11f, strokeColor)
             }
         }
     }
 }
 
+private fun DrawScope.drawEightPointedStar(
+    center: Offset,
+    radius: Float,
+    primaryColor: Color,
+    highlightColor: Color
+) {
+    val strokeWidth = (radius * 0.046f).coerceIn(1.2f, 2.2f)
+    val halfSide = radius * 0.7071f
+
+    // Soft embossed inner radiance
+    drawCircle(
+        color = primaryColor.copy(alpha = primaryColor.alpha * 0.12f),
+        radius = radius * 0.72f,
+        center = center
+    )
+
+    // Two overlapping squares rotated by 45 degrees forming the classic Khatam star
+    for (deg in listOf(0f, 45f)) {
+        rotate(degrees = deg, pivot = center) {
+            val corners = listOf(
+                Offset(center.x - halfSide, center.y - halfSide),
+                Offset(center.x + halfSide, center.y - halfSide),
+                Offset(center.x + halfSide, center.y + halfSide),
+                Offset(center.x - halfSide, center.y + halfSide)
+            )
+            for (i in corners.indices) {
+                drawLine(
+                    color = primaryColor,
+                    start = corners[i],
+                    end = corners[(i + 1) % 4],
+                    strokeWidth = strokeWidth,
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+    }
+
+    // Concentric inner micro-octagon
+    val innerR = radius * 0.34f
+    val octPts = (0 until 8).map { i ->
+        val rad = Math.toRadians(i * 45.0 + 22.5)
+        Offset(
+            center.x + (innerR * cos(rad)).toFloat(),
+            center.y + (innerR * sin(rad)).toFloat()
+        )
+    }
+    for (i in octPts.indices) {
+        drawLine(
+            color = highlightColor,
+            start = octPts[i],
+            end = octPts[(i + 1) % 8],
+            strokeWidth = strokeWidth * 0.85f,
+            cap = StrokeCap.Round
+        )
+    }
+
+    // Central jewel bead
+    drawCircle(
+        color = primaryColor,
+        radius = (radius * 0.055f).coerceAtLeast(1.5f),
+        center = center
+    )
+}
+
+private fun DrawScope.drawInterlockingRibbons(
+    center: Offset,
+    cellPx: Float,
+    color: Color
+) {
+    val r = cellPx * 0.38f
+    val stroke = (cellPx * 0.015f).coerceIn(1.1f, 2.0f)
+    // 8 outward radiating ribbon lines reaching toward adjacent star points
+    for (i in 0 until 8) {
+        val angle = Math.toRadians(i * 45.0)
+        val p1 = Offset(
+            center.x + (r * 0.82f * cos(angle)).toFloat(),
+            center.y + (r * 0.82f * sin(angle)).toFloat()
+        )
+        val p2 = Offset(
+            center.x + (cellPx * 0.50f * cos(angle)).toFloat(),
+            center.y + (cellPx * 0.50f * sin(angle)).toFloat()
+        )
+        drawLine(
+            color = color,
+            start = p1,
+            end = p2,
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+private fun DrawScope.drawCornerDiamonds(
+    center: Offset,
+    size: Float,
+    color: Color
+) {
+    val stroke = (size * 0.28f).coerceIn(1.0f, 1.8f)
+
+    // Subtle soft center glow
+    drawCircle(
+        color = color.copy(alpha = color.alpha * 0.10f),
+        radius = size * 0.8f,
+        center = center
+    )
+
+    rotate(degrees = 45f, pivot = center) {
+        drawRect(
+            color = color,
+            topLeft = Offset(center.x - size, center.y - size),
+            size = Size(size * 2, size * 2),
+            style = Stroke(width = stroke)
+        )
+    }
+
+    // Tiny center bead
+    drawCircle(
+        color = color,
+        radius = (size * 0.18f).coerceAtLeast(1f),
+        center = center
+    )
+}
+
+// Backwards-compatible aliases so any existing callers continue working seamlessly
+internal fun DrawScope.drawGirihWall(
+    tint: Color,
+    baseAlpha: Float,
+    cellPx: Float,
+    cache: Any? = null
+) = drawArabesqueLattice(tint, baseAlpha, cellPx)
+
 internal fun DrawScope.drawKhatamWall(
     tint: Color,
     baseAlpha: Float,
     cellPx: Float,
-    cache: GirihCache
-) = drawGirihWall(tint, baseAlpha, cellPx, cache)
+    cache: Any? = null
+) = drawArabesqueLattice(tint, baseAlpha, cellPx)
 
-/** Convenience wrapper: opaque dark base + the selected backdrop behind [content]. */
+internal class GirihCache {
+    fun motifFor(cellPx: Float): Any = this
+}
+internal typealias KhatamCache = GirihCache
+
+/** Convenience wrapper: opaque dark base + modern Islamic pattern behind [content]. */
 @Composable
 fun PatternScaffold(
     modifier: Modifier = Modifier,
     patternAlpha: Float = 0.12f,
-    animated: Boolean = false,
+    animated: Boolean = true,
     content: @Composable () -> Unit
 ) {
     Box(
