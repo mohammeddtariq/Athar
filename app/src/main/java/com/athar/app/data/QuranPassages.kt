@@ -52,13 +52,20 @@ object QuranPassages {
         val ayah: Int,
         val letters: String,
         val text: String
-    )
+    ) {
+        /** The same letters with the alef dropped, which the rasm often omits. */
+        val bare: String = letters.replace("\u0627", "")
+    }
 
     @Volatile
     private var verses: List<Verse>? = null
 
     @Volatile
     private var byPrefix: Map<String, List<Int>> = emptyMap()
+
+    /** Alef-less keys that belong to exactly one verse, and so to one number. */
+    @Volatile
+    private var byBare: Map<String, Int> = emptyMap()
 
     private val cache = ConcurrentHashMap<String, List<QuranPassage>>()
 
@@ -132,7 +139,47 @@ object QuranPassages {
                 cursor = passage.end
             }
         }
-        return accepted
+        return fillGaps(text, accepted)
+    }
+
+    /**
+     * Fills a gap that is exactly one verse, spelled with an alef the mushaf
+     * leaves out — `النفاثات` against `ٱلنَّفَّـٰثَـٰتِ`.
+     *
+     * Only a gap between two verses already matched is considered, and only
+     * when the whole gap reduces to one verse whose alef-less key is unique in
+     * the mushaf. A number is never guessed: a missing marker reads as prose,
+     * a wrong number would misquote the Quran.
+     */
+    private fun fillGaps(text: String, accepted: List<QuranPassage>): List<QuranPassage> {
+        if (accepted.size < 2) return accepted
+        val out = ArrayList<QuranPassage>(accepted.size + 1)
+        out += accepted.first()
+        for (i in 1 until accepted.size) {
+            fillOne(text, accepted[i - 1].end, accepted[i].start)?.let { out += it }
+            out += accepted[i]
+        }
+        return out
+    }
+
+    private fun fillOne(text: String, start: Int, end: Int): QuranPassage? {
+        if (end <= start) return null
+        val bare = StringBuilder(end - start)
+        for (i in start until end) {
+            val letter = fold(text[i]) ?: continue
+            if (letter == '\u0627') continue
+            bare.append(letter)
+        }
+        if (bare.length < MIN_LETTERS) return null
+        val id = byBare[bare.toString()] ?: return null
+        val verse = verses?.getOrNull(id) ?: return null
+        return QuranPassage(
+            start = start,
+            end = end,
+            surah = verse.surah,
+            ayah = verse.ayah,
+            text = verse.text
+        )
     }
 
     private fun ensureIndexed(context: Context) {
@@ -165,6 +212,19 @@ object QuranPassages {
                 }
             }
             byPrefix = prefix
+
+            // Alef-less keys are only usable when they point at a single verse,
+            // so a number can never come from an ambiguous key.
+            val bare = HashMap<String, Int>()
+            val clashes = HashSet<String>()
+            for (id in built.indices) {
+                val key = built[id].bare
+                if (key.length < MIN_LETTERS) continue
+                if (bare.put(key, id) != null) clashes += key
+            }
+            for (key in clashes) bare.remove(key)
+            byBare = bare
+
             verses = built
         }
     }

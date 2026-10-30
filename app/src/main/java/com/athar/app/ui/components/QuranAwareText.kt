@@ -98,8 +98,15 @@ fun quranAwareAnnotated(
     quranSize: TextUnit = 26.sp
 ): AnnotatedString = buildAnnotatedString {
     var cursor = 0
+    var emitted = false
     for (passage in passages) {
-        if (passage.start > cursor) append(proseGap(text.substring(cursor, passage.start)))
+        val gap = if (passage.start > cursor) proseGap(text.substring(cursor, passage.start)) else ""
+        if (gap.isNotEmpty()) {
+            append(gap)
+        } else if (emitted) {
+            // A verse that filled a whole gap sits flush against the one before.
+            append(" ")
+        }
         withStyle(
             SpanStyle(
                 fontFamily = QuranUthmanicHafs,
@@ -113,6 +120,7 @@ fun quranAwareAnnotated(
                 append(with(QuranRepository) { passage.ayah.toArabicIndic() })
             }
         }
+        emitted = true
         cursor = passage.end
     }
     if (cursor < text.length) append(proseGap(text.substring(cursor)))
