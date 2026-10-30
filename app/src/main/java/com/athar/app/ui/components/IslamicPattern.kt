@@ -44,16 +44,17 @@ import kotlin.math.sin
 // ATHAR — Backdrops
 //
 // Two hand-built walls sit behind every screen:
-//   ISLAMIC — a lattice of octagons laid edge to edge, each holding an
-//             eight-lobed rosette, with a small square and bead where
-//             four of them meet. Rounded throughout, so the field
-//             braids into one continuous medallion wall.
+//   ISLAMIC — a khatam lattice: an eight-pointed star at every node,
+//             built from a pair of rotated squares, with its straps
+//             running out to the tips of the neighbouring stars so the
+//             field closes into one interlaced geometry, and a small
+//             diamond where the diagonals cross.
 //   LETTERS — a woven field of isolated Naskh letters in slow drift.
 //
-// Both are drawn with hairline-to-mid inks and fade along the same
-// diagonal, so text on top always stays readable. Every surface in
-// the app (screens, dialogs, floating cards) routes through here, so
-// one switch repaints all of them at once.
+// Both are drawn with hairline inks and fade along the same diagonal,
+// so text on top always stays readable. Every surface in the app
+// (screens, dialogs, floating cards) routes through here, so one
+// switch repaints all of them at once.
 // ══════════════════════════════════════════════════════════════
 
 /**
@@ -77,13 +78,13 @@ fun IslamicPatternBackground(
     val cellPx = with(LocalDensity.current) { cellDp.dp.toPx() }
     val typeface = rememberHurufTypeface()
 
-    // The medallion stamp is rebuilt only when the cell size changes.
-    val girihCache = remember { GirihCache() }
+    // The star stamp is rebuilt only when the cell size changes.
+    val girihCache = remember { KhatamCache() }
 
     // The wall is recorded once into a display list and then only moved around.
-    // Painting it directly meant rebuilding every medallion on every frame, on
-    // every screen, which is where the stutter came from. Now a frame costs one
-    // layer draw.
+    // Painting it directly meant rebuilding every star on every frame, on every
+    // screen, which is where the stutter came from. Now a frame costs one layer
+    // draw.
     val baked = remember { BakedBackdrop() }
     baked.layer = rememberGraphicsLayer()
     val density = LocalDensity.current
@@ -93,7 +94,7 @@ fun IslamicPatternBackground(
 
     // One full cell of travel per loop: the restart lands on an identical
     // frame, so the drift reads as continuous motion instead of a jump. The
-    // medallions move on the diagonal, which is the lattice's own direction.
+    // stars move on the diagonal, which is the lattice's own direction.
     val girihPhase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -148,7 +149,7 @@ fun IslamicPatternBackground(
                 cellPx = cellPx,
                 tint = tint,
                 typeface = typeface,
-                girihCache = girihCache,
+                cache = girihCache,
                 density = density,
                 layoutDirection = layoutDirection,
                 bleed = bleed
@@ -173,8 +174,8 @@ fun IslamicPatternBackground(
                 drawLayer(wall)
             }
 
-            // The medallions themselves no longer re-light every frame, so a
-            // single additive wash carries the travelling light across them.
+            // The stars themselves no longer re-light every frame, so a single
+            // additive wash carries the travelling light across them.
             if (style == AtharBackgroundStyle.ISLAMIC) {
                 val sweep = (0.5f + 0.5f * sin(glowPhase - PI.toFloat() / 2f)) * size.width
                 drawRect(
@@ -216,7 +217,7 @@ private class BakedBackdrop {
         cellPx: Float,
         tint: Color,
         typeface: android.graphics.Typeface?,
-        girihCache: GirihCache,
+        cache: KhatamCache,
         density: androidx.compose.ui.unit.Density,
         layoutDirection: androidx.compose.ui.unit.LayoutDirection,
         bleed: Float
@@ -239,7 +240,7 @@ private class BakedBackdrop {
             translate(left = bleed, top = bleed) {
                 when (style) {
                     AtharBackgroundStyle.ISLAMIC ->
-                        drawGirihWall(tint, BAKE_ALPHA, cellPx, girihCache)
+                        drawKhatamWall(tint, BAKE_ALPHA, cellPx, cache)
                     AtharBackgroundStyle.LETTERS ->
                         drawHurufWeave(tint, BAKE_ALPHA, 0f, typeface, cellPx)
                     AtharBackgroundStyle.SOLID -> Unit
@@ -256,49 +257,54 @@ private class BakedBackdrop {
     }
 }
 
-// ─── Girih wall ────────────────────────────────────────────────
+// ─── Khatam wall ───────────────────────────────────────────────
 
 /**
- * One medallion, built at the current cell size. Every cell on the wall is
- * this same stamp, so the field costs one build and a translate per cell
- * instead of a rebuild per frame.
+ * One node of the lattice, built at the current cell size.
  *
- * The frame is a regular octagon. Four of them meet edge to edge around a
- * small square, and the eight-lobed rosette inside each one carries the
- * field — rounded, so no two tiles ever cross into a pointed star.
+ * The star is the classic khatam: two squares inscribed in the same circle,
+ * one turned 45°, whose union is the eight-pointed figure. Both squares keep
+ * their own outline, so the star reads as two interlaced frames instead of a
+ * silhouette, and the small octagon sits on the notches between the points.
+ * Each point then carries a strap out to the point of the star beside it,
+ * which is what closes the wall into one geometry rather than a field of
+ * separate rosettes.
  */
-internal class GirihMotif(val cell: Float) {
-    // Octagon centres sit one cell apart, so their edges touch exactly and the
-    // square hole they leave between them closes itself — nothing to draw.
-    private val radius = cell * 0.5412f
+internal class KhatamMotif(val cell: Float) {
+    /** Distance from the node to the tip of a point. */
+    val radius = cell * 0.315f
 
-    val octagon: Path = polygonPath(8, radius, PI.toFloat() / 8f)
-    val ring = radius * 0.86f
-    val petalRadius = radius * 0.34f
-    val petals: List<Offset> = List(8) { k ->
-        val angle = k * PI.toFloat() / 4f
-        Offset(radius * 0.50f * cos(angle), radius * 0.50f * sin(angle))
-    }
-    val innerRing = radius * 0.30f
-    val coreRing = radius * 0.12f
-    val coreDot = cell * 0.009f
+    /** Distance to the notch between two points, which is where the squares met. */
+    private val notch = cell * 0.212f
 
-    /** Centre of the square hole where four octagons meet. */
-    val gapCenter = Offset(cell * 0.5f, cell * 0.5f)
-    val gapDot = cell * 0.008f
+    val star: Path = starPath(radius, notch)
+    val inner: Path = polygonPath(8, notch * 0.46f, PI.toFloat() / 8f)
 
-    val fine = (cell * 0.0055f).coerceAtLeast(1f)
+    /** Small diamond sitting where the two diagonals of the cell cross. */
+    val diamond: Path = polygonPath(4, cell * 0.080f, PI.toFloat() / 4f, at = Offset(cell * 0.5f, cell * 0.5f))
+
+    val core = cell * 0.011f
+    val knot = cell * 0.010f
+    val fine = (cell * 0.0046f).coerceAtLeast(1f)
+    val ribbon = (cell * 0.0036f).coerceAtLeast(0.9f)
+
+    /** Inset that keeps a strap from touching the ink of its star. */
+    val strapInset = cell * 0.022f
+    val axisStart = radius + strapInset
+    val axisEnd = cell - radius - strapInset
+    val diagonalStart = radius * 0.7071f + strapInset
+    val diagonalEnd = cell - radius * 0.7071f - strapInset
 }
 
-/** Keeps the built medallion alive across frames and recompositions. */
-internal class GirihCache {
+/** Keeps the built node alive across frames and recompositions. */
+internal class KhatamCache {
     private var cellPx = -1f
-    private var motif: GirihMotif? = null
+    private var motif: KhatamMotif? = null
 
-    internal fun motifFor(cellPx: Float): GirihMotif {
+    internal fun motifFor(cellPx: Float): KhatamMotif {
         val cached = motif
         if (cached != null && this.cellPx == cellPx) return cached
-        val built = GirihMotif(cellPx)
+        val built = KhatamMotif(cellPx)
         this.cellPx = cellPx
         motif = built
         return built
@@ -309,29 +315,50 @@ private fun polar(r: Float, angle: Float): Offset =
     Offset(r * cos(angle), r * sin(angle))
 
 /** An n-gon whose vertices sit on [radius], first one at [rotation]. */
-private fun polygonPath(sides: Int, radius: Float, rotation: Float): Path = Path().apply {
+private fun polygonPath(
+    sides: Int,
+    radius: Float,
+    rotation: Float,
+    at: Offset = Offset.Zero
+): Path = Path().apply {
     for (k in 0 until sides) {
-        val angle = rotation + k * 2f * PI.toFloat() / sides
-        val point = polar(radius, angle)
+        val point = polar(radius, rotation + k * 2f * PI.toFloat() / sides) + at
         if (k == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y)
     }
     close()
 }
 
 /**
- * Draws the girih wall.
- *
- * Each cell stamps one octagon with an eight-lobed rosette inside: an outer
- * ring, eight overlapping petals, a pair of inner rings and a bead at the
- * centre. Four octagons meet around a small square, which carries its own
- * bead, so the field joins into a continuous lattice of medallions — never a
- * cross. A slow diagonal light keeps it from reading as flat wallpaper.
+ * The eight-pointed star: [points] tips on [tip], with a notch on [notch]
+ * between each pair. The union of the two rotated squares is exactly this
+ * outline, drawn once instead of stroking both squares over each other.
  */
-internal fun DrawScope.drawGirihWall(
+private fun starPath(tip: Float, notch: Float, points: Int = 8): Path = Path().apply {
+    for (k in 0 until points * 2) {
+        val point = polar(if (k % 2 == 0) tip else notch, k * PI.toFloat() / points)
+        if (k == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y)
+    }
+    close()
+}
+
+/**
+ * Draws the khatam wall.
+ *
+ * Each node stamps one eight-pointed star, its inner octagon and a bead at the
+ * centre, then runs straps to the four stars beside it and to the two on the
+ * diagonals, so the field interlocks. A diamond sits where the diagonal straps
+ * cross, and a bead where the axis straps do, so the wall has two scales of
+ * ornament instead of one repeated shape.
+ *
+ * Density fades from the top-end corner towards the bottom-start, and each cell
+ * carries a small, fixed variation in weight, so the wall never reads as flat
+ * wallpaper under the content.
+ */
+internal fun DrawScope.drawKhatamWall(
     tint: Color,
     baseAlpha: Float,
     cellPx: Float,
-    cache: GirihCache
+    cache: KhatamCache
 ) {
     if (size.width <= 0f || size.height <= 0f || cellPx <= 0f) return
 
@@ -340,62 +367,89 @@ internal fun DrawScope.drawGirihWall(
     val h = size.height
     val columns = ceil(w / cellPx).toInt() + 2
     val rows = ceil(h / cellPx).toInt() + 2
+    val half = cellPx * 0.5f
 
     for (row in -2..rows) {
         for (column in -2..columns) {
             val cx = column * cellPx
             val cy = row * cellPx
 
-            // Density fades from the top-end corner towards the bottom-start,
-            // so the wall is present without ever fighting the content on top.
             val diagonal = ((cx / w) * 0.62f + (1f - cy / h) * 0.38f).coerceIn(0f, 1f)
-            val lit = 0.62f + 0.38f * sin(column * 0.9f + row * 0.62f)
-            val local = baseAlpha * (0.58f + diagonal * 1.75f) * lit
+            val lit = 0.88f + 0.12f * sin(column * 0.9f + row * 0.62f)
+            val local = baseAlpha * (0.58f + diagonal * 1.62f) * lit
             if (local <= 0.004f) continue
 
             withTransform({ translate(left = cx, top = cy) }) {
-                drawPath(
-                    path = motif.octagon,
-                    color = tint.copy(alpha = local * 0.40f),
-                    style = Stroke(width = motif.fine)
-                )
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.30f),
-                    radius = motif.ring,
-                    center = Offset.Zero,
-                    style = Stroke(width = motif.fine)
-                )
-                for (petal in motif.petals) {
-                    drawCircle(
-                        color = tint.copy(alpha = local * 0.34f),
-                        radius = motif.petalRadius,
-                        center = petal,
-                        style = Stroke(width = motif.fine)
+                // Straps first, so the stars sit over their own joints.
+                if (motif.axisEnd > motif.axisStart) {
+                    val axis = tint.copy(alpha = local * 0.24f)
+                    drawLine(
+                        color = axis,
+                        start = Offset(motif.axisStart, 0f),
+                        end = Offset(motif.axisEnd, 0f),
+                        strokeWidth = motif.ribbon
+                    )
+                    drawLine(
+                        color = axis,
+                        start = Offset(0f, motif.axisStart),
+                        end = Offset(0f, motif.axisEnd),
+                        strokeWidth = motif.ribbon
                     )
                 }
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.26f),
-                    radius = motif.innerRing,
-                    center = Offset.Zero,
+                if (motif.diagonalEnd > motif.diagonalStart) {
+                    val diag = tint.copy(alpha = local * 0.15f)
+                    drawLine(
+                        color = diag,
+                        start = Offset(motif.diagonalStart, motif.diagonalStart),
+                        end = Offset(motif.diagonalEnd, motif.diagonalEnd),
+                        strokeWidth = motif.ribbon
+                    )
+                    drawLine(
+                        color = diag,
+                        start = Offset(-motif.diagonalStart, motif.diagonalStart),
+                        end = Offset(-motif.diagonalEnd, motif.diagonalEnd),
+                        strokeWidth = motif.ribbon
+                    )
+                }
+
+                // A faint wash inside the star, so it reads as lit stone rather
+                // than an empty outline.
+                drawPath(
+                    path = motif.star,
+                    color = tint.copy(alpha = local * 0.085f)
+                )
+                drawPath(
+                    path = motif.star,
+                    color = tint.copy(alpha = local * 0.72f),
+                    style = Stroke(width = motif.fine)
+                )
+                drawPath(
+                    path = motif.inner,
+                    color = tint.copy(alpha = local * 0.36f),
                     style = Stroke(width = motif.fine)
                 )
                 drawCircle(
-                    color = tint.copy(alpha = local * 0.18f),
-                    radius = motif.coreRing,
-                    center = Offset.Zero,
-                    style = Stroke(width = motif.fine)
-                )
-                drawCircle(
-                    color = tint.copy(alpha = local * 0.50f),
-                    radius = motif.coreDot,
+                    color = tint.copy(alpha = local * 0.66f),
+                    radius = motif.core,
                     center = Offset.Zero
                 )
 
-                // A bead in the square hole where four octagons meet.
+                // Beads where the axis straps meet, and a diamond at the
+                // crossing of the diagonals, one cell further out.
                 drawCircle(
-                    color = tint.copy(alpha = local * 0.32f),
-                    radius = motif.gapDot,
-                    center = motif.gapCenter
+                    color = tint.copy(alpha = local * 0.34f),
+                    radius = motif.knot,
+                    center = Offset(half, 0f)
+                )
+                drawCircle(
+                    color = tint.copy(alpha = local * 0.34f),
+                    radius = motif.knot,
+                    center = Offset(0f, half)
+                )
+                drawPath(
+                    path = motif.diamond,
+                    color = tint.copy(alpha = local * 0.36f),
+                    style = Stroke(width = motif.fine)
                 )
             }
         }

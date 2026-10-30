@@ -51,9 +51,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.athar.app.ui.components.GirihCache
+import com.athar.app.ui.components.KhatamCache
 import com.athar.app.ui.components.IslamicPatternBackground
-import com.athar.app.ui.components.drawGirihWall
+import com.athar.app.ui.components.drawKhatamWall
 import com.athar.app.ui.components.drawHurufWeave
 import com.athar.app.ui.components.quranAwareAnnotated
 import com.athar.app.ui.components.rememberHurufTypeface
@@ -474,7 +474,7 @@ private fun BackdropRow(
 ) {
     val haptics = LocalHapticFeedback.current
     val typeface = rememberHurufTypeface()
-    val girihCache = remember { GirihCache() }
+    val girihCache = remember { KhatamCache() }
     val density = LocalDensity.current
     val cellPx = with(density) { 20.dp.toPx() }
 
@@ -553,10 +553,10 @@ private fun DrawScope.drawBackdropPreview(
     tint: Color,
     cellPx: Float,
     typeface: android.graphics.Typeface?,
-    girihCache: GirihCache
+    girihCache: KhatamCache
 ) {
     when (style) {
-        AtharBackgroundStyle.ISLAMIC -> drawGirihWall(
+        AtharBackgroundStyle.ISLAMIC -> drawKhatamWall(
             tint = tint,
             baseAlpha = 0.30f,
             cellPx = cellPx,
