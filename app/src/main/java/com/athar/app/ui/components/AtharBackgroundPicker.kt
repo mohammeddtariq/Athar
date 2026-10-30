@@ -65,7 +65,7 @@ fun AtharBackgroundPicker(
     modifier: Modifier = Modifier
 ) {
     val typeface = rememberHurufTypeface()
-    val girihCache = remember { KhatamCache() }
+    val girihCache = remember { GirihCache() }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -102,7 +102,7 @@ private fun BackgroundChoiceCard(
     isSelected: Boolean,
     isArabic: Boolean,
     typeface: android.graphics.Typeface?,
-    girihCache: KhatamCache,
+    girihCache: GirihCache,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -155,7 +155,7 @@ private fun BackgroundChoiceCard(
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             when (style) {
-                AtharBackgroundStyle.ISLAMIC -> drawKhatamWall(
+                AtharBackgroundStyle.ISLAMIC -> drawGirihWall(
                     tint = AtharBackdropHighlight,
                     baseAlpha = 0.30f,
                     cellPx = previewCellPx,

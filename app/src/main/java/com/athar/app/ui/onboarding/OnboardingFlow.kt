@@ -502,9 +502,11 @@ private fun OpeningMark() {
         contentAlignment = Alignment.Center
     ) {
         AtharAnimatedLogo(
-            intervalMillis = 1_400L,
+            intervalMillis = 1_500L,
             startArabic = false,
-            textScale = 1.75f
+            textScale = 1.75f,
+            loop = false,
+            alignment = Alignment.Center
         )
     }
 }
