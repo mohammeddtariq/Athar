@@ -65,6 +65,12 @@ class AppPreferences(private val context: Context) {
         private val APP_ICON_STYLE_KEY = stringPreferencesKey("app_icon_style")
         private val MOTION_BLUR_ENABLED_KEY = booleanPreferencesKey("motion_blur_enabled")
 
+        private val MASBAHA_SUBHAN_KEY = intPreferencesKey("masbaha_subhan")
+        private val MASBAHA_HAMD_KEY = intPreferencesKey("masbaha_hamd")
+        private val MASBAHA_AKBAR_KEY = intPreferencesKey("masbaha_akbar")
+        private val MASBAHA_HAPTICS_KEY = booleanPreferencesKey("masbaha_haptics")
+        private val MASBAHA_SOUND_KEY = booleanPreferencesKey("masbaha_sound")
+
         // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
         private val QURAN_FONT_SCALE_KEY = doublePreferencesKey("quran_font_scale")
@@ -203,6 +209,23 @@ class AppPreferences(private val context: Context) {
     /** Edge motion blur while scrolling. On by default; can be turned off on slow devices. */
     val motionBlurEnabled: Flow<Boolean> = context.dataStore.data.map {
         it[MOTION_BLUR_ENABLED_KEY] ?: true
+    }
+
+    /** Tasbih tally for each dhikr, in the order of [com.athar.app.ui.corner.Dhikr]. */
+    val masbahaCounts: Flow<List<Int>> = context.dataStore.data.map {
+        listOf(
+            it[MASBAHA_SUBHAN_KEY] ?: 0,
+            it[MASBAHA_HAMD_KEY] ?: 0,
+            it[MASBAHA_AKBAR_KEY] ?: 0
+        )
+    }
+
+    val masbahaHaptics: Flow<Boolean> = context.dataStore.data.map {
+        it[MASBAHA_HAPTICS_KEY] ?: true
+    }
+
+    val masbahaSound: Flow<Boolean> = context.dataStore.data.map {
+        it[MASBAHA_SOUND_KEY] ?: true
     }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
@@ -568,6 +591,23 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setMotionBlurEnabled(enabled: Boolean) {
         context.dataStore.edit { it[MOTION_BLUR_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun setMasbahaCount(index: Int, value: Int) {
+        val key = when (index) {
+            0 -> MASBAHA_SUBHAN_KEY
+            1 -> MASBAHA_HAMD_KEY
+            else -> MASBAHA_AKBAR_KEY
+        }
+        context.dataStore.edit { it[key] = value.coerceAtLeast(0) }
+    }
+
+    suspend fun setMasbahaHaptics(enabled: Boolean) {
+        context.dataStore.edit { it[MASBAHA_HAPTICS_KEY] = enabled }
+    }
+
+    suspend fun setMasbahaSound(enabled: Boolean) {
+        context.dataStore.edit { it[MASBAHA_SOUND_KEY] = enabled }
     }
 
     suspend fun saveLastReadPosition(

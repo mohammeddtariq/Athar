@@ -115,6 +115,7 @@ import com.athar.app.data.presetCities
 import com.athar.app.ui.components.AtharBackgroundPicker
 import com.athar.app.ui.components.AtharIconPicker
 import com.athar.app.ui.components.AtharThemePicker
+import com.athar.app.ui.components.AppIconChangeDialog
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
@@ -276,6 +277,7 @@ fun SettingsScreen(
 
     var showMethods by remember { mutableStateOf(false) }
     var showCities by remember { mutableStateOf(false) }
+    var pendingIconStyle by remember { mutableStateOf<AtharIconStyle?>(null) }
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -335,6 +337,18 @@ fun SettingsScreen(
 
     PatternScaffold(patternAlpha = 0.07f) {
         Box(modifier = Modifier.fillMaxSize()) {
+            pendingIconStyle?.let { picked ->
+                AppIconChangeDialog(
+                    onConfirm = {
+                        pendingIconStyle = null
+                        scope.launch {
+                            prefs.setAppIconStyle(picked)
+                            LauncherIconController.apply(context.applicationContext, picked)
+                        }
+                    },
+                    onDismiss = { pendingIconStyle = null }
+                )
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -437,12 +451,7 @@ fun SettingsScreen(
                     AtharIconPicker(
                         selected = effectiveIconStyle,
                         isArabic = language == "ar",
-                        onPick = { picked ->
-                            scope.launch {
-                                prefs.setAppIconStyle(picked)
-                                LauncherIconController.apply(context.applicationContext, picked)
-                            }
-                        }
+                        onPick = { picked -> pendingIconStyle = picked }
                     )
 
                     Spacer(Modifier.height(18.dp))

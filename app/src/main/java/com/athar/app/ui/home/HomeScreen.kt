@@ -50,9 +50,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Check
@@ -153,7 +152,7 @@ private val timeFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 @Composable
 fun HomeScreen(
     onOpenSettings: () -> Unit = {},
-    onOpenNotifications: () -> Unit = onOpenSettings,
+    onOpenQibla: () -> Unit = {},
     onNavigateToDuas: () -> Unit = {},
     onOpenSearch: () -> Unit = {}
 ) {
@@ -166,7 +165,6 @@ fun HomeScreen(
     val selectedLanguage by prefs.selectedLanguage.collectAsState(initial = "ar")
     val methodId by prefs.calcMethodId.collectAsState(initial = "MWL")
     val madhabId by prefs.madhabId.collectAsState(initial = "SHAFI")
-    val notifMaster by prefs.notificationsMaster.collectAsState(initial = false)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
 
     var showAfterPrayerDialog by remember { mutableStateOf(false) }
@@ -412,9 +410,8 @@ fun HomeScreen(
                 ) {
                     TopBar(
                         onSettingsClick = onOpenSettings,
-                        onOpenNotifications = onOpenNotifications,
-                        onOpenSearch = onOpenSearch,
-                        notificationsEnabled = notifMaster
+                        onOpenQibla = onOpenQibla,
+                        onOpenSearch = onOpenSearch
                     )
                 }
             }
@@ -425,9 +422,8 @@ fun HomeScreen(
 @Composable
 private fun TopBar(
     onSettingsClick: () -> Unit,
-    onOpenNotifications: () -> Unit,
-    onOpenSearch: () -> Unit,
-    notificationsEnabled: Boolean
+    onOpenQibla: () -> Unit,
+    onOpenSearch: () -> Unit
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
@@ -475,14 +471,14 @@ private fun TopBar(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onOpenNotifications
+                            onClick = onOpenQibla
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        if (notificationsEnabled) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
-                        contentDescription = stringResource(R.string.home_notification_settings),
-                        tint = if (notificationsEnabled) AtharPrimaryLight else AtharTextSecondary,
+                        imageVector = Icons.Outlined.Explore,
+                        contentDescription = stringResource(R.string.nav_qibla),
+                        tint = AtharPrimaryLight,
                         modifier = Modifier.size(19.dp)
                     )
                 }

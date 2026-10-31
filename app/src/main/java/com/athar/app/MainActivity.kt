@@ -3,6 +3,7 @@ package com.athar.app
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import com.athar.app.data.AppPreferences
 import com.athar.app.data.BatteryOptimizationHelper
 import com.athar.app.data.LauncherIconController
+import com.athar.app.data.VolumeKeyRouter
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.MainScreen
 import com.athar.app.ui.components.AppUpdateDialog
@@ -249,6 +251,19 @@ class MainActivity : ComponentActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             UpdateCheckWorker.checkIfDue(applicationContext, minIntervalMinutes = 30)
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (VolumeKeyRouter.isActive &&
+            (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+                event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+        ) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                VolumeKeyRouter.press()
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun applyLocale(languageCode: String) {

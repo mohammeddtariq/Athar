@@ -99,6 +99,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import com.athar.app.ui.corner.AlAmanahAnnouncementDialog
 import com.athar.app.ui.corner.AlAmanahScreen
 import com.athar.app.ui.corner.DuasScreen
+import com.athar.app.ui.corner.MasbahaScreen
 import com.athar.app.ui.corner.QiblaScreen
 import com.athar.app.ui.corner.QuranScreen
 import com.athar.app.ui.home.HomeScreen
@@ -150,6 +151,12 @@ sealed class Screen(
         unselectedVector = Icons.Outlined.Explore
     )
 
+    object Masbaha : Screen(
+        route = "masbaha",
+        labelResId = R.string.nav_masbaha,
+        iconResId = R.drawable.ic_masbaha
+    )
+
     object Settings : Screen(
         route = "settings",
         labelResId = R.string.nav_settings,
@@ -169,7 +176,7 @@ val allNavScreens = listOf(
     Screen.Home,
     Screen.Quran,
     Screen.Duas,
-    Screen.Qibla
+    Screen.Masbaha
 )
 
 private val TabMotionEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
@@ -287,10 +294,7 @@ fun MainScreen(
             composable(Screen.Home.route) {
                 HomeScreen(
                     onOpenSettings = { navController.navigateToTab(Screen.Settings) },
-                    onOpenNotifications = {
-                        targetSettingsSection = "notifications"
-                        navController.navigateToTab(Screen.Settings)
-                    },
+                    onOpenQibla = { navController.navigateToTab(Screen.Qibla) },
                     onNavigateToDuas = { navController.navigateToTab(Screen.Duas) },
                     onOpenSearch = { showUnifiedSearch = true }
                 )
@@ -321,6 +325,9 @@ fun MainScreen(
                     onBack = { navController.navigateToTab(Screen.Home) },
                     onOpenSettings = { navController.navigateToTab(Screen.Settings) }
                 )
+            }
+            composable(Screen.Masbaha.route) {
+                MasbahaScreen(onBack = { navController.navigateToTab(Screen.Home) })
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(

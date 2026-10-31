@@ -7,9 +7,19 @@
     <string name="nav_quran">Quran</string>
     <string name="nav_duas">Duas</string>
     <string name="nav_qibla">Qibla</string>
+    <string name="nav_masbaha">Al-Subhah</string>
     <string name="nav_services">Essence</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_amanah">Al-Amanah</string>
+
+    <!-- Al-Subhah (tasbih masbaha) -->
+    <string name="masbaha_title">Al-Subhah</string>
+    <string name="masbaha_subtitle">The masbaha for tasbih</string>
+    <string name="masbaha_haptics">Haptics</string>
+    <string name="masbaha_sound">Sound</string>
+    <string name="masbaha_reset">Reset</string>
+    <string name="masbaha_cycle">%1$s of %2$s</string>
+    <string name="masbaha_hint">Tap, drag the beads, or press a volume key</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">My Location</string>
@@ -125,6 +135,10 @@
     <string name="settings_background_sub">The atmosphere behind every screen.</string>
     <string name="settings_app_icon">App icon</string>
     <string name="settings_app_icon_sub">Pick the colour of Athar on your home screen. The mark and lettering stay the same.</string>
+    <string name="settings_app_icon_warning_title">Athar will close</string>
+    <string name="settings_app_icon_warning_body">Changing the app icon closes Athar for a moment while your launcher refreshes the icon. It reopens normally and nothing is lost.</string>
+    <string name="settings_app_icon_warning_confirm">Change icon</string>
+    <string name="settings_app_icon_warning_cancel">Keep current</string>
     <string name="settings_motion_blur">Motion blur</string>
     <string name="settings_motion_blur_sub">Softens content as it slides beneath the edges. Turn it off on slower devices.</string>
     <string name="settings_language">Language</string>
