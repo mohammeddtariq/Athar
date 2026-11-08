@@ -37,7 +37,7 @@ enum class AtharIconStyle(
 
     /** Colour of the calligraphic mark and wordmark on the icon. */
     val ink: Color
-        get() = theme.paletteFor(AtharAccentTone.GOLD).primaryLight
+        get() = theme.palette.primaryLight
 
     /** The stock foreground artwork recoloured for this colourway. */
     val foregroundRes: Int

@@ -248,7 +248,7 @@ fun SettingsScreen(
 
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
     val themeId by prefs.themeId.collectAsState(initial = AtharThemeId.default)
-    val accentTone by prefs.accentTone.collectAsState(initial = AtharAccentTone.GOLD)
+    val accentTone by prefs.accentTone.collectAsState(initial = AtharAccentTone.NATIVE)
     val backgroundStyle by prefs.backgroundStyle.collectAsState(initial = AtharBackgroundStyle.default)
     val iconStyleChoice by prefs.appIconStyle.collectAsState(initial = null)
     val installedIconStyle = remember {
@@ -390,10 +390,18 @@ fun SettingsScreen(
                         selected = themeId,
                         isArabic = language == "ar",
                         onPick = { picked ->
+                            // Carry the accent over when the new theme offers
+                            // it, otherwise settle on that theme's own colour.
+                            val resolvedAccent = if (accentTone in picked.accentTones) {
+                                accentTone
+                            } else {
+                                picked.accentTones.firstOrNull() ?: AtharAccentTone.NATIVE
+                            }
                             // Repaint immediately, persist behind the scenes.
-                            AtharThemeState.apply(picked, accentTone)
+                            AtharThemeState.apply(picked, resolvedAccent)
                             scope.launch {
                                 prefs.setThemeId(picked)
+                                if (resolvedAccent != accentTone) prefs.setAccentTone(resolvedAccent)
                                 AtharWidgetUpdater.updateAllWidgetsSuspend(context)
                             }
                         },

@@ -206,7 +206,9 @@ fun ShareCardSheet(
                     if (picked != theme) {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         theme = picked
-                        if (picked.accentTones.none { it == tone }) tone = AtharAccentTone.GOLD
+                        if (picked.accentTones.none { it == tone }) {
+                            tone = picked.accentTones.firstOrNull() ?: AtharAccentTone.NATIVE
+                        }
                     }
                 }
             )
@@ -214,6 +216,7 @@ fun ShareCardSheet(
             if (theme.accentTones.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 AccentRow(
+                    theme = theme,
                     tones = theme.accentTones,
                     selected = tone,
                     isArabic = isArabic,
@@ -595,7 +598,7 @@ private fun ThemeRow(
     ) {
         AtharThemeId.entries.forEach { theme ->
             val isSelected = theme == selected
-            val preview = theme.paletteFor(AtharAccentTone.GOLD)
+            val preview = theme.palette
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -646,56 +649,66 @@ private fun ThemeRow(
 
 @Composable
 private fun AccentRow(
+    theme: AtharThemeId,
     tones: List<AtharAccentTone>,
     selected: AtharAccentTone,
     isArabic: Boolean,
     onPick: (AtharAccentTone) -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        tones.forEach { tone ->
-            val isSelected = tone == selected
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        tones.chunked(3).forEach { chunk ->
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) tone.swatch.copy(alpha = 0.14f) else Color.Transparent)
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) tone.swatch.copy(alpha = 0.85f) else AtharSurface,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            if (!isSelected) {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onPick(tone)
-                            }
-                        }
-                    )
-                    .padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(11.dp)
-                        .clip(CircleShape)
-                        .background(tone.swatch)
-                )
-                Spacer(Modifier.width(7.dp))
-                Text(
-                    text = if (isArabic) tone.labelAr else tone.labelEn,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = if (isSelected) AtharTextPrimary else AtharTextSecondary
-                )
+                chunk.forEach { tone ->
+                    val isSelected = tone == selected
+                    val swatch = if (tone == AtharAccentTone.NATIVE) theme.palette.primary else tone.swatch
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isSelected) swatch.copy(alpha = 0.14f) else Color.Transparent)
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) swatch.copy(alpha = 0.85f) else AtharSurface,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    if (!isSelected) {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onPick(tone)
+                                    }
+                                }
+                            )
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(11.dp)
+                                .clip(CircleShape)
+                                .background(swatch)
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            text = if (isArabic) tone.labelAr else tone.labelEn,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = if (isSelected) AtharTextPrimary else AtharTextSecondary,
+                            maxLines = 1
+                        )
+                    }
+                }
+                repeat(3 - chunk.size) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
     }

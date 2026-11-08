@@ -7,14 +7,13 @@
     <string name="nav_quran">القرآن</string>
     <string name="nav_duas">الأدعية</string>
     <string name="nav_qibla">القبلة</string>
-    <string name="nav_masbaha">السُّبْحَة</string>
+    <string name="nav_masbaha">الوِصَال</string>
     <string name="nav_services">الجوهر</string>
     <string name="nav_settings">الإعدادات</string>
     <string name="nav_amanah">الأَمَنَة</string>
 
-    <!-- Al-Subhah (tasbih masbaha) -->
-    <string name="masbaha_title">السُّبْحَة</string>
-    <string name="masbaha_subtitle">مسبحة التسبيح</string>
+    <!-- Al-Wisaal (tasbih masbaha) -->
+    <string name="masbaha_title">الوِصَال</string>
     <string name="masbaha_haptics">الاهتزاز</string>
     <string name="masbaha_sound">الصوت</string>
     <string name="masbaha_reset">تصفير</string>

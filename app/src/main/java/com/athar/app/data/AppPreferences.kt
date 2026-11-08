@@ -807,7 +807,7 @@ data class AppPrefsSnapshot(
     val widgetLanguage: String = language,
     val widgetFontStyle: WidgetFontStyle = WidgetFontStyle.APP_FONT,
     val themeId: AtharThemeId = AtharThemeId.default,
-    val accentTone: AtharAccentTone = AtharAccentTone.GOLD
+    val accentTone: AtharAccentTone = AtharAccentTone.NATIVE
 )
 
 enum class NumberStylePreference(val id: String) {

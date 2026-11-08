@@ -86,7 +86,7 @@ class MainActivity : ComponentActivity() {
                     appPreferences.accentTone.first()
                 }
             }
-        }.getOrNull() ?: AtharAccentTone.GOLD
+        }.getOrNull() ?: AtharAccentTone.NATIVE
         AtharThemeState.apply(initialTheme, initialAccent)
 
         val initialBackdrop = runCatching {

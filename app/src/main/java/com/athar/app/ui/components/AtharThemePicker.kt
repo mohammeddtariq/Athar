@@ -73,7 +73,7 @@ fun AtharThemePicker(
     isArabic: Boolean,
     onPick: (AtharThemeId) -> Unit,
     modifier: Modifier = Modifier,
-    accentTone: AtharAccentTone = AtharAccentTone.GOLD,
+    accentTone: AtharAccentTone = AtharAccentTone.NATIVE,
     onPickAccent: (AtharAccentTone) -> Unit = {}
 ) {
     Column(
@@ -85,13 +85,18 @@ fun AtharThemePicker(
                 theme = theme,
                 isSelected = theme == selected,
                 isArabic = isArabic,
-                accentTone = if (theme == selected) accentTone else AtharAccentTone.GOLD,
+                accentTone = if (theme == selected) {
+                    accentTone.takeIf { it in theme.accentTones } ?: theme.accentTones.first()
+                } else {
+                    theme.accentTones.firstOrNull() ?: AtharAccentTone.NATIVE
+                },
                 onClick = { onPick(theme) }
             )
             AnimatedVisibility(visible = theme == selected && theme.accentTones.isNotEmpty()) {
                 AccentToneRow(
+                    theme = theme,
                     tones = theme.accentTones,
-                    selected = accentTone,
+                    selected = accentTone.takeIf { it in theme.accentTones } ?: theme.accentTones.first(),
                     isArabic = isArabic,
                     onPick = onPickAccent,
                     modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp)
@@ -102,11 +107,13 @@ fun AtharThemePicker(
 }
 
 /**
- * The secondary accent selector a theme exposes under its card. Burgundy
- * offers antique gold or warm ivory; the chips repaint the app immediately.
+ * The secondary accent selector a theme exposes under its card. Each theme
+ * offers its own colour first, then the alternatives; the chips repaint the
+ * app immediately.
  */
 @Composable
 private fun AccentToneRow(
+    theme: AtharThemeId,
     tones: List<AtharAccentTone>,
     selected: AtharAccentTone,
     isArabic: Boolean,
@@ -114,54 +121,66 @@ private fun AccentToneRow(
     modifier: Modifier = Modifier
 ) {
     val haptics = LocalHapticFeedback.current
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        tones.forEach { tone ->
-            val isSelected = tone == selected
-            val swatch = tone.swatch
-            val shape = RoundedCornerShape(11.dp)
+        tones.chunked(3).forEach { chunk ->
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(38.dp)
-                    .clip(shape)
-                    .background(
-                        if (isSelected) swatch.copy(alpha = 0.12f) else Color.Transparent
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) swatch.copy(alpha = 0.85f) else AtharCardBorder,
-                        shape = shape
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            if (!isSelected) {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onPick(tone)
-                            }
-                        }
-                    )
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(swatch)
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    text = if (isArabic) tone.labelAr else tone.labelEn,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = if (isSelected) AtharTextPrimary else AtharTextSecondary
-                )
+                chunk.forEach { tone ->
+                    val isSelected = tone == selected
+                    val swatch = if (tone == AtharAccentTone.NATIVE) theme.palette.primary else tone.swatch
+                    val shape = RoundedCornerShape(11.dp)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                            .clip(shape)
+                            .background(
+                                if (isSelected) swatch.copy(alpha = 0.12f) else Color.Transparent
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) swatch.copy(alpha = 0.85f) else AtharCardBorder,
+                                shape = shape
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    if (!isSelected) {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onPick(tone)
+                                    }
+                                }
+                            )
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(swatch)
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            text = if (isArabic) tone.labelAr else tone.labelEn,
+                            fontFamily = ThmanyahSans,
+                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = if (isSelected) AtharTextPrimary else AtharTextSecondary,
+                            maxLines = 1
+                        )
+                    }
+                }
+                // Keep the last row aligned with the rows above it.
+                repeat(3 - chunk.size) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
     }

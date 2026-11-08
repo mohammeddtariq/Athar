@@ -146,7 +146,7 @@ fun OnboardingFlow(
     var stepForward by remember { mutableStateOf(true) }
     var language by remember { mutableStateOf<String?>(null) }
     var theme by remember { mutableStateOf(AtharThemeId.default) }
-    var accent by remember { mutableStateOf(AtharAccentTone.GOLD) }
+    var accent by remember { mutableStateOf(AtharAccentTone.NATIVE) }
     var notifGranted by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf<PresetCity?>(null) }
     var gpsLabel by remember { mutableStateOf<String?>(null) }
@@ -319,8 +319,16 @@ fun OnboardingFlow(
                             topInset = topInset,
                             onPick = { picked ->
                                 theme = picked
+                                // Carry the accent when the theme offers it,
+                                // otherwise take that theme's own colour.
+                                val resolved = if (accent in picked.accentTones) {
+                                    accent
+                                } else {
+                                    picked.accentTones.firstOrNull() ?: AtharAccentTone.NATIVE
+                                }
+                                accent = resolved
                                 // Repaint the setup flow in the chosen colour immediately.
-                                AtharThemeState.apply(picked, accent)
+                                AtharThemeState.apply(picked, resolved)
                             },
                             onPickAccent = { tone ->
                                 accent = tone
