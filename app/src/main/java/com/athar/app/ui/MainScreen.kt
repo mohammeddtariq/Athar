@@ -327,7 +327,10 @@ fun MainScreen(
                 )
             }
             composable(Screen.Masbaha.route) {
-                MasbahaScreen(onBack = { navController.navigateToTab(Screen.Home) })
+                MasbahaScreen(
+                    onBack = { navController.navigateToTab(Screen.Home) },
+                    bottomInset = navDockTopInset
+                )
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(

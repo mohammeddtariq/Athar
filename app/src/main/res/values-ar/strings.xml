@@ -7,18 +7,18 @@
     <string name="nav_quran">القرآن</string>
     <string name="nav_duas">الأدعية</string>
     <string name="nav_qibla">القبلة</string>
-    <string name="nav_masbaha">الوِصَال</string>
+    <string name="nav_masbaha">اليَاقُوت</string>
     <string name="nav_services">الجوهر</string>
     <string name="nav_settings">الإعدادات</string>
     <string name="nav_amanah">الأَمَنَة</string>
 
-    <!-- Al-Wisaal (tasbih masbaha) -->
-    <string name="masbaha_title">الوِصَال</string>
+    <!-- Al-Yaqut (tasbih masbaha) -->
+    <string name="masbaha_title">اليَاقُوت</string>
     <string name="masbaha_haptics">الاهتزاز</string>
     <string name="masbaha_sound">الصوت</string>
     <string name="masbaha_reset">تصفير</string>
     <string name="masbaha_cycle">%1$s من %2$s</string>
-    <string name="masbaha_hint">اضغط، أو حرّك الخرز، أو استخدم مفاتيح الصوت</string>
+    <string name="masbaha_hint">اضغط خرزة، أو أدر الحلقة، أو استخدم مفاتيح الصوت</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">موقعي</string>

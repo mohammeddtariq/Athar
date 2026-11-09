@@ -13,7 +13,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -32,8 +31,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -63,7 +60,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -75,14 +71,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
@@ -94,7 +88,9 @@ import com.athar.app.ui.theme.AtharAccentInk
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
+import com.athar.app.ui.theme.AtharPrimaryDeep
 import com.athar.app.ui.theme.AtharPrimaryLight
+import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
@@ -105,52 +101,37 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The three tasbih a masbaha is strung for, each paired with a short ayah on
- * the greatness of Allah. Both the name and the ayah are carried in the two
- * languages so the screen can stay purely in whichever one the app is set to.
+ * The three tasbih a masbaha is strung for. Both names are carried so the
+ * screen can stay purely in whichever language the app is set to.
  */
 enum class Dhikr(
     val arabic: String,
-    val english: String,
-    val arabicQuote: String,
-    val englishQuote: String
+    val english: String
 ) {
-    SUBHAN(
-        "سُبْحَانَ اللَّهِ",
-        "Subhan Allah",
-        "لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
-        "To Him belongs all in the heavens and the earth — the Most High, the Most Great."
-    ),
-    HAMD(
-        "الْحَمْدُ لِلَّهِ",
-        "Alhamdu lillah",
-        "وَمَا بِكُم مِّن نِّعْمَةٍ فَمِنَ اللَّهِ",
-        "Whatever blessing you have is from Allah."
-    ),
-    AKBAR(
-        "اللَّهُ أَكْبَرُ",
-        "Allahu Akbar",
-        "وَهُوَ الْكَبِيرُ الْمُتَعَالِ",
-        "He is the Most Great, the Most High."
-    )
+    SUBHAN("سُبْحَانَ اللَّهِ", "Subhan Allah"),
+    HAMD("الْحَمْدُ لِلَّهِ", "Alhamdu lillah"),
+    AKBAR("اللَّهُ أَكْبَرُ", "Allahu Akbar")
 }
 
 private const val BEADS = 33
 private const val CYCLE = 33
 
 /**
- * A masbaha strung the whole width of the page: thirty-three white beads on a
- * gently wrinkled string, floating and breathing in place. A finger turns the
- * beads, a tap counts one, and the volume keys count without looking. Each
- * dhikr keeps its own tally, so switching between them never mixes the three.
+ * Al-Yaqut — the ruby. A small, hand-strung masbaha floating on the page: a
+ * loop of thirty-three ivory pearls with brass dividers every eleven, an imam
+ * bead and a short tassel hanging from the bottom. The tally sits in the empty
+ * middle, the chosen dhikr sits above it, and everything else is kept clear of
+ * the floating dock so nothing collides with the navigation bar.
  */
 @Composable
-fun MasbahaScreen(onBack: () -> Unit = {}) {
+fun MasbahaScreen(
+    onBack: () -> Unit = {},
+    bottomInset: Dp = 104.dp
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { AppPreferences(context.applicationContext) }
@@ -172,9 +153,9 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
     var selected by remember { mutableIntStateOf(0) }
     var celebration by remember { mutableIntStateOf(0) }
 
-    val tone = remember { MasbahaTone() }
+    val tick = remember { MasbahaTick() }
     DisposableEffect(Unit) {
-        onDispose { tone.release() }
+        onDispose { tick.release() }
     }
 
     fun step(amount: Int) {
@@ -185,7 +166,7 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
         counts = base.toMutableList().also { it[selected] = after }
         scope.launch { prefs.setMasbahaCount(selected, after) }
         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        if (soundOn) tone.tick()
+        if (soundOn) tick.tick()
         if (after / CYCLE > before / CYCLE) celebration++
     }
 
@@ -194,7 +175,7 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
         counts = base.toMutableList().also { it[selected] = 0 }
         scope.launch { prefs.setMasbahaCount(selected, 0) }
         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        if (soundOn) tone.tick()
+        if (soundOn) tick.tick()
     }
 
     val volumeStep = rememberUpdatedState { step(1) }
@@ -206,98 +187,78 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
     val count = live[selected]
     val cycle = if (count == 0) 0 else ((count - 1) % CYCLE) + 1
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AtharBackground)
     ) {
-        // Short screens get a tighter wheel so the masbaha keeps as much room as
-        // possible; tall ones give the dhikr names their full size.
-        val wheelItemHeight = (maxHeight * 0.084f).coerceIn(60.dp, 76.dp)
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onBack
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = null,
-                            tint = AtharTextPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = stringResource(R.string.masbaha_title),
-                        fontFamily = ThmanyahSerifDisplay,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 25.sp,
-                        color = AtharTextPrimary
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Spacer(Modifier.size(44.dp))
-                }
+            YaqutHeader(isArabic = isArabic, onBack = onBack)
 
-                Text(
-                    text = stringResource(R.string.masbaha_hint),
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 10.5.sp,
-                    color = AtharTextSecondary.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 1.dp)
-                )
+            Spacer(Modifier.height(8.dp))
 
-                Spacer(Modifier.height(4.dp))
+            AyahBanner(isArabic = isArabic)
 
-                DhikrWheel(
-                    selected = selected,
-                    isArabic = isArabic,
-                    itemHeight = wheelItemHeight,
-                    onSelect = { selected = it },
-                    onStep = {
+            Spacer(Modifier.height(12.dp))
+
+            DhikrPills(
+                selected = selected,
+                isArabic = isArabic,
+                onSelect = {
+                    if (it != selected) {
+                        selected = it
                         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        if (soundOn) tone.tick()
                     }
-                )
-            }
-
-            MasbahaRing(
-                count = count,
-                cycle = cycle,
-                numberStyle = numberStyle,
-                onCount = { amount -> step(amount) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                }
             )
 
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val diameter = minOf(maxWidth * 0.94f, maxHeight - 26.dp)
+                        .coerceIn(110.dp, 296.dp)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        SibhaRing(
+                            count = count,
+                            cycle = cycle,
+                            dhikr = Dhikr.entries[selected],
+                            isArabic = isArabic,
+                            numberStyle = numberStyle,
+                            onCount = { amount -> step(amount) },
+                            modifier = Modifier.size(diameter)
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.masbaha_hint),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 9.5.sp,
+                            color = AtharTextSecondary.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ControlPill(
@@ -317,7 +278,7 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
                     active = soundOn,
                     onClick = {
                         val next = !soundOn
-                        if (next) tone.tick()
+                        if (next) tick.tick()
                         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         scope.launch { prefs.setMasbahaSound(next) }
                     },
@@ -332,7 +293,7 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
                 )
             }
 
-            Spacer(Modifier.height(88.dp))
+            Spacer(Modifier.height(bottomInset + 8.dp))
         }
 
         MasbahaSparks(
@@ -343,143 +304,227 @@ fun MasbahaScreen(onBack: () -> Unit = {}) {
 }
 
 /**
- * The wheel of the three dhikr. Dragging it the way the iOS alarm picker turns
- * settles one dhikr under the other, ticking as it passes each one. The chosen
- * dhikr carries its ayah underneath, in the language the app is set to.
+ * The Al-Yaqut wordmark: a small faceted gem beside the name, with the other
+ * script set underneath so both Arabic and Latin live in the header.
  */
 @Composable
-private fun DhikrWheel(
+private fun YaqutHeader(isArabic: Boolean, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onBack
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = null,
+                tint = AtharTextPrimary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                YaqutGem(modifier = Modifier.size(19.dp))
+                Text(
+                    text = if (isArabic) stringResource(R.string.masbaha_title) else "AL-YAQUT",
+                    fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                    fontWeight = FontWeight.Black,
+                    fontSize = if (isArabic) 23.sp else 20.sp,
+                    letterSpacing = if (isArabic) 0.sp else 3.5.sp,
+                    color = AtharTextPrimary
+                )
+            }
+            Text(
+                text = if (isArabic) "AL-YAQUT" else "اليَاقُوت",
+                fontFamily = if (isArabic) ThmanyahSans else ThmanyahSerifDisplay,
+                fontWeight = FontWeight.Medium,
+                fontSize = 8.sp,
+                letterSpacing = if (isArabic) 2.6.sp else 0.sp,
+                color = AtharAccentInk.copy(alpha = 0.62f)
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.size(44.dp))
+    }
+}
+
+/** A tiny cut gem, drawn as a faceted diamond in the active accent. */
+@Composable
+private fun YaqutGem(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val top = Offset(w * 0.5f, 0f)
+        val right = Offset(w, h * 0.38f)
+        val bottom = Offset(w * 0.5f, h)
+        val left = Offset(0f, h * 0.38f)
+        val waistY = h * 0.38f
+
+        val outline = Path().apply {
+            moveTo(top.x, top.y)
+            lineTo(right.x, right.y)
+            lineTo(bottom.x, bottom.y)
+            lineTo(left.x, left.y)
+            close()
+        }
+        drawPath(
+            path = outline,
+            brush = Brush.linearGradient(
+                colors = listOf(AtharPrimaryLight, AtharPrimary, AtharPrimaryDeep),
+                start = Offset(0f, 0f),
+                end = Offset(w, h)
+            )
+        )
+        // Crown facets.
+        val leftWaist = Offset(w * 0.26f, waistY)
+        val rightWaist = Offset(w * 0.74f, waistY)
+        drawLine(AtharBackground.copy(alpha = 0.45f), top, leftWaist, strokeWidth = 0.8f)
+        drawLine(AtharBackground.copy(alpha = 0.45f), top, rightWaist, strokeWidth = 0.8f)
+        drawLine(AtharBackground.copy(alpha = 0.30f), leftWaist, rightWaist, strokeWidth = 0.7f)
+        drawLine(AtharBackground.copy(alpha = 0.30f), leftWaist, bottom, strokeWidth = 0.7f)
+        drawLine(AtharBackground.copy(alpha = 0.30f), rightWaist, bottom, strokeWidth = 0.7f)
+        // Glint.
+        drawCircle(
+            color = Color.White.copy(alpha = 0.75f),
+            radius = w * 0.07f,
+            center = Offset(w * 0.38f, h * 0.24f)
+        )
+    }
+}
+
+/**
+ * The ayah the musabbihaat open with, framed on a quiet card above the sibha.
+ */
+@Composable
+private fun AyahBanner(isArabic: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(AtharPrimarySubtle, AtharBackground)
+                )
+            )
+            .border(
+                width = 1.dp,
+                color = AtharPrimary.copy(alpha = 0.24f),
+                shape = RoundedCornerShape(18.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "سَبَّحَ لِلَّهِ مَا فِي السَّمَاوَاتِ وَالْأَرْضِ ۖ وَهُوَ الْعَزِيزُ الْحَكِيمُ",
+            fontFamily = ThmanyahSerifDisplay,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.5.sp,
+            lineHeight = 24.sp,
+            color = AtharTextPrimary,
+            textAlign = TextAlign.Center
+        )
+        if (!isArabic) {
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = "All that is in the heavens and earth glorifies Allah — He is the Almighty, the All-Wise.",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 9.sp,
+                lineHeight = 13.sp,
+                color = AtharTextSecondary,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = if (isArabic) "الحديد ١" else "Al-Hadid 1",
+            fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 9.sp,
+            letterSpacing = if (isArabic) 0.sp else 0.8.sp,
+            color = AtharAccentInk.copy(alpha = 0.82f)
+        )
+    }
+}
+
+/** Three compact dhikr chips, one of them lit. */
+@Composable
+private fun DhikrPills(
     selected: Int,
     isArabic: Boolean,
-    itemHeight: Dp,
-    onSelect: (Int) -> Unit,
-    onStep: () -> Unit,
-    modifier: Modifier = Modifier
+    onSelect: (Int) -> Unit
 ) {
-    val itemPx = with(LocalDensity.current) { itemHeight.toPx() }
-    val nameSize = if (itemHeight >= 70.dp) 24.sp else 20.sp
-    val quoteSize = if (itemHeight >= 70.dp) 11.sp else 9.5.sp
-    val quoteLines = if (itemHeight >= 70.dp) 2 else 1
-
-    var offset by remember { mutableFloatStateOf(0f) }
-    var dragging by remember { mutableStateOf(false) }
-    val settle by animateFloatAsState(
-        targetValue = if (dragging) offset else 0f,
-        animationSpec = if (dragging) snap() else spring(dampingRatio = 0.82f, stiffness = 420f),
-        label = "dhikrWheelSettle"
-    )
-    val selectRef = rememberUpdatedState(onSelect)
-    val stepRef = rememberUpdatedState(onStep)
-    val selectedRef = rememberUpdatedState(selected)
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(itemHeight * 3)
-            .clipToBounds()
-            .pointerInput(itemPx) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    offset = settle
-                    dragging = true
-                    var accum = offset
-                    var working = selectedRef.value
-                    var lastY = down.position.y
-                    try {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) break
-                            val dy = change.position.y - lastY
-                            lastY = change.position.y
-                            accum += dy
-                            while (accum > itemPx / 2f) {
-                                if (working > 0) {
-                                    working -= 1
-                                    accum -= itemPx
-                                    stepRef.value()
-                                    selectRef.value(working)
-                                } else {
-                                    accum = itemPx / 2f
-                                    break
-                                }
-                            }
-                            while (accum < -itemPx / 2f) {
-                                if (working < Dhikr.entries.lastIndex) {
-                                    working += 1
-                                    accum += itemPx
-                                    stepRef.value()
-                                    selectRef.value(working)
-                                } else {
-                                    accum = -itemPx / 2f
-                                    break
-                                }
-                            }
-                            offset = accum
-                            change.consume()
-                        }
-                    } finally {
-                        dragging = false
-                    }
-                }
-            }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        for (i in Dhikr.entries.indices) {
-            val dy = (i - selected) * itemPx + settle
-            val closeness = (1f - abs(dy) / itemPx).coerceIn(0f, 1f)
-            val dhikr = Dhikr.entries[i]
+        Dhikr.entries.forEachIndexed { index, dhikr ->
+            val active = index == selected
             Box(
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset { IntOffset(0, dy.roundToInt()) }
-                    .height(itemHeight)
-                    .graphicsLayer {
-                        val scale = 0.82f + 0.26f * closeness
-                        scaleX = scale
-                        scaleY = scale
-                        alpha = 0.26f + 0.74f * closeness
-                    },
+                    .weight(1f)
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        if (active) AtharPrimary.copy(alpha = 0.16f) else Color.Transparent
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (active) AtharPrimary.copy(alpha = 0.72f) else AtharCardBorder,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onSelect(index) }
+                    )
+                    .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (isArabic) dhikr.arabic else dhikr.english,
-                        fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                        fontWeight = FontWeight.Black,
-                        fontSize = nameSize,
-                        color = if (i == selected) AtharTextPrimary else AtharTextSecondary,
-                        maxLines = 1
-                    )
-                    if (closeness > 0.55f) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = if (isArabic) dhikr.arabicQuote else dhikr.englishQuote,
-                            fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = quoteSize,
-                            lineHeight = if (isArabic) 18.sp else 14.sp,
-                            color = AtharAccentInk.copy(alpha = 0.85f),
-                            textAlign = TextAlign.Center,
-                            maxLines = quoteLines,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
+                Text(
+                    text = if (isArabic) dhikr.arabic else dhikr.english,
+                    fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                    fontWeight = if (active) FontWeight.Black else FontWeight.Bold,
+                    fontSize = if (isArabic) 12.5.sp else 10.5.sp,
+                    color = if (active) AtharPrimaryLight else AtharTextSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 }
 
 /**
- * The masbaha itself: a ring of white pearl beads on a wrinkled string that
- * fills the space it is given, drifting and breathing as it floats. The tally
- * sits in the empty middle, and the active bead glows.
+ * The masbaha itself. A loop of thirty-three pearls strung on a slightly
+ * wrinkled thread, with brass spacers every eleven, an imam bead and a short
+ * tassel at the bottom. Dragging around the loop turns the beads one step per
+ * bead passed; tapping counts one. The tally sits in the empty middle.
  */
 @Composable
-private fun MasbahaRing(
+private fun SibhaRing(
     count: Int,
     cycle: Int,
+    dhikr: Dhikr,
+    isArabic: Boolean,
     numberStyle: NumberStylePreference,
     onCount: (Int) -> Unit,
     modifier: Modifier = Modifier
@@ -488,9 +533,9 @@ private fun MasbahaRing(
     val halfTurn = PI.toFloat()
     val fullTurn = (2 * PI).toFloat()
     val rotation by animateFloatAsState(
-        targetValue = -count * stepRad,
+        targetValue = count * stepRad,
         animationSpec = spring(dampingRatio = 0.62f, stiffness = 170f),
-        label = "masbahaRotation"
+        label = "sibhaRotation"
     )
     val pulse = remember { Animatable(1f) }
     LaunchedEffect(count) {
@@ -500,7 +545,7 @@ private fun MasbahaRing(
         }
     }
 
-    val drift = rememberInfiniteTransition(label = "masbahaFloat")
+    val drift = rememberInfiniteTransition(label = "sibhaFloat")
     val driftX by drift.animateFloat(
         initialValue = -1f,
         targetValue = 1f,
@@ -508,7 +553,7 @@ private fun MasbahaRing(
             animation = tween(5600, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "masbahaDriftX"
+        label = "sibhaDriftX"
     )
     val driftY by drift.animateFloat(
         initialValue = -1f,
@@ -517,7 +562,7 @@ private fun MasbahaRing(
             animation = tween(7200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "masbahaDriftY"
+        label = "sibhaDriftY"
     )
     val sway by drift.animateFloat(
         initialValue = -1f,
@@ -526,7 +571,7 @@ private fun MasbahaRing(
             animation = tween(9400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "masbahaSway"
+        label = "sibhaSway"
     )
     val breathe by drift.animateFloat(
         initialValue = 0f,
@@ -535,7 +580,7 @@ private fun MasbahaRing(
             animation = tween(4800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "masbahaBreathe"
+        label = "sibhaBreathe"
     )
     val countRef = rememberUpdatedState(onCount)
 
@@ -544,10 +589,10 @@ private fun MasbahaRing(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationX = driftX * 5.dp.toPx()
-                    translationY = driftY * 7.dp.toPx()
-                    rotationZ = sway * 1.2f
-                    val scale = (0.997f + 0.007f * breathe) * pulse.value
+                    translationX = driftX * 3.dp.toPx()
+                    translationY = driftY * 4.dp.toPx()
+                    rotationZ = sway * 0.9f
+                    val scale = (0.996f + 0.008f * breathe) * pulse.value
                     scaleX = scale
                     scaleY = scale
                 }
@@ -582,17 +627,20 @@ private fun MasbahaRing(
         ) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val minDim = size.minDimension
-            val beadRadius = minDim * 0.0435f
-            val radius = minDim * 0.5f - beadRadius * 1.05f
+            val beadRadius = minDim * 0.029f
+            val radius = minDim * 0.305f
 
-            // A soft halo so the white sibha lifts off the dark page.
+            // Soft halo so the pearls lift off the dark page.
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color.White.copy(alpha = 0.07f), Color.Transparent),
+                    colors = listOf(
+                        AtharPrimaryLight.copy(alpha = 0.08f),
+                        Color.Transparent
+                    ),
                     center = center,
-                    radius = radius * 1.35f
+                    radius = radius * 1.55f
                 ),
-                radius = radius * 1.35f,
+                radius = radius * 1.55f,
                 center = center
             )
 
@@ -600,11 +648,9 @@ private fun MasbahaRing(
             val radii = FloatArray(BEADS)
             for (i in 0 until BEADS) {
                 val angle = (-halfTurn / 2f + i * stepRad + rotation).toDouble()
-                // A little unevenness in radius and bead size, so the loop reads
-                // as hand-strung rather than machine-perfect.
                 val wobble = 1f +
-                    0.013f * sin(i * 2.3f + breathe * 1.4f) +
-                    0.008f * cos(i * 1.7f)
+                    0.012f * sin(i * 2.3f + breathe * 1.4f) +
+                    0.007f * cos(i * 1.7f)
                 val r = radius * wobble
                 points += Offset(
                     x = center.x + cos(angle).toFloat() * r,
@@ -613,9 +659,8 @@ private fun MasbahaRing(
                 radii[i] = beadRadius * (0.93f + 0.09f * sin(i * 1.9f + 1.1f))
             }
 
-            // The string, drawn as one closed curve through every bead. Each
-            // span bows a hair off the straight line, alternating sides, so the
-            // thread reads as hand-strung and slightly wrinkled.
+            // The thread, one closed curve through every pearl, bowing a hair
+            // off the straight line so it reads as hand-strung.
             val string = Path()
             string.moveTo(points[0].x, points[0].y)
             for (i in 0 until BEADS) {
@@ -624,7 +669,7 @@ private fun MasbahaRing(
                 val dx = to.x - from.x
                 val dy = to.y - from.y
                 val len = kotlin.math.hypot(dx, dy).coerceAtLeast(0.001f)
-                val wrinkle = beadRadius * 0.16f * sin(i * 2.7f + 0.8f)
+                val wrinkle = beadRadius * 0.15f * sin(i * 2.7f + 0.8f)
                 val control = Offset(
                     x = (from.x + to.x) / 2f - dy / len * wrinkle,
                     y = (from.y + to.y) / 2f + dx / len * wrinkle
@@ -634,27 +679,38 @@ private fun MasbahaRing(
             string.close()
             drawPath(
                 path = string,
-                color = Color.Black.copy(alpha = 0.38f),
-                style = Stroke(width = 3.4.dp.toPx(), cap = StrokeCap.Round)
+                color = Color.Black.copy(alpha = 0.40f),
+                style = Stroke(width = 3.2.dp.toPx(), cap = StrokeCap.Round)
             )
             drawPath(
                 path = string,
                 color = Color(0xFFF3EFE7).copy(alpha = 0.9f),
-                style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
             )
 
-            val active = ((count % BEADS) + BEADS) % BEADS
+            // The imam bead and tassel hang from the bottom of the loop.
+            drawImamAndTassel(
+                center = center,
+                radius = radius,
+                beadRadius = beadRadius
+            )
+
+            val active = ((-count % BEADS) + BEADS) % BEADS
             for (i in 0 until BEADS) {
                 val point = points[i]
                 val br = radii[i]
+                val spacer = i == 11 || i == 22
                 if (i == active) {
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.40f), Color.Transparent),
+                            colors = listOf(
+                                AtharPrimaryLight.copy(alpha = 0.55f),
+                                Color.Transparent
+                            ),
                             center = point,
-                            radius = br * 2.4f
+                            radius = br * 2.8f
                         ),
-                        radius = br * 2.4f,
+                        radius = br * 2.8f,
                         center = point
                     )
                 }
@@ -664,32 +720,54 @@ private fun MasbahaRing(
                     radius = br * 0.98f,
                     center = point + Offset(0f, br * 0.24f)
                 )
-                // Pearl body.
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White,
-                            Color(0xFFF8F4EC),
-                            Color(0xFFDED6C7)
+                if (spacer) {
+                    // A small brass divider after every eleven pearls.
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                AtharPrimaryLight,
+                                AtharPrimary,
+                                AtharPrimaryDeep
+                            ),
+                            center = point - Offset(br * 0.3f, br * 0.32f),
+                            radius = br * 1.5f
                         ),
-                        center = point - Offset(br * 0.34f, br * 0.36f),
-                        radius = br * 1.55f
-                    ),
-                    radius = br,
-                    center = point
-                )
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.55f),
-                    radius = br,
-                    center = point,
-                    style = Stroke(width = 0.7.dp.toPx())
-                )
-                // Specular glint.
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.92f),
-                    radius = br * 0.22f,
-                    center = point - Offset(br * 0.30f, br * 0.32f)
-                )
+                        radius = br * 0.78f,
+                        center = point
+                    )
+                    drawCircle(
+                        color = Color.Black.copy(alpha = 0.28f),
+                        radius = br * 0.78f,
+                        center = point,
+                        style = Stroke(width = 0.7.dp.toPx())
+                    )
+                } else {
+                    // Pearl body.
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White,
+                                Color(0xFFF8F4EC),
+                                Color(0xFFDED6C7)
+                            ),
+                            center = point - Offset(br * 0.34f, br * 0.36f),
+                            radius = br * 1.55f
+                        ),
+                        radius = br,
+                        center = point
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.55f),
+                        radius = br,
+                        center = point,
+                        style = Stroke(width = 0.7.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.92f),
+                        radius = br * 0.22f,
+                        center = point - Offset(br * 0.30f, br * 0.32f)
+                    )
+                }
             }
         }
 
@@ -698,10 +776,19 @@ private fun MasbahaRing(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
+                text = if (isArabic) dhikr.arabic else dhikr.english,
+                fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.5.sp,
+                color = AtharAccentInk.copy(alpha = 0.85f),
+                maxLines = 1
+            )
+            Text(
                 text = formatDigits(count.toString(), numberStyle),
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 54.sp,
+                fontSize = 46.sp,
+                lineHeight = 50.sp,
                 color = AtharTextPrimary
             )
             Text(
@@ -712,10 +799,111 @@ private fun MasbahaRing(
                 ),
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                color = AtharAccentInk.copy(alpha = 0.9f)
+                fontSize = 10.sp,
+                color = AtharTextSecondary.copy(alpha = 0.85f)
             )
         }
+    }
+}
+
+/** The imam bead, its cap and a short fan of tassel threads. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
+    center: Offset,
+    radius: Float,
+    beadRadius: Float
+) {
+    val topY = center.y + radius + beadRadius * 0.6f
+    val imamWidth = beadRadius * 1.35f
+    val imamHeight = beadRadius * 2.0f
+    val imamCenter = Offset(center.x, topY + imamHeight / 2f)
+
+    // The thread that carries the loop down into the imam bead.
+    drawLine(
+        color = Color(0xFFF3EFE7).copy(alpha = 0.9f),
+        start = Offset(center.x, center.y + radius),
+        end = Offset(center.x, topY),
+        strokeWidth = 1.4.dp.toPx(),
+        cap = StrokeCap.Round
+    )
+
+    // Contact shadow under the imam.
+    drawOval(
+        color = Color.Black.copy(alpha = 0.32f),
+        topLeft = Offset(
+            imamCenter.x - imamWidth / 2f,
+            imamCenter.y - imamHeight / 2f + beadRadius * 0.18f
+        ),
+        size = androidx.compose.ui.geometry.Size(imamWidth, imamHeight)
+    )
+    drawOval(
+        brush = Brush.linearGradient(
+            colors = listOf(
+                AtharPrimaryLight,
+                AtharPrimary,
+                AtharPrimaryDeep
+            ),
+            start = Offset(imamCenter.x - imamWidth / 2f, imamCenter.y - imamHeight / 2f),
+            end = Offset(imamCenter.x + imamWidth / 2f, imamCenter.y + imamHeight / 2f)
+        ),
+        topLeft = Offset(imamCenter.x - imamWidth / 2f, imamCenter.y - imamHeight / 2f),
+        size = androidx.compose.ui.geometry.Size(imamWidth, imamHeight)
+    )
+    drawOval(
+        color = Color.White.copy(alpha = 0.35f),
+        topLeft = Offset(
+            imamCenter.x - imamWidth * 0.26f,
+            imamCenter.y - imamHeight * 0.30f
+        ),
+        size = androidx.compose.ui.geometry.Size(imamWidth * 0.24f, imamHeight * 0.30f)
+    )
+
+    val capY = imamCenter.y + imamHeight / 2f
+    drawCircle(
+        color = AtharPrimaryLight.copy(alpha = 0.9f),
+        radius = beadRadius * 0.42f,
+        center = Offset(center.x, capY)
+    )
+    drawCircle(
+        color = Color.Black.copy(alpha = 0.35f),
+        radius = beadRadius * 0.42f,
+        center = Offset(center.x, capY),
+        style = Stroke(width = 0.7.dp.toPx())
+    )
+
+    // Tassel: a knot and five threads fanning gently.
+    val knot = Offset(center.x, capY + beadRadius * 0.55f)
+    drawCircle(
+        color = AtharPrimaryDeep,
+        radius = beadRadius * 0.55f,
+        center = knot
+    )
+    drawCircle(
+        color = AtharPrimary.copy(alpha = 0.9f),
+        radius = beadRadius * 0.55f,
+        center = knot,
+        style = Stroke(width = 1.dp.toPx())
+    )
+
+    val threadTop = knot.y + beadRadius * 0.25f
+    val threadLength = beadRadius * 2.8f
+    for (i in 0..4) {
+        val spread = (i - 2) / 2f
+        val endX = center.x + spread * beadRadius * 1.4f
+        val endY = threadTop + threadLength * (1f - abs(spread) * 0.18f)
+        val path = Path().apply {
+            moveTo(center.x, threadTop)
+            quadraticBezierTo(
+                center.x + spread * beadRadius * 0.5f,
+                threadTop + threadLength * 0.55f,
+                endX,
+                endY
+            )
+        }
+        drawPath(
+            path = path,
+            color = AtharPrimary.copy(alpha = 0.82f),
+            style = Stroke(width = 1.1.dp.toPx(), cap = StrokeCap.Round)
+        )
     }
 }
 
@@ -789,14 +977,14 @@ private fun MasbahaSparks(trigger: Int, modifier: Modifier = Modifier) {
     val seed = trigger
     Canvas(modifier = modifier) {
         val p = progress.value
-        val center = Offset(size.width / 2f, size.height * 0.52f)
+        val center = Offset(size.width / 2f, size.height * 0.56f)
         val random = Random(seed)
-        val gold = Color(0xFFE6D79A)
+        val gold = AtharPrimaryLight
 
         repeat(46) { i ->
             val angle = random.nextFloat().toDouble() * 2.0 * PI
             val speed = 0.3f + random.nextFloat() * 0.7f
-            val distance = size.minDimension * 0.08f + p * size.minDimension * 0.52f * speed
+            val distance = size.minDimension * 0.06f + p * size.minDimension * 0.36f * speed
             val x = center.x + cos(angle).toFloat() * distance
             val y = center.y + sin(angle).toFloat() * distance * 0.92f
             val alpha = ((1f - p) * 0.9f).coerceIn(0f, 1f)
@@ -822,7 +1010,7 @@ private fun MasbahaSparks(trigger: Int, modifier: Modifier = Modifier) {
 
         drawCircle(
             color = Color.White.copy(alpha = (1f - p) * 0.30f),
-            radius = size.minDimension * 0.10f + p * size.minDimension * 0.34f,
+            radius = size.minDimension * 0.08f + p * size.minDimension * 0.26f,
             center = center,
             style = Stroke(width = 2f)
         )
@@ -833,11 +1021,11 @@ private fun angleOf(point: Offset, center: Offset): Float =
     atan2(point.y - center.y, point.x - center.x)
 
 /**
- * The bead tick: a very short, dry click built from a fast-decaying high tone
- * and a noise transient, closer to a clock tick than a beep. One static
- * [AudioTrack] is written once and replayed from the top on every tap.
+ * The bead tick: a dry, mechanical click and nothing else. A tiny noise
+ * transient with a very short high ping, the way a timer clicks — no warm
+ * body, no beep. One static [AudioTrack] is written once and replayed.
  */
-private class MasbahaTone {
+private class MasbahaTick {
     private val track: AudioTrack? = runCatching {
         val samples = buildTick()
         val created = AudioTrack.Builder()
@@ -878,17 +1066,19 @@ private class MasbahaTone {
         const val SAMPLE_RATE = 44100
 
         fun buildTick(): ShortArray {
-            val length = (SAMPLE_RATE * 0.028f).toInt()
+            val length = (SAMPLE_RATE * 0.011f).toInt()
             val samples = ShortArray(length)
             val random = Random(7)
+            var previousNoise = 0f
             for (i in 0 until length) {
                 val t = i / SAMPLE_RATE.toFloat()
-                val body = sin(2.0 * PI * 2600.0 * t) * 0.55 +
-                    sin(2.0 * PI * 3900.0 * t) * 0.22
-                val bodyEnv = exp(-t * 170f)
-                val click = (random.nextFloat() * 2f - 1f) * exp(-t * 520f) * 0.35f
-                val warm = sin(2.0 * PI * 880.0 * t) * exp(-t * 95f) * 0.10
-                val value = (body * bodyEnv + click + warm) * 0.30f
+                val raw = random.nextFloat() * 2f - 1f
+                // One-pole high-pass, so the transient is dry and clicky.
+                val noise = raw - previousNoise * 0.35f
+                previousNoise = raw
+                val transient = noise * exp(-t * 900f) * 0.62f
+                val ping = sin(2.0 * PI * 3200.0 * t) * exp(-t * 620f) * 0.16f
+                val value = (transient + ping) * 0.62f
                 samples[i] = (value * Short.MAX_VALUE)
                     .toInt()
                     .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())

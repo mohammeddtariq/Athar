@@ -7,18 +7,18 @@
     <string name="nav_quran">Quran</string>
     <string name="nav_duas">Duas</string>
     <string name="nav_qibla">Qibla</string>
-    <string name="nav_masbaha">Al-Wisaal</string>
+    <string name="nav_masbaha">Al-Yaqut</string>
     <string name="nav_services">Essence</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_amanah">Al-Amanah</string>
 
-    <!-- Al-Wisaal (tasbih masbaha) -->
-    <string name="masbaha_title">Al-Wisaal</string>
+    <!-- Al-Yaqut (tasbih masbaha) -->
+    <string name="masbaha_title">Al-Yaqut</string>
     <string name="masbaha_haptics">Haptics</string>
     <string name="masbaha_sound">Sound</string>
     <string name="masbaha_reset">Reset</string>
     <string name="masbaha_cycle">%1$s of %2$s</string>
-    <string name="masbaha_hint">Tap, drag the beads, or press a volume key</string>
+    <string name="masbaha_hint">Tap a bead, drag the ring, or press a volume key</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">My Location</string>

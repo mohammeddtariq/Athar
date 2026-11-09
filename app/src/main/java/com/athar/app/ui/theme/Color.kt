@@ -90,9 +90,9 @@ enum class AtharAccentTone(
     val swatch: Color
 ) {
     NATIVE("NATIVE", "الأصلي", "Original", Color(0xFFC9D8B4)),
-    GOLD("GOLD", "ذهبي", "Gold", Color(0xFFD9A45C)),
+    GOLD("GOLD", "ذهبي", "Gold", Color(0xFFC0A472)),
     SAGE("SAGE", "زيتوني", "Sage", Color(0xFFC9D8B4)),
-    WINE("WINE", "عُنّابي", "Garnet", Color(0xFFB24A5E)),
+    WINE("WINE", "عُنّابي", "Burgundy", Color(0xFF8E2F44)),
     COFFEE("COFFEE", "بُنّي", "Coffee", Color(0xFFB08968)),
     BLACK("BLACK", "أسود", "Onyx", Color(0xFF191416)),
     IVORY("IVORY", "عاجي", "Ivory", Color(0xFFF2E6D8));
@@ -313,16 +313,16 @@ enum class AtharThemeId(
         accent == AtharAccentTone.NATIVE -> palette
 
         this == OLIVE && accent == AtharAccentTone.GOLD -> palette.copy(
-            primary = Color(0xFFD9A45C),
-            primaryMuted = Color(0xFF8C7038),
-            primaryLight = Color(0xFFF2DCA6),
-            primarySubtle = Color(0xFF211A10),
-            primaryDeep = Color(0xFF3A2C1C),
-            textOnPrimary = Color(0xFF1B1008),
-            navPillSelected = Color(0xFF3E3320),
-            navPillBorder = Color(0xFF8C7038),
-            navIconActive = Color(0xFFF2DCA6),
-            navGlow = Color(0xFFE8B96B)
+            primary = Color(0xFFC0A472),
+            primaryMuted = Color(0xFF8A7350),
+            primaryLight = Color(0xFFE7D9B6),
+            primarySubtle = Color(0xFF201A11),
+            primaryDeep = Color(0xFF3A3020),
+            textOnPrimary = Color(0xFF1C1509),
+            navPillSelected = Color(0xFF3A3121),
+            navPillBorder = Color(0xFF8A7350),
+            navIconActive = Color(0xFFE7D9B6),
+            navGlow = Color(0xFFD6C08C)
         )
 
         this == AMOLED && accent == AtharAccentTone.SAGE -> palette.copy(
@@ -339,17 +339,17 @@ enum class AtharThemeId(
         )
 
         this == AMOLED && accent == AtharAccentTone.WINE -> palette.copy(
-            primary = Color(0xFFB24A5E),
-            primaryMuted = Color(0xFF7E3A45),
-            primaryLight = Color(0xFFE9C3CA),
-            primarySubtle = Color(0xFF1A0A0E),
+            primary = Color(0xFF8E2F44),
+            primaryMuted = Color(0xFF6B2433),
+            primaryLight = Color(0xFFE2BEC4),
+            primarySubtle = Color(0xFF170A0E),
             primaryDeep = Color(0xFF3A121B),
             textOnPrimary = Color(0xFFFFF4F6),
-            navPillSelected = Color(0xFF2E1017),
-            navPillBorder = Color(0xFFB24A5E),
-            navIconActive = Color(0xFFF0D6DA),
-            navGlow = Color(0xFFE07A8D),
-            accentInk = Color(0xFFE9C3CA)
+            navPillSelected = Color(0xFF2A0F16),
+            navPillBorder = Color(0xFF7E2A3D),
+            navIconActive = Color(0xFFE2BEC4),
+            navGlow = Color(0xFFA95065),
+            accentInk = Color(0xFFE2BEC4)
         )
 
         this == AMOLED && accent == AtharAccentTone.GOLD -> palette.copy(
@@ -425,11 +425,11 @@ enum class AtharThemeId(
     fun moodFor(accent: AtharAccentTone, isArabic: Boolean): String = when {
         accent == AtharAccentTone.NATIVE -> if (isArabic) moodAr else moodEn
         this == OLIVE && accent == AtharAccentTone.GOLD ->
-            if (isArabic) "ذهب وزيتون" else "Gold & olive"
+            if (isArabic) "نحاسٌ مصنفر وزيتون" else "Frosted brass & olive"
         this == AMOLED && accent == AtharAccentTone.SAGE ->
             if (isArabic) "زيتوني وسواد" else "Sage & black"
         this == AMOLED && accent == AtharAccentTone.WINE ->
-            if (isArabic) "عُنّابي وسواد" else "Garnet & black"
+            if (isArabic) "عُنّابي وسواد" else "Burgundy & black"
         this == AMOLED && accent == AtharAccentTone.GOLD ->
             if (isArabic) "ذهب وسواد" else "Gold & black"
         this == AMOLED && accent == AtharAccentTone.COFFEE ->

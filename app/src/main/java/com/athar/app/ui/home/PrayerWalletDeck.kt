@@ -1,5 +1,9 @@
 package com.athar.app.ui.home
 
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -11,10 +15,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,9 +42,12 @@ import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,16 +59,26 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -84,6 +103,8 @@ import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
 import java.time.format.DateTimeFormatter
+import kotlin.math.exp
+import kotlin.random.Random
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -121,6 +142,11 @@ fun PrayerWalletDeck(
     var showGestureHint by remember { mutableStateOf(!hintPrefs.getBoolean(HINT_SEEN_KEY, false)) }
     var focusedKey by rememberSaveable { mutableStateOf<String?>(null) }
     var fanTarget by remember { mutableFloatStateOf(0f) }
+    val revealedAyat = remember { mutableStateMapOf<String, Boolean>() }
+    val scratchSound = remember { ScratchSound() }
+    DisposableEffect(Unit) {
+        onDispose { scratchSound.release() }
+    }
     val scope = rememberCoroutineScope()
     val fan by animateFloatAsState(
         targetValue = fanTarget,
@@ -205,6 +231,9 @@ fun PrayerWalletDeck(
                 isFocused = isFocused,
                 glowAlpha = if (row.isNext) glowAlpha else 0f,
                 spin = spin,
+                ayahRevealed = revealedAyat[row.key] == true,
+                onAyahRevealed = { revealedAyat[row.key] = true },
+                scratchSound = scratchSound,
                 modifier = Modifier
                     .offset(y = peek * (rows.lastIndex - index) + lift)
                     .zIndex(if (isFocused) 100f else (rows.size - index).toFloat())
@@ -314,6 +343,9 @@ private fun PrayerWalletCard(
     isFocused: Boolean,
     glowAlpha: Float,
     spin: Float,
+    ayahRevealed: Boolean,
+    onAyahRevealed: () -> Unit,
+    scratchSound: ScratchSound,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(22.dp)
@@ -353,7 +385,13 @@ private fun PrayerWalletCard(
                     .fillMaxSize()
                     .graphicsLayer { rotationY = 180f }
             ) {
-                PrayerCardBack()
+                PrayerCardBack(
+                    row = row,
+                    isArabic = isArabic,
+                    revealed = ayahRevealed,
+                    onRevealed = onAyahRevealed,
+                    scratchSound = scratchSound
+                )
             }
         } else {
             PrayerCardFront(
@@ -480,10 +518,17 @@ private fun PrayerCardFront(
 
 /**
  * The reverse of a prayer card: the app's own backdrop — whichever the user
- * chose — with the Athar wordmark on top.
+ * chose — with the Athar wordmark, then a foil panel the user scratches away
+ * to reveal an ayah chosen for that prayer.
  */
 @Composable
-private fun PrayerCardBack() {
+private fun PrayerCardBack(
+    row: PrayerRow,
+    isArabic: Boolean,
+    revealed: Boolean,
+    onRevealed: () -> Unit,
+    scratchSound: ScratchSound
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -515,27 +560,373 @@ private fun PrayerCardBack() {
         )
 
         Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = "أَثَر",
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 42.sp,
+                fontSize = 22.sp,
                 color = AtharPrimaryLight,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = "A T H A R",
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.5.sp,
-                letterSpacing = 6.sp,
+                fontSize = 8.5.sp,
+                letterSpacing = 4.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center
             )
+            Spacer(Modifier.height(9.dp))
+            ScratchAyah(
+                row = row,
+                isArabic = isArabic,
+                revealed = revealed,
+                onRevealed = onRevealed,
+                scratchSound = scratchSound,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (isArabic) "اخدش لتكشف" else "Scratch to reveal",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 8.sp,
+                letterSpacing = 0.4.sp,
+                color = AtharTextSecondary.copy(alpha = 0.72f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * A credit-card style scratch panel. The ayah sits underneath; a brushed foil
+ * layer covers it and is erased with [BlendMode.Clear] wherever the finger
+ * passes. Once enough of it has been scratched the rest wipes away in a soft
+ * expanding circle, and the panel stays revealed for the rest of the session.
+ */
+@Composable
+private fun ScratchAyah(
+    row: PrayerRow,
+    isArabic: Boolean,
+    revealed: Boolean,
+    onRevealed: () -> Unit,
+    scratchSound: ScratchSound,
+    modifier: Modifier = Modifier
+) {
+    val ayah = remember(row.key) { ayahFor(row.key) }
+    val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+    val label = if (isArabic) "اخدش لتكشف" else "Scratch to reveal"
+    val shape = RoundedCornerShape(9.dp)
+
+    val strokes = remember { mutableStateListOf<ScratchStroke>() }
+    var travelled by remember { mutableFloatStateOf(0f) }
+    val reveal = remember { Animatable(if (revealed) 1f else 0f) }
+    LaunchedEffect(revealed) {
+        if (revealed) {
+            if (reveal.value < 1f) {
+                reveal.animateTo(1f, tween(durationMillis = 560, easing = FastOutSlowInEasing))
+            }
+        } else {
+            reveal.snapTo(0f)
+            strokes.clear()
+            travelled = 0f
+        }
+    }
+
+    val thresholdPx = with(density) { 118.dp.toPx() }
+    val clearWidth = with(density) { 15.dp.toPx() }
+    val labelStyle = TextStyle(
+        color = Color(0xFF2C2C31).copy(alpha = 0.55f),
+        fontFamily = ThmanyahSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 7.5.sp,
+        letterSpacing = 1.1.sp
+    )
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(AtharBackground.copy(alpha = 0.55f))
+            .border(1.dp, AtharPrimary.copy(alpha = 0.22f), shape)
+            // Swallow plain taps so starting a scratch never flips the card back.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { }
+    ) {
+        // The ayah, waiting underneath the foil.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = ayah.arabic,
+                fontFamily = ThmanyahSerifDisplay,
+                fontWeight = FontWeight.Bold,
+                fontSize = 9.5.sp,
+                lineHeight = 13.5.sp,
+                color = AtharTextPrimary,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(1.dp))
+            Text(
+                text = if (isArabic) ayah.referenceAr else ayah.referenceEn,
+                fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 7.5.sp,
+                color = AtharPrimaryLight.copy(alpha = 0.9f),
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+            if (!isArabic) {
+                Text(
+                    text = ayah.meaning,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 6.5.sp,
+                    lineHeight = 8.sp,
+                    color = AtharTextSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Canvas(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .pointerInput(revealed) {
+                    if (revealed) return@pointerInput
+                    var last = Offset.Zero
+                    detectDragGestures(
+                        onDragStart = { start ->
+                            last = start
+                            scratchSound.scratch()
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val to = change.position
+                            strokes += ScratchStroke(last, to)
+                            travelled += (to - last).getDistance()
+                            last = to
+                            scratchSound.scratch()
+                            if (strokes.size % 5 == 0) {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                            if (travelled > thresholdPx) {
+                                onRevealed()
+                            }
+                        }
+                    )
+                }
+        ) {
+            if (reveal.value >= 1f) return@Canvas
+
+            // Brushed foil.
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF4B4B50),
+                        Color(0xFF9E9EA5),
+                        Color(0xFF5A5A60),
+                        Color(0xFFB5B5BB)
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, size.height)
+                )
+            )
+            // Fine diagonal brushing.
+            val gap = 6.dp.toPx()
+            var x = -size.height
+            while (x < size.width) {
+                drawLine(
+                    color = Color.White.copy(alpha = 0.045f),
+                    start = Offset(x, 0f),
+                    end = Offset(x + size.height, size.height),
+                    strokeWidth = 1f
+                )
+                x += gap
+            }
+            // Edge shading so the panel reads as recessed foil.
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.22f),
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.20f)
+                    )
+                )
+            )
+            // Invitation to scratch.
+            val measured = textMeasurer.measure(AnnotatedString(label), style = labelStyle)
+            drawText(
+                textLayoutResult = measured,
+                topLeft = Offset(
+                    (size.width - measured.size.width) / 2f,
+                    (size.height - measured.size.height) / 2f
+                )
+            )
+            // Erase where the finger has been.
+            for (stroke in strokes) {
+                drawLine(
+                    color = Color.Transparent,
+                    start = stroke.from,
+                    end = stroke.to,
+                    strokeWidth = clearWidth,
+                    cap = StrokeCap.Round,
+                    blendMode = BlendMode.Clear
+                )
+            }
+            // The final wipe: a circle of light spreading from the middle.
+            if (reveal.value > 0f) {
+                drawCircle(
+                    color = Color.Transparent,
+                    radius = reveal.value * size.maxDimension,
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    blendMode = BlendMode.Clear
+                )
+            }
+        }
+    }
+}
+
+private data class ScratchStroke(val from: Offset, val to: Offset)
+
+private data class AyahReveal(
+    val arabic: String,
+    val referenceAr: String,
+    val referenceEn: String,
+    val meaning: String
+)
+
+private fun ayahFor(key: String): AyahReveal = when (key) {
+    "fajr" -> AyahReveal(
+        arabic = "وَقُرْآنَ الْفَجْرِ ۖ إِنَّ قُرْآنَ الْفَجْرِ كَانَ مَشْهُودًا",
+        referenceAr = "الإسراء ٧٨",
+        referenceEn = "Al-Isra 78",
+        meaning = "And the recitation of dawn — indeed, the recitation of dawn is ever witnessed."
+    )
+    "sunrise" -> AyahReveal(
+        arabic = "وَسَبِّحْ بِحَمْدِ رَبِّكَ قَبْلَ طُلُوعِ الشَّمْسِ",
+        referenceAr = "ق ٣٩",
+        referenceEn = "Qaf 39",
+        meaning = "And glorify the praise of your Lord before the rising of the sun."
+    )
+    "dhuhr" -> AyahReveal(
+        arabic = "أَقِمِ الصَّلَاةَ لِدُلُوكِ الشَّمْسِ",
+        referenceAr = "الإسراء ٧٨",
+        referenceEn = "Al-Isra 78",
+        meaning = "Establish prayer at the decline of the sun."
+    )
+    "asr" -> AyahReveal(
+        arabic = "حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ",
+        referenceAr = "البقرة ٢٣٨",
+        referenceEn = "Al-Baqarah 238",
+        meaning = "Guard strictly the prayers, especially the middle prayer."
+    )
+    "maghrib" -> AyahReveal(
+        arabic = "فَسُبْحَانَ اللَّهِ حِينَ تُمْسُونَ",
+        referenceAr = "الروم ١٧",
+        referenceEn = "Ar-Rum 17",
+        meaning = "So glory be to Allah when you enter the evening."
+    )
+    else -> AyahReveal(
+        arabic = "وَمِنَ اللَّيْلِ فَسَبِّحْهُ وَإِدْبَارَ النُّجُومِ",
+        referenceAr = "الطور ٤٩",
+        referenceEn = "At-Tur 49",
+        meaning = "And glorify Him in the night and after the stars decline."
+    )
+}
+
+/** A short friction burst that follows the finger while scratching foil. */
+private class ScratchSound {
+    private var lastPlayed = 0L
+
+    private val track: AudioTrack? = runCatching {
+        val samples = buildScratch()
+        val created = AudioTrack.Builder()
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(SAMPLE_RATE)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(samples.size * 2)
+            .setTransferMode(AudioTrack.MODE_STATIC)
+            .build()
+        created.write(samples, 0, samples.size)
+        created
+    }.getOrNull()
+
+    fun scratch() {
+        val audio = track ?: return
+        val now = System.nanoTime()
+        if (now - lastPlayed < 85_000_000L) return
+        lastPlayed = now
+        runCatching {
+            if (audio.playState == AudioTrack.PLAYSTATE_PLAYING) audio.stop()
+            audio.reloadStaticData()
+            audio.play()
+        }
+    }
+
+    fun release() {
+        runCatching { track?.release() }
+    }
+
+    private companion object {
+        const val SAMPLE_RATE = 44100
+
+        fun buildScratch(): ShortArray {
+            val length = (SAMPLE_RATE * 0.075f).toInt()
+            val samples = ShortArray(length)
+            val random = Random(11)
+            var low = 0f
+            for (i in 0 until length) {
+                val t = i / SAMPLE_RATE.toFloat()
+                val raw = random.nextFloat() * 2f - 1f
+                low += (raw - low) * 0.25f
+                val grain = raw - low
+                val attack = (t / 0.012f).coerceAtMost(1f)
+                val env = attack * exp(-t * 42f)
+                val crackle = if (random.nextFloat() < 0.004f) {
+                    (random.nextFloat() * 2f - 1f) * 0.5f
+                } else {
+                    0f
+                }
+                val value = (grain * 0.5f + crackle) * env * 0.5f
+                samples[i] = (value * Short.MAX_VALUE)
+                    .toInt()
+                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                    .toShort()
+            }
+            return samples
         }
     }
 }
