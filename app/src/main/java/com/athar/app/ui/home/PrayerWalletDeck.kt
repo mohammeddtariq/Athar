@@ -147,9 +147,10 @@ fun PrayerWalletDeck(
     var showGestureHint by remember { mutableStateOf(!hintPrefs.getBoolean(HINT_SEEN_KEY, false)) }
     var focusedKey by rememberSaveable { mutableStateOf<String?>(null) }
     var fanTarget by remember { mutableFloatStateOf(0f) }
-    // The key of the card whose foil is currently under a finger. While set,
-    // the horizontal flip draggable is removed so scratching never spins it.
-    var scratchingKey by remember { mutableStateOf<String?>(null) }
+    // Cards that have been turned onto their back and squared up. Their turn
+    // gesture is switched off until they are put back down, so a hand on the
+    // foil scratches instead of spinning the card it is printed on.
+    val backFacing = remember { mutableStateMapOf<String, Boolean>() }
     val revealedAyat = remember { mutableStateMapOf<String, Boolean>() }
     val scratchSound = remember { ScratchSound() }
     DisposableEffect(Unit) {
@@ -179,24 +180,36 @@ fun PrayerWalletDeck(
         lastFanHaptic = fanTarget
     }
 
+    val toggleFocus: (String) -> Unit = { key ->
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        focusedKey = if (focusedKey == key) null else key
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .height(CardHeight + peek * (rows.size - 1).coerceAtLeast(0) + 16.dp)
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    fanTarget = (fanTarget + delta / 320f).coerceIn(0f, 1f)
-                    if (showGestureHint && delta > 2f) {
-                        showGestureHint = false
-                        hintPrefs.edit().putBoolean(HINT_SEEN_KEY, true).apply()
-                    }
-                },
-                onDragStopped = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    fanTarget = if (fanTarget > 0.45f) 1f else 0f
-                    focusedKey = null
+            .then(
+                // While a card is lifted, the deck itself holds still: the fan
+                // is an outward gesture, and it must never fight the scratch.
+                if (focusedKey == null) {
+                    Modifier.draggable(
+                        orientation = Orientation.Vertical,
+                        state = rememberDraggableState { delta ->
+                            fanTarget = (fanTarget + delta / 320f).coerceIn(0f, 1f)
+                            if (showGestureHint && delta > 2f) {
+                                showGestureHint = false
+                                hintPrefs.edit().putBoolean(HINT_SEEN_KEY, true).apply()
+                            }
+                        },
+                        onDragStopped = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            fanTarget = if (fanTarget > 0.45f) 1f else 0f
+                        }
+                    )
+                } else {
+                    Modifier
                 }
             )
     ) {
@@ -216,11 +229,13 @@ fun PrayerWalletDeck(
             // How far the card has been turned, in degrees. Free to pass 360.
             var spin by remember(row.key) { mutableFloatStateOf(0f) }
             var settleJob by remember(row.key) { mutableStateOf<Job?>(null) }
+            val flipped = backFacing[row.key] == true
 
             // Releasing the card turns it back to face front.
             LaunchedEffect(isFocused) {
                 settleJob?.cancel()
                 if (!isFocused && spin != 0f) {
+                    backFacing[row.key] = false
                     animate(
                         initialValue = spin,
                         targetValue = 0f,
@@ -241,16 +256,14 @@ fun PrayerWalletDeck(
                 spin = spin,
                 ayahRevealed = revealedAyat[row.key] == true,
                 onAyahRevealed = { revealedAyat[row.key] = true },
-                onScratchActive = { active ->
-                    scratchingKey = if (active) row.key else null
-                },
+                onCardTap = { toggleFocus(row.key) },
                 scratchSound = scratchSound,
                 modifier = Modifier
                     .offset(y = peek * (rows.lastIndex - index) + lift)
                     .zIndex(if (isFocused) 100f else (rows.size - index).toFloat())
                     .scale(cardScale)
                     .then(
-                        if (isFocused && scratchingKey != row.key) {
+                        if (isFocused && !flipped) {
                             Modifier.draggable(
                                 orientation = Orientation.Horizontal,
                                 state = rememberDraggableState { delta ->
@@ -261,6 +274,8 @@ fun PrayerWalletDeck(
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     // Square the card up to whichever face it is nearest.
                                     val target = (spin / 180f).roundToInt() * 180f
+                                    val normalised = ((target % 360f) + 360f) % 360f
+                                    backFacing[row.key] = normalised > 90f && normalised < 270f
                                     settleJob = scope.launch {
                                         animate(
                                             initialValue = spin,
@@ -280,10 +295,7 @@ fun PrayerWalletDeck(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            focusedKey = if (isFocused) null else row.key
-                        }
+                        onClick = { toggleFocus(row.key) }
                     )
             )
 
@@ -356,7 +368,7 @@ private fun PrayerWalletCard(
     spin: Float,
     ayahRevealed: Boolean,
     onAyahRevealed: () -> Unit,
-    onScratchActive: (Boolean) -> Unit,
+    onCardTap: () -> Unit,
     scratchSound: ScratchSound,
     modifier: Modifier = Modifier
 ) {
@@ -402,7 +414,7 @@ private fun PrayerWalletCard(
                     isArabic = isArabic,
                     revealed = ayahRevealed,
                     onRevealed = onAyahRevealed,
-                    onScratchActive = onScratchActive,
+                    onCardTap = onCardTap,
                     scratchSound = scratchSound
                 )
             }
@@ -540,7 +552,7 @@ private fun PrayerCardBack(
     isArabic: Boolean,
     revealed: Boolean,
     onRevealed: () -> Unit,
-    onScratchActive: (Boolean) -> Unit,
+    onCardTap: () -> Unit,
     scratchSound: ScratchSound
 ) {
     Box(
@@ -604,7 +616,7 @@ private fun PrayerCardBack(
                 isArabic = isArabic,
                 revealed = revealed,
                 onRevealed = onRevealed,
-                onScratchActive = onScratchActive,
+                onCardTap = onCardTap,
                 scratchSound = scratchSound,
                 modifier = Modifier
                     .fillMaxWidth(0.82f)
@@ -626,7 +638,7 @@ private fun ScratchAyah(
     isArabic: Boolean,
     revealed: Boolean,
     onRevealed: () -> Unit,
-    onScratchActive: (Boolean) -> Unit,
+    onCardTap: () -> Unit,
     scratchSound: ScratchSound,
     modifier: Modifier = Modifier
 ) {
@@ -642,7 +654,7 @@ private fun ScratchAyah(
     var scratchedCells by remember { mutableIntStateOf(0) }
     val reveal = remember { Animatable(if (revealed) 1f else 0f) }
     val onRevealedRef = rememberUpdatedState(onRevealed)
-    val onScratchActiveRef = rememberUpdatedState(onScratchActive)
+    val onCardTapRef = rememberUpdatedState(onCardTap)
 
     LaunchedEffect(revealed) {
         if (revealed) {
@@ -752,70 +764,62 @@ private fun ScratchAyah(
 
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
+                        // The whole gesture belongs to the foil, so neither the
+                        // card's turn nor the deck's fan ever sees it.
                         down.consume()
-                        onScratchActiveRef.value(true)
                         var last = down.position
-                        scratchSound.scratch()
-                        try {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                change.consume()
-                                if (!change.pressed) break
-                                val to = change.position
-                                if (to != last) {
-                                    strokes += ScratchStroke(last, to)
-                                    markCoverage(last, to)
-                                    scratchSound.scratch()
-                                    if (strokes.size % 4 == 0) {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    }
-                                    last = to
+                        var travelled = 0f
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            change.consume()
+                            if (!change.pressed) break
+                            val to = change.position
+                            if (to != last) {
+                                travelled += (to - last).getDistance()
+                                strokes += ScratchStroke(last, to)
+                                markCoverage(last, to)
+                                scratchSound.scratch()
+                                if (strokes.size % 4 == 0) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
+                                last = to
                             }
-                        } finally {
-                            onScratchActiveRef.value(false)
                         }
+                        // A tap that never moved is a hand on the card, not a
+                        // scratch: it puts the card away.
+                        if (travelled < 4.dp.toPx()) onCardTapRef.value()
                     }
                 }
         ) {
             if (reveal.value >= 1f) return@Canvas
 
-            // Metallic foil base.
+            // Plain silver foil.
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFFDCDCE2),
-                        Color(0xFFB0B0B9),
-                        Color(0xFFCBCBD2)
+                        Color(0xFFF0F0F4),
+                        Color(0xFFBEBEC7),
+                        Color(0xFFD9D9E0)
                     )
                 )
             )
-            // A literal barcode: vertical lines of varying weight printed on
-            // the foil, so nothing besides the strip reads through it.
-            val barInk = Color(0xFF26262C)
-            var x = 2.dp.toPx()
-            var bar = 0
-            while (x < size.width - 1.dp.toPx()) {
-                val barWidth = (0.7f + ((bar * 37) % 5) * 0.5f).dp.toPx()
-                val alpha = 0.28f + ((bar * 53) % 7) / 7f * 0.34f
-                drawRect(
-                    color = barInk.copy(alpha = alpha),
-                    topLeft = Offset(x, 0f),
-                    size = Size(barWidth, size.height)
-                )
-                x += barWidth + (1.2f + ((bar * 29) % 5) * 0.7f).dp.toPx()
-                bar++
-            }
-            // A soft sheen so the print still reads as brushed metal.
+            // A slow diagonal sheen, so it reads as brushed metal.
             drawRect(
-                brush = Brush.verticalGradient(
+                brush = Brush.linearGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.20f),
+                        Color.White.copy(alpha = 0.40f),
                         Color.Transparent,
-                        Color.Black.copy(alpha = 0.18f)
-                    )
+                        Color.Black.copy(alpha = 0.12f)
+                    ),
+                    start = Offset.Zero,
+                    end = Offset(size.width, size.height)
                 )
+            )
+            drawRect(
+                color = Color.White.copy(alpha = 0.55f),
+                topLeft = Offset(0f, 0f),
+                size = Size(size.width, 1.dp.toPx())
             )
             // One word only: Scratch.
             val measured = textMeasurer.measure(AnnotatedString(label), style = labelStyle)

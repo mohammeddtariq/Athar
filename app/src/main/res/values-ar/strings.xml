@@ -18,7 +18,8 @@
     <string name="masbaha_sound">الصوت</string>
     <string name="masbaha_reset">تصفير</string>
     <string name="masbaha_cycle">%1$s من %2$s</string>
-    <string name="masbaha_hint">اضغط خرزة، أو أدر الحلقة، أو استخدم مفاتيح الصوت</string>
+    <string name="masbaha_hint">اضغط خرزة، أو اسحب السبحة، أو استخدم مفاتيح الصوت</string>
+    <string name="masbaha_change_style">تغيير شكل السبحة</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">موقعي</string>

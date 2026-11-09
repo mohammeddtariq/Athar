@@ -3,26 +3,52 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Open mushaf -->
+    <!-- Open mushaf, held up on its rehal. -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M4.6,6.2C7.3,5.8 9.8,6.3 12,7.9C14.2,6.3 16.7,5.8 19.4,6.2V15.4C16.7,15.0 14.2,15.5 12,17.1C9.8,15.5 7.3,15.0 4.6,15.4Z"
+        android:pathData="M3.4,6.6 C6.6,6.0 9.8,6.6 12,8.1 C14.2,6.6 17.4,6.0 20.6,6.6 L20.6,15.2 C17.4,14.6 14.2,15.2 12,16.7 C9.8,15.2 6.6,14.6 3.4,15.2 Z"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:strokeWidth="1.7" />
+        android:strokeWidth="1.6" />
     <!-- Spine -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M12,7.9V17.1"
+        android:pathData="M12,8.1 L12,16.7"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
-        android:strokeWidth="1.7" />
-    <!-- Rehal stand -->
+        android:strokeWidth="1.2" />
+    <!-- Mihrab arch ruled on each page. -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M5.1,21.4L11.2,17.1M18.9,21.4L12.8,17.1"
+        android:pathData="M6.5,13.7 L6.5,10.7 Q7.9,8.9 9.3,10.7 L9.3,13.7"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
-        android:strokeWidth="1.7" />
+        android:strokeLineJoin="round"
+        android:strokeWidth="0.9" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M14.7,13.7 L14.7,10.7 Q16.1,8.9 17.5,10.7 L17.5,13.7"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="0.9" />
+    <!-- Rehal legs, splayed out below the book. -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M10.9,16.6 L4.4,21.2 M13.1,16.6 L19.6,21.2"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.6" />
+    <!-- Tassel hanging from the spine. -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M12,16.7 L12,18.3"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.1" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,18.1 L13,19.2 L12,20.6 L11,19.2 Z" />
 </vector>

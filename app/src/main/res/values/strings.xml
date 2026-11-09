@@ -18,7 +18,8 @@
     <string name="masbaha_sound">Sound</string>
     <string name="masbaha_reset">Reset</string>
     <string name="masbaha_cycle">%1$s of %2$s</string>
-    <string name="masbaha_hint">Tap a bead, drag the ring, or press a volume key</string>
+    <string name="masbaha_hint">Tap a bead, drag the sibha, or press a volume key</string>
+    <string name="masbaha_change_style">Change sibha style</string>
 
     <!-- Home Screen -->
     <string name="home_location_label">My Location</string>

@@ -70,6 +70,7 @@ class AppPreferences(private val context: Context) {
         private val MASBAHA_AKBAR_KEY = intPreferencesKey("masbaha_akbar")
         private val MASBAHA_HAPTICS_KEY = booleanPreferencesKey("masbaha_haptics")
         private val MASBAHA_SOUND_KEY = booleanPreferencesKey("masbaha_sound")
+        private val MASBAHA_STYLE_KEY = stringPreferencesKey("masbaha_style")
 
         // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
@@ -226,6 +227,11 @@ class AppPreferences(private val context: Context) {
 
     val masbahaSound: Flow<Boolean> = context.dataStore.data.map {
         it[MASBAHA_SOUND_KEY] ?: true
+    }
+
+    /** Which sibha is on show: the strung loop or the hanging strand. */
+    val masbahaStyle: Flow<String> = context.dataStore.data.map {
+        it[MASBAHA_STYLE_KEY] ?: "classic"
     }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
@@ -608,6 +614,10 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setMasbahaSound(enabled: Boolean) {
         context.dataStore.edit { it[MASBAHA_SOUND_KEY] = enabled }
+    }
+
+    suspend fun setMasbahaStyle(style: String) {
+        context.dataStore.edit { it[MASBAHA_STYLE_KEY] = style }
     }
 
     suspend fun saveLastReadPosition(

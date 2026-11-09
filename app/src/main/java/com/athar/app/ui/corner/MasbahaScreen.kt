@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -83,6 +84,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
@@ -151,6 +153,26 @@ enum class Dhikr(
 private const val BEADS = 33
 private const val CYCLE = 33
 
+/** How many beads the hanging strand shows, whatever the tally's cycle is. */
+private const val STRAND_BEADS = 13
+
+/** The two sibha the screen can wear; the choice is kept in preferences. */
+private enum class SibhaStyle(val id: String) {
+    CLASSIC("classic"),
+    STRAND("strand");
+
+    companion object {
+        fun fromId(id: String?): SibhaStyle = entries.firstOrNull { it.id == id } ?: CLASSIC
+
+        fun next(current: SibhaStyle): SibhaStyle =
+            if (current == CLASSIC) STRAND else CLASSIC
+    }
+}
+
+// The strung loop is an oval, taller than it is wide.
+private const val RING_CENTER_Y = 0.56f
+private const val RING_RADIUS_Y = 0.355f
+
 /**
  * Al-Yaqut — the ruby. A small, hand-strung masbaha floating on the page: a
  * loop of thirty-three ivory pearls with brass dividers every eleven, an imam
@@ -169,6 +191,8 @@ fun MasbahaScreen(
     val haptics = LocalHapticFeedback.current
 
     val storedCounts by prefs.masbahaCounts.collectAsState(initial = null)
+    val storedStyle by prefs.masbahaStyle.collectAsState(initial = SibhaStyle.CLASSIC.id)
+    val sibhaStyle = SibhaStyle.fromId(storedStyle)
     val hapticsOn by prefs.masbahaHaptics.collectAsState(initial = true)
     val soundOn by prefs.masbahaSound.collectAsState(initial = true)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
@@ -238,6 +262,11 @@ fun MasbahaScreen(
             YaqutHeader(
                 isArabic = isArabic,
                 onBack = onBack,
+                onChangeStyle = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (soundOn) tick.tick()
+                    scope.launch { prefs.setMasbahaStyle(SibhaStyle.next(sibhaStyle).id) }
+                },
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
 
@@ -264,21 +293,33 @@ fun MasbahaScreen(
 
             // The sibha is the subject of the screen, so it keeps the full
             // width: no side padding, nothing sitting above it but the drum.
-            BoxWithConstraints(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
             ) {
-                val diameter = minOf(maxWidth, maxHeight).coerceIn(140.dp, 440.dp)
-                SibhaRing(
-                    count = count,
-                    cycle = cycle,
-                    numberStyle = numberStyle,
-                    onCount = { amount -> step(amount) },
-                    contentShift = diameter * 0.07f,
-                    modifier = Modifier.size(diameter)
-                )
+                Crossfade(
+                    targetState = sibhaStyle,
+                    animationSpec = tween(320, easing = FastOutSlowInEasing),
+                    label = "sibhaStyle"
+                ) { active ->
+                    when (active) {
+                        SibhaStyle.CLASSIC -> SibhaRing(
+                            count = count,
+                            cycle = cycle,
+                            numberStyle = numberStyle,
+                            onCount = { amount -> step(amount) },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        SibhaStyle.STRAND -> SibhaStrand(
+                            count = count,
+                            cycle = cycle,
+                            numberStyle = numberStyle,
+                            onCount = { amount -> step(amount) },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
             }
 
             Text(
@@ -353,6 +394,7 @@ fun MasbahaScreen(
 private fun YaqutHeader(
     isArabic: Boolean,
     onBack: () -> Unit,
+    onChangeStyle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -389,7 +431,25 @@ private fun YaqutHeader(
             color = AtharTextPrimary
         )
         Spacer(Modifier.weight(1f))
-        Spacer(Modifier.size(44.dp))
+        // Swaps the sibha for the other one the screen knows.
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onChangeStyle
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.SwapHoriz,
+                contentDescription = stringResource(R.string.masbaha_change_style),
+                tint = AtharPrimaryLight.copy(alpha = 0.85f),
+                modifier = Modifier.size(21.dp)
+            )
+        }
     }
 }
 
@@ -536,10 +596,12 @@ private fun DhikrAyah(selected: Int, isArabic: Boolean) {
 }
 
 /**
- * The masbaha itself. A loop of thirty-three pearls strung on a slightly
- * wrinkled thread, with brass spacers every eleven, an imam bead and a short
- * tassel at the bottom. Dragging around the loop turns the beads one step per
- * bead passed; tapping counts one. The tally sits in the empty middle.
+ * The masbaha itself: an oval loop of thirty-three pearls, taller than it is
+ * wide and strung on a hand-wrinkled thread, with brass spacers every eleven.
+ * The imam bead and its tassel are the head of the piece and sit at the top;
+ * where the string closes at the bottom it is tied off in a small knot.
+ * Dragging around the loop turns the beads one step per bead passed; tapping
+ * counts one. The tally sits in the empty middle.
  */
 @Composable
 private fun SibhaRing(
@@ -547,7 +609,6 @@ private fun SibhaRing(
     cycle: Int,
     numberStyle: NumberStylePreference,
     onCount: (Int) -> Unit,
-    contentShift: Dp,
     modifier: Modifier = Modifier
 ) {
     val stepRad = (2f * PI / BEADS).toFloat()
@@ -605,7 +666,8 @@ private fun SibhaRing(
     )
     val countRef = rememberUpdatedState(onCount)
 
-    Box(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier) {
+        val readoutShift = maxHeight * (RING_CENTER_Y - 0.5f)
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -620,15 +682,14 @@ private fun SibhaRing(
                 .pointerInput(BEADS) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        val center = Offset(size.width / 2f, size.height * 0.42f)
-                        var last = angleOf(down.position, center)
+                        var last = ringParameter(down.position, size)
                         var accum = 0f
                         var travelled = 0f
                         while (true) {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) break
-                            val angle = angleOf(change.position, center)
+                            val angle = ringParameter(change.position, size)
                             var delta = angle - last
                             if (delta > halfTurn) delta -= fullTurn
                             if (delta < -halfTurn) delta += fullTurn
@@ -646,38 +707,41 @@ private fun SibhaRing(
                     }
                 }
         ) {
-            val center = Offset(size.width / 2f, size.height * 0.42f)
-            val minDim = size.minDimension
-            val beadRadius = minDim * 0.032f
-            val radius = minDim * 0.40f
+            val center = Offset(size.width / 2f, size.height * RING_CENTER_Y)
+            val radiusY = size.height * RING_RADIUS_Y
+            val radiusX = ringRadiusX(size.width, radiusY)
+            val beadRadius = minOf(radiusX, radiusY) * 0.078f
 
             // Soft halo so the pearls lift off the dark page.
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        AtharPrimaryLight.copy(alpha = 0.08f),
+                        AtharPrimaryLight.copy(alpha = 0.07f),
                         Color.Transparent
                     ),
                     center = center,
-                    radius = radius * 1.55f
+                    radius = radiusY * 1.5f
                 ),
-                radius = radius * 1.55f,
+                radius = radiusY * 1.5f,
                 center = center
             )
 
             val points = ArrayList<Offset>(BEADS)
             val radii = FloatArray(BEADS)
             for (i in 0 until BEADS) {
-                val angle = (-halfTurn / 2f + i * stepRad + rotation).toDouble()
+                // Every pearl sits a hair off the geometric oval: the loop has
+                // been strung by hand and has never been perfectly round.
+                val jitter = 0.0045f * sin(i * 3.3f + 0.6f) + 0.002f * cos(i * 5.7f)
+                val angle = (-halfTurn / 2f + i * stepRad + rotation + jitter).toDouble()
                 val wobble = 1f +
-                    0.012f * sin(i * 2.3f + breathe * 1.4f) +
-                    0.007f * cos(i * 1.7f)
-                val r = radius * wobble
+                    0.014f * sin(i * 2.3f + breathe * 1.4f) +
+                    0.009f * cos(i * 1.7f) +
+                    0.005f * sin(i * 4.6f + 2.1f)
                 points += Offset(
-                    x = center.x + cos(angle).toFloat() * r,
-                    y = center.y + sin(angle).toFloat() * r
+                    x = center.x + cos(angle).toFloat() * radiusX * wobble,
+                    y = center.y + sin(angle).toFloat() * radiusY * wobble
                 )
-                radii[i] = beadRadius * (0.93f + 0.09f * sin(i * 1.9f + 1.1f))
+                radii[i] = beadRadius * (0.90f + 0.11f * sin(i * 1.9f + 1.1f) + 0.05f * cos(i * 0.8f))
             }
 
             // The thread, one closed curve through every pearl, bowing a hair
@@ -690,7 +754,7 @@ private fun SibhaRing(
                 val dx = to.x - from.x
                 val dy = to.y - from.y
                 val len = kotlin.math.hypot(dx, dy).coerceAtLeast(0.001f)
-                val wrinkle = beadRadius * 0.15f * sin(i * 2.7f + 0.8f)
+                val wrinkle = beadRadius * (0.17f + 0.11f * sin(i * 1.3f + 0.4f))
                 val control = Offset(
                     x = (from.x + to.x) / 2f - dy / len * wrinkle,
                     y = (from.y + to.y) / 2f + dx / len * wrinkle
@@ -709,10 +773,14 @@ private fun SibhaRing(
                 style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
             )
 
-            // The imam bead and tassel hang from the bottom of the loop.
-            drawImamAndTassel(
-                center = center,
-                radius = radius,
+            // The head of the piece — the imam bead and its tassel — is at the
+            // top; the string is tied off where it closes at the bottom.
+            drawCrownAndTassel(
+                center = Offset(center.x, center.y - radiusY),
+                beadRadius = beadRadius
+            )
+            drawTailKnot(
+                center = Offset(center.x, center.y + radiusY),
                 beadRadius = beadRadius
             )
 
@@ -795,48 +863,286 @@ private fun SibhaRing(
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .offset(y = -contentShift),
+                .offset(y = readoutShift),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = formatDigits(count.toString(), numberStyle),
-                fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Black,
-                fontSize = 56.sp,
-                lineHeight = 60.sp,
-                color = AtharTextPrimary
-            )
-            Text(
-                text = stringResource(
-                    R.string.masbaha_cycle,
-                    formatDigits(cycle.toString(), numberStyle),
-                    formatDigits(CYCLE.toString(), numberStyle)
-                ),
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Medium,
-                fontSize = 10.sp,
-                color = AtharTextSecondary.copy(alpha = 0.85f)
-            )
+            CountReadout(count = count, cycle = cycle, numberStyle = numberStyle)
         }
     }
 }
 
-/** The imam bead, its cap and a short fan of tassel threads. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
+/** The tally and where it stands in the current cycle. */
+@Composable
+private fun CountReadout(
+    count: Int,
+    cycle: Int,
+    numberStyle: NumberStylePreference
+) {
+    Text(
+        text = formatDigits(count.toString(), numberStyle),
+        fontFamily = ThmanyahSerifDisplay,
+        fontWeight = FontWeight.Black,
+        fontSize = 56.sp,
+        lineHeight = 60.sp,
+        color = AtharTextPrimary
+    )
+    Text(
+        text = stringResource(
+            R.string.masbaha_cycle,
+            formatDigits(cycle.toString(), numberStyle),
+            formatDigits(CYCLE.toString(), numberStyle)
+        ),
+        fontFamily = ThmanyahSans,
+        fontWeight = FontWeight.Medium,
+        fontSize = 10.sp,
+        color = AtharTextSecondary.copy(alpha = 0.85f)
+    )
+}
+
+/**
+ * The other sibha: a strand of large amber beads hanging in a shallow garland
+ * across the lower half of the screen, tied off with a tassel at either end.
+ * The tally sits above it, so the count reads first and the beads are the
+ * progress. Dragging along the garland counts one bead per bead crossed;
+ * tapping counts one.
+ */
+@Composable
+private fun SibhaStrand(
+    count: Int,
+    cycle: Int,
+    numberStyle: NumberStylePreference,
+    onCount: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val pulse = remember { Animatable(1f) }
+    LaunchedEffect(count) {
+        if (count > 0) {
+            pulse.snapTo(0.965f)
+            pulse.animateTo(1f, spring(dampingRatio = 0.34f, stiffness = 340f))
+        }
+    }
+
+    val drift = rememberInfiniteTransition(label = "strandFloat")
+    val sway by drift.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "strandSway"
+    )
+    val countRef = rememberUpdatedState(onCount)
+
+    BoxWithConstraints(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    rotationZ = sway * 0.7f
+                    translationY = sway * 1.6.dp.toPx()
+                }
+                .pointerInput(STRAND_BEADS) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        val left = size.width * 0.08f
+                        val span = size.width * 0.84f
+                        fun indexAt(x: Float): Int =
+                            (((x - left) / span) * (STRAND_BEADS - 1))
+                                .roundToInt()
+                                .coerceIn(0, STRAND_BEADS - 1)
+
+                        var last = indexAt(down.position.x)
+                        var lastPoint = down.position
+                        var travelled = 0f
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            change.consume()
+                            if (!change.pressed) break
+                            val point = change.position
+                            travelled += (point - lastPoint).getDistance()
+                            lastPoint = point
+                            val index = indexAt(point.x)
+                            if (index != last) {
+                                countRef.value(abs(index - last))
+                                last = index
+                            }
+                        }
+                        if (travelled < 6.dp.toPx()) countRef.value(1)
+                    }
+                }
+        ) {
+            val left = size.width * 0.08f
+            val span = size.width * 0.84f
+            val baseY = size.height * 0.54f
+            val sag = size.height * 0.14f
+            val beadR = span / (STRAND_BEADS - 1) * 0.42f
+
+            val points = ArrayList<Offset>(STRAND_BEADS)
+            for (i in 0 until STRAND_BEADS) {
+                val t = i / (STRAND_BEADS - 1f)
+                points += Offset(
+                    x = left + span * t,
+                    y = baseY + sag * sin(PI * t.toDouble()).toFloat()
+                )
+            }
+
+            // The strand's shadow keeps it hanging off the page.
+            drawOval(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.Black.copy(alpha = 0.26f), Color.Transparent),
+                    center = Offset(size.width / 2f, baseY + sag * 1.05f),
+                    radius = span * 0.55f
+                ),
+                topLeft = Offset(left, baseY + sag * 0.55f),
+                size = androidx.compose.ui.geometry.Size(span, sag * 1.1f)
+            )
+
+            // A slack thread, dipping a little between every bead.
+            val string = Path().apply {
+                moveTo(points[0].x, points[0].y)
+                for (i in 0 until points.lastIndex) {
+                    val from = points[i]
+                    val to = points[i + 1]
+                    quadraticTo(
+                        (from.x + to.x) / 2f,
+                        maxOf(from.y, to.y) + beadR * 0.20f,
+                        to.x,
+                        to.y
+                    )
+                }
+            }
+            drawPath(
+                path = string,
+                color = Color.Black.copy(alpha = 0.38f),
+                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+            )
+            drawPath(
+                path = string,
+                color = Color(0xFFF3EFE7).copy(alpha = 0.85f),
+                style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            val lit = ((count % CYCLE) * (STRAND_BEADS - 1)) / CYCLE
+            for (i in 0 until STRAND_BEADS) {
+                val point = points[i]
+                val r = beadR * (0.94f + 0.06f * sin(i * 1.7f + 1.2f))
+                val isCurrent = i == lit
+                // Beads still to come in this cycle sit back a little.
+                val dim = if (i > lit) 0.45f else 1f
+
+                if (isCurrent) {
+                    val glow = r * 2.4f * pulse.value
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                AtharPrimaryLight.copy(alpha = 0.42f),
+                                Color.Transparent
+                            ),
+                            center = point,
+                            radius = glow
+                        ),
+                        radius = glow,
+                        center = point
+                    )
+                }
+
+                drawCircle(
+                    color = Color.Black.copy(alpha = 0.34f * (0.45f + dim * 0.55f)),
+                    radius = r,
+                    center = point + Offset(0f, r * 0.26f)
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFEBC0).copy(alpha = dim),
+                            AtharPrimaryLight.copy(alpha = dim),
+                            AtharPrimaryDeep.copy(alpha = dim)
+                        ),
+                        center = point - Offset(r * 0.32f, r * 0.36f),
+                        radius = r * 1.7f
+                    ),
+                    radius = r,
+                    center = point
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.55f * dim),
+                    radius = r * 0.20f,
+                    center = point - Offset(r * 0.30f, r * 0.34f)
+                )
+            }
+
+            drawStrandTassel(anchor = points.first(), beadR = beadR, direction = -1f)
+            drawStrandTassel(anchor = points.last(), beadR = beadR, direction = 1f)
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = maxHeight * 0.12f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CountReadout(count = count, cycle = cycle, numberStyle = numberStyle)
+        }
+    }
+}
+
+/** The little tassel that finishes off each end of the strand. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStrandTassel(
+    anchor: Offset,
+    beadR: Float,
+    direction: Float
+) {
+    val knot = Offset(anchor.x + direction * beadR * 0.15f, anchor.y + beadR * 0.55f)
+    drawCircle(color = AtharPrimaryDeep, radius = beadR * 0.40f, center = knot)
+    drawCircle(
+        color = AtharPrimary.copy(alpha = 0.9f),
+        radius = beadR * 0.40f,
+        center = knot,
+        style = Stroke(width = 0.9.dp.toPx())
+    )
+    for (i in 0..2) {
+        val spread = (i - 1) * 0.55f + direction * 0.15f
+        val path = Path().apply {
+            moveTo(knot.x, knot.y)
+            quadraticTo(
+                knot.x + spread * beadR * 1.1f,
+                knot.y + beadR * 1.2f,
+                knot.x + spread * beadR * 1.6f,
+                knot.y + beadR * 2.0f
+            )
+        }
+        drawPath(
+            path = path,
+            color = AtharPrimary.copy(alpha = 0.8f),
+            style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
+        )
+    }
+}
+
+/**
+ * The head of the piece. Where the loop closes at the top the string passes
+ * through the imam bead, its brass cap and a knot, and a fan of tassel threads
+ * rises out of it — the tail of a masbaha held the other way up.
+ * [center] is the topmost pearl of the loop.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCrownAndTassel(
     center: Offset,
-    radius: Float,
     beadRadius: Float
 ) {
-    val topY = center.y + radius + beadRadius * 0.6f
-    val imamWidth = beadRadius * 1.35f
-    val imamHeight = beadRadius * 1.8f
-    val imamCenter = Offset(center.x, topY + imamHeight / 2f)
+    val imamWidth = beadRadius * 1.30f
+    val imamHeight = beadRadius * 1.95f
+    val imamBottom = center.y - beadRadius * 0.55f
+    val imamTop = imamBottom - imamHeight
+    val imamCenter = Offset(center.x, imamTop + imamHeight / 2f)
 
-    // The thread that carries the loop down into the imam bead.
+    // The thread that carries the loop up into the imam bead.
     drawLine(
         color = Color(0xFFF3EFE7).copy(alpha = 0.9f),
-        start = Offset(center.x, center.y + radius),
-        end = Offset(center.x, topY),
+        start = center,
+        end = Offset(center.x, imamBottom),
         strokeWidth = 1.4.dp.toPx(),
         cap = StrokeCap.Round
     )
@@ -844,10 +1150,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
     // Contact shadow under the imam.
     drawOval(
         color = Color.Black.copy(alpha = 0.32f),
-        topLeft = Offset(
-            imamCenter.x - imamWidth / 2f,
-            imamCenter.y - imamHeight / 2f + beadRadius * 0.18f
-        ),
+        topLeft = Offset(imamCenter.x - imamWidth / 2f, imamTop + beadRadius * 0.18f),
         size = androidx.compose.ui.geometry.Size(imamWidth, imamHeight)
     )
     drawOval(
@@ -857,36 +1160,33 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
                 AtharPrimary,
                 AtharPrimaryDeep
             ),
-            start = Offset(imamCenter.x - imamWidth / 2f, imamCenter.y - imamHeight / 2f),
-            end = Offset(imamCenter.x + imamWidth / 2f, imamCenter.y + imamHeight / 2f)
+            start = Offset(imamCenter.x - imamWidth / 2f, imamTop),
+            end = Offset(imamCenter.x + imamWidth / 2f, imamBottom)
         ),
-        topLeft = Offset(imamCenter.x - imamWidth / 2f, imamCenter.y - imamHeight / 2f),
+        topLeft = Offset(imamCenter.x - imamWidth / 2f, imamTop),
         size = androidx.compose.ui.geometry.Size(imamWidth, imamHeight)
     )
     drawOval(
         color = Color.White.copy(alpha = 0.35f),
-        topLeft = Offset(
-            imamCenter.x - imamWidth * 0.26f,
-            imamCenter.y - imamHeight * 0.30f
-        ),
-        size = androidx.compose.ui.geometry.Size(imamWidth * 0.24f, imamHeight * 0.30f)
+        topLeft = Offset(imamCenter.x - imamWidth * 0.26f, imamTop + imamHeight * 0.16f),
+        size = androidx.compose.ui.geometry.Size(imamWidth * 0.24f, imamHeight * 0.28f)
     )
 
-    val capY = imamCenter.y + imamHeight / 2f
+    val cap = Offset(center.x, imamTop - beadRadius * 0.34f)
     drawCircle(
         color = AtharPrimaryLight.copy(alpha = 0.9f),
         radius = beadRadius * 0.42f,
-        center = Offset(center.x, capY)
+        center = cap
     )
     drawCircle(
         color = Color.Black.copy(alpha = 0.35f),
         radius = beadRadius * 0.42f,
-        center = Offset(center.x, capY),
+        center = cap,
         style = Stroke(width = 0.7.dp.toPx())
     )
 
-    // Tassel: a knot and five threads fanning gently.
-    val knot = Offset(center.x, capY + beadRadius * 0.55f)
+    // The knot the threads are gathered into.
+    val knot = Offset(center.x, cap.y - beadRadius * 0.62f)
     drawCircle(
         color = AtharPrimaryDeep,
         radius = beadRadius * 0.55f,
@@ -899,17 +1199,17 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
         style = Stroke(width = 1.dp.toPx())
     )
 
-    val threadTop = knot.y + beadRadius * 0.25f
-    val threadLength = beadRadius * 2.0f
+    val threadBase = knot.y - beadRadius * 0.25f
+    val threadLength = beadRadius * 2.3f
     for (i in 0..4) {
         val spread = (i - 2) / 2f
-        val endX = center.x + spread * beadRadius * 1.4f
-        val endY = threadTop + threadLength * (1f - abs(spread) * 0.18f)
+        val endX = center.x + spread * beadRadius * 1.5f
+        val endY = threadBase - threadLength * (1f - abs(spread) * 0.18f)
         val path = Path().apply {
-            moveTo(center.x, threadTop)
+            moveTo(center.x, threadBase)
             quadraticTo(
                 center.x + spread * beadRadius * 0.5f,
-                threadTop + threadLength * 0.55f,
+                threadBase - threadLength * 0.55f,
                 endX,
                 endY
             )
@@ -917,6 +1217,45 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
         drawPath(
             path = path,
             color = AtharPrimary.copy(alpha = 0.82f),
+            style = Stroke(width = 1.1.dp.toPx(), cap = StrokeCap.Round)
+        )
+    }
+}
+
+/**
+ * Where the string closes at the bottom of the loop: a small knot with the two
+ * loose ends hanging from it.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTailKnot(
+    center: Offset,
+    beadRadius: Float
+) {
+    val knot = Offset(center.x, center.y + beadRadius * 0.55f)
+    drawCircle(
+        color = AtharPrimaryDeep,
+        radius = beadRadius * 0.42f,
+        center = knot
+    )
+    drawCircle(
+        color = AtharPrimary.copy(alpha = 0.9f),
+        radius = beadRadius * 0.42f,
+        center = knot,
+        style = Stroke(width = 0.9.dp.toPx())
+    )
+    for (i in 0..1) {
+        val spread = if (i == 0) -1f else 1f
+        val path = Path().apply {
+            moveTo(center.x, knot.y)
+            quadraticTo(
+                center.x + spread * beadRadius * 0.9f,
+                knot.y + beadRadius * 1.1f,
+                center.x + spread * beadRadius * 1.5f,
+                knot.y + beadRadius * 2.2f
+            )
+        }
+        drawPath(
+            path = path,
+            color = Color(0xFFF3EFE7).copy(alpha = 0.85f),
             style = Stroke(width = 1.1.dp.toPx(), cap = StrokeCap.Round)
         )
     }
@@ -1032,8 +1371,19 @@ private fun MasbahaSparks(trigger: Int, modifier: Modifier = Modifier) {
     }
 }
 
-private fun angleOf(point: Offset, center: Offset): Float =
-    atan2(point.y - center.y, point.x - center.x)
+/** Where a finger sits on the oval, in the loop's own angle space. */
+private fun ringParameter(point: Offset, size: IntSize): Float {
+    val radiusY = size.height * RING_RADIUS_Y
+    val radiusX = ringRadiusX(size.width.toFloat(), radiusY)
+    return atan2(
+        (point.y - size.height * RING_CENTER_Y) / radiusY,
+        (point.x - size.width / 2f) / radiusX
+    )
+}
+
+/** Half-width of the loop, always kept a little narrower than its half-height. */
+private fun ringRadiusX(width: Float, radiusY: Float): Float =
+    minOf(width * 0.40f, radiusY * 0.90f)
 
 /**
  * The bead tick: a dry, mechanical click and nothing else. A tiny noise

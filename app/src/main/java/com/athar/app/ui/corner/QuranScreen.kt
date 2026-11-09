@@ -802,20 +802,21 @@ private fun SurahListScreen(
                         Spacer(Modifier.weight(1f))
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Matches the Duas screen header exactly.
                             Text(
                                 stringResource(R.string.nav_quran),
-                                fontFamily = if (isRtl) ThmanyahSerifDisplay else ThmanyahSans,
+                                fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 22.sp,
                                 color = AtharTextPrimary
                             )
+                            // Same weight and size as the Duas screen's subheader.
                             Text(
                                 stringResource(R.string.quran_title),
                                 fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 8.5.sp,
-                                letterSpacing = if (isRtl) 0.sp else 1.6.sp,
-                                color = AtharPrimaryLight.copy(alpha = 0.8f)
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.5.sp,
+                                color = AtharPrimaryLight
                             )
                         }
 
