@@ -801,13 +801,23 @@ private fun SurahListScreen(
 
                         Spacer(Modifier.weight(1f))
 
-                        Text(
-                            stringResource(R.string.quran_title),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 22.sp,
-                            color = AtharTextPrimary
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                stringResource(R.string.nav_quran),
+                                fontFamily = if (isRtl) ThmanyahSerifDisplay else ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 22.sp,
+                                color = AtharTextPrimary
+                            )
+                            Text(
+                                stringResource(R.string.quran_title),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 8.5.sp,
+                                letterSpacing = if (isRtl) 0.sp else 1.6.sp,
+                                color = AtharPrimaryLight.copy(alpha = 0.8f)
+                            )
+                        }
 
                         Spacer(Modifier.weight(1f))
                         Spacer(Modifier.size(44.dp))

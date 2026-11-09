@@ -135,7 +135,7 @@ sealed class Screen(
     object Quran : Screen(
         route = "quran",
         labelResId = R.string.nav_quran,
-        iconResId = R.drawable.ic_quran_book
+        iconResId = R.drawable.ic_furqan
     )
 
     object Duas : Screen(

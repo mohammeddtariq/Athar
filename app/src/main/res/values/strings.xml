@@ -4,7 +4,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
-    <string name="nav_quran">Quran</string>
+    <string name="nav_quran">Al-Furqan</string>
     <string name="nav_duas">Duas</string>
     <string name="nav_qibla">Qibla</string>
     <string name="nav_masbaha">Al-Yaqut</string>
@@ -410,5 +410,6 @@
     <string name="home_prayer_note_maghrib">The sun lets go of the day, and maghrib catches it in prayer.</string>
     <string name="home_prayer_note_isha">Night draws its curtain, and Isha leaves one lamp burning for you.</string>
     <string name="home_deck_hint">Swipe down to fan the cards</string>
+    <string name="scratch_label">Scratch</string>
 </resources>
 

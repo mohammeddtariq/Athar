@@ -3,6 +3,7 @@ package com.athar.app.ui.corner
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -13,6 +14,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -31,6 +33,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -60,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -71,12 +75,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
@@ -90,7 +96,6 @@ import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryDeep
 import com.athar.app.ui.theme.AtharPrimaryLight
-import com.athar.app.ui.theme.AtharPrimarySubtle
 import com.athar.app.ui.theme.AtharTextPrimary
 import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.ThmanyahSans
@@ -101,20 +106,46 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The three tasbih a masbaha is strung for. Both names are carried so the
- * screen can stay purely in whichever language the app is set to.
+ * The three tasbih a masbaha is strung for, in the order the wheel presents
+ * them. Each carries a short ayah in both languages so the screen can stay
+ * purely in whichever language the app is set to.
+ *
+ * [storeIndex] keeps the persisted tally slots stable even though the display
+ * order changed; counts are stored Subhan, Hamd, Akbar.
  */
 enum class Dhikr(
+    val storeIndex: Int,
     val arabic: String,
-    val english: String
+    val english: String,
+    val arabicQuote: String,
+    val englishQuote: String
 ) {
-    SUBHAN("سُبْحَانَ اللَّهِ", "Subhan Allah"),
-    HAMD("الْحَمْدُ لِلَّهِ", "Alhamdu lillah"),
-    AKBAR("اللَّهُ أَكْبَرُ", "Allahu Akbar")
+    HAMD(
+        1,
+        "الْحَمْدُ لِلَّهِ",
+        "Alhamdulillah",
+        "وَمَا بِكُم مِّن نِّعْمَةٍ فَمِنَ اللَّهِ",
+        "Whatever blessing you have is from Allah."
+    ),
+    AKBAR(
+        2,
+        "اللَّهُ أَكْبَرُ",
+        "Allahu Akbar",
+        "وَهُوَ الْكَبِيرُ الْمُتَعَالِ",
+        "He is the Most Great, the Most High."
+    ),
+    SUBHAN(
+        0,
+        "سُبْحَانَ اللَّهِ",
+        "Subhan Allah",
+        "لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+        "To Him belongs all in the heavens and the earth — the Most High, the Most Great."
+    )
 }
 
 private const val BEADS = 33
@@ -160,20 +191,22 @@ fun MasbahaScreen(
 
     fun step(amount: Int) {
         if (amount <= 0) return
+        val slot = Dhikr.entries[selected].storeIndex
         val base = counts ?: live
-        val before = base[selected]
+        val before = base[slot]
         val after = before + amount
-        counts = base.toMutableList().also { it[selected] = after }
-        scope.launch { prefs.setMasbahaCount(selected, after) }
+        counts = base.toMutableList().also { it[slot] = after }
+        scope.launch { prefs.setMasbahaCount(slot, after) }
         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         if (soundOn) tick.tick()
         if (after / CYCLE > before / CYCLE) celebration++
     }
 
     fun reset() {
+        val slot = Dhikr.entries[selected].storeIndex
         val base = counts ?: live
-        counts = base.toMutableList().also { it[selected] = 0 }
-        scope.launch { prefs.setMasbahaCount(selected, 0) }
+        counts = base.toMutableList().also { it[slot] = 0 }
+        scope.launch { prefs.setMasbahaCount(slot, 0) }
         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         if (soundOn) tick.tick()
     }
@@ -184,81 +217,90 @@ fun MasbahaScreen(
         onDispose { VolumeKeyRouter.unbind() }
     }
 
-    val count = live[selected]
+    val count = live[Dhikr.entries[selected].storeIndex]
     val cycle = if (count == 0) 0 else ((count - 1) % CYCLE) + 1
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(AtharBackground)
     ) {
+        // Short screens get a tighter drum so the sibha keeps as much room as
+        // possible; tall ones give the dhikr names their full size.
+        val wheelItemHeight = (maxHeight * 0.066f).coerceIn(46.dp, 56.dp)
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp),
+                .statusBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            YaqutHeader(isArabic = isArabic, onBack = onBack)
+            YaqutHeader(
+                isArabic = isArabic,
+                onBack = onBack,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(2.dp))
 
-            AyahBanner(isArabic = isArabic)
-
-            Spacer(Modifier.height(12.dp))
-
-            DhikrPills(
+            DhikrWheel(
                 selected = selected,
                 isArabic = isArabic,
+                itemHeight = wheelItemHeight,
                 onSelect = {
                     if (it != selected) {
                         selected = it
                         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     }
-                }
+                },
+                onStep = {
+                    if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (soundOn) tick.tick()
+                },
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
 
-            Box(
+            DhikrAyah(selected = selected, isArabic = isArabic)
+
+            // The sibha is the subject of the screen, so it keeps the full
+            // width: no side padding, nothing sitting above it but the drum.
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                BoxWithConstraints(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val diameter = minOf(maxWidth * 0.94f, maxHeight - 26.dp)
-                        .coerceIn(110.dp, 296.dp)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        SibhaRing(
-                            count = count,
-                            cycle = cycle,
-                            dhikr = Dhikr.entries[selected],
-                            isArabic = isArabic,
-                            numberStyle = numberStyle,
-                            onCount = { amount -> step(amount) },
-                            modifier = Modifier.size(diameter)
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.masbaha_hint),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 9.5.sp,
-                            color = AtharTextSecondary.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            modifier = Modifier.padding(horizontal = 12.dp)
-                        )
-                    }
-                }
+                val diameter = minOf(maxWidth, maxHeight).coerceIn(140.dp, 440.dp)
+                SibhaRing(
+                    count = count,
+                    cycle = cycle,
+                    numberStyle = numberStyle,
+                    onCount = { amount -> step(amount) },
+                    contentShift = diameter * 0.07f,
+                    modifier = Modifier.size(diameter)
+                )
             }
 
-            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.masbaha_hint),
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 9.5.sp,
+                color = AtharTextSecondary.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            )
+
+            Spacer(Modifier.height(6.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ControlPill(
@@ -304,13 +346,17 @@ fun MasbahaScreen(
 }
 
 /**
- * The Al-Yaqut wordmark: a small faceted gem beside the name, with the other
- * script set underneath so both Arabic and Latin live in the header.
+ * The Al-Yaqut wordmark: only the name, in whichever language the app is set
+ * to. No gem, no second script.
  */
 @Composable
-private fun YaqutHeader(isArabic: Boolean, onBack: () -> Unit) {
+private fun YaqutHeader(
+    isArabic: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -334,182 +380,158 @@ private fun YaqutHeader(isArabic: Boolean, onBack: () -> Unit) {
             )
         }
         Spacer(Modifier.weight(1f))
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                YaqutGem(modifier = Modifier.size(19.dp))
-                Text(
-                    text = if (isArabic) stringResource(R.string.masbaha_title) else "AL-YAQUT",
-                    fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = if (isArabic) 23.sp else 20.sp,
-                    letterSpacing = if (isArabic) 0.sp else 3.5.sp,
-                    color = AtharTextPrimary
-                )
-            }
-            Text(
-                text = if (isArabic) "AL-YAQUT" else "اليَاقُوت",
-                fontFamily = if (isArabic) ThmanyahSans else ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Medium,
-                fontSize = 8.sp,
-                letterSpacing = if (isArabic) 2.6.sp else 0.sp,
-                color = AtharAccentInk.copy(alpha = 0.62f)
-            )
-        }
+        Text(
+            text = stringResource(R.string.masbaha_title),
+            fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+            fontWeight = FontWeight.Black,
+            fontSize = if (isArabic) 25.sp else 20.sp,
+            letterSpacing = if (isArabic) 0.sp else 2.sp,
+            color = AtharTextPrimary
+        )
         Spacer(Modifier.weight(1f))
         Spacer(Modifier.size(44.dp))
     }
 }
 
-/** A tiny cut gem, drawn as a faceted diamond in the active accent. */
+/**
+ * The clock-like drum of the three dhikr. Dragging it the way an alarm picker
+ * turns settles one dhikr under the other, ticking as it passes each one.
+ */
 @Composable
-private fun YaqutGem(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val top = Offset(w * 0.5f, 0f)
-        val right = Offset(w, h * 0.38f)
-        val bottom = Offset(w * 0.5f, h)
-        val left = Offset(0f, h * 0.38f)
-        val waistY = h * 0.38f
+private fun DhikrWheel(
+    selected: Int,
+    isArabic: Boolean,
+    itemHeight: Dp,
+    onSelect: (Int) -> Unit,
+    onStep: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val itemPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val nameSize = if (itemHeight >= 52.dp) 24.sp else 21.sp
 
-        val outline = Path().apply {
-            moveTo(top.x, top.y)
-            lineTo(right.x, right.y)
-            lineTo(bottom.x, bottom.y)
-            lineTo(left.x, left.y)
-            close()
+    var offset by remember { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val settle by animateFloatAsState(
+        targetValue = if (dragging) offset else 0f,
+        animationSpec = if (dragging) snap() else spring(dampingRatio = 0.82f, stiffness = 420f),
+        label = "dhikrWheelSettle"
+    )
+    val selectRef = rememberUpdatedState(onSelect)
+    val stepRef = rememberUpdatedState(onStep)
+    val selectedRef = rememberUpdatedState(selected)
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(itemHeight * 2.7f)
+            .clipToBounds()
+            .pointerInput(itemPx) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    offset = settle
+                    dragging = true
+                    var accum = offset
+                    var working = selectedRef.value
+                    var lastY = down.position.y
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                            val dy = change.position.y - lastY
+                            lastY = change.position.y
+                            accum += dy
+                            while (accum > itemPx / 2f) {
+                                if (working > 0) {
+                                    working -= 1
+                                    accum -= itemPx
+                                    stepRef.value()
+                                    selectRef.value(working)
+                                } else {
+                                    accum = itemPx / 2f
+                                    break
+                                }
+                            }
+                            while (accum < -itemPx / 2f) {
+                                if (working < Dhikr.entries.lastIndex) {
+                                    working += 1
+                                    accum += itemPx
+                                    stepRef.value()
+                                    selectRef.value(working)
+                                } else {
+                                    accum = -itemPx / 2f
+                                    break
+                                }
+                            }
+                            offset = accum
+                            change.consume()
+                        }
+                    } finally {
+                        dragging = false
+                    }
+                }
+            }
+    ) {
+        for (i in Dhikr.entries.indices) {
+            val dy = (i - selected) * itemPx + settle
+            val closeness = (1f - abs(dy) / itemPx).coerceIn(0f, 1f)
+            val dhikr = Dhikr.entries[i]
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset { IntOffset(0, dy.roundToInt()) }
+                    .height(itemHeight)
+                    .graphicsLayer {
+                        val scale = 0.82f + 0.26f * closeness
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = 0.26f + 0.74f * closeness
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (isArabic) dhikr.arabic else dhikr.english,
+                        fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = nameSize,
+                        color = if (i == selected) AtharTextPrimary else AtharTextSecondary,
+                        maxLines = 1
+                    )
+                }
+            }
         }
-        drawPath(
-            path = outline,
-            brush = Brush.linearGradient(
-                colors = listOf(AtharPrimaryLight, AtharPrimary, AtharPrimaryDeep),
-                start = Offset(0f, 0f),
-                end = Offset(w, h)
-            )
-        )
-        // Crown facets.
-        val leftWaist = Offset(w * 0.26f, waistY)
-        val rightWaist = Offset(w * 0.74f, waistY)
-        drawLine(AtharBackground.copy(alpha = 0.45f), top, leftWaist, strokeWidth = 0.8f)
-        drawLine(AtharBackground.copy(alpha = 0.45f), top, rightWaist, strokeWidth = 0.8f)
-        drawLine(AtharBackground.copy(alpha = 0.30f), leftWaist, rightWaist, strokeWidth = 0.7f)
-        drawLine(AtharBackground.copy(alpha = 0.30f), leftWaist, bottom, strokeWidth = 0.7f)
-        drawLine(AtharBackground.copy(alpha = 0.30f), rightWaist, bottom, strokeWidth = 0.7f)
-        // Glint.
-        drawCircle(
-            color = Color.White.copy(alpha = 0.75f),
-            radius = w * 0.07f,
-            center = Offset(w * 0.38f, h * 0.24f)
-        )
     }
 }
 
 /**
- * The ayah the musabbihaat open with, framed on a quiet card above the sibha.
+ * The ayah that belongs to whichever dhikr is settled in the drum, in the
+ * language the app is set to. Two lines are always reserved so the sibha below
+ * never jumps as the drum turns.
  */
 @Composable
-private fun AyahBanner(isArabic: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(AtharPrimarySubtle, AtharBackground)
-                )
-            )
-            .border(
-                width = 1.dp,
-                color = AtharPrimary.copy(alpha = 0.24f),
-                shape = RoundedCornerShape(18.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 11.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+private fun DhikrAyah(selected: Int, isArabic: Boolean) {
+    Crossfade(
+        targetState = selected,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "dhikrAyah"
+    ) { index ->
+        val dhikr = Dhikr.entries[index]
         Text(
-            text = "سَبَّحَ لِلَّهِ مَا فِي السَّمَاوَاتِ وَالْأَرْضِ ۖ وَهُوَ الْعَزِيزُ الْحَكِيمُ",
-            fontFamily = ThmanyahSerifDisplay,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.5.sp,
-            lineHeight = 24.sp,
-            color = AtharTextPrimary,
-            textAlign = TextAlign.Center
-        )
-        if (!isArabic) {
-            Spacer(Modifier.height(3.dp))
-            Text(
-                text = "All that is in the heavens and earth glorifies Allah — He is the Almighty, the All-Wise.",
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Medium,
-                fontSize = 9.sp,
-                lineHeight = 13.sp,
-                color = AtharTextSecondary,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.height(3.dp))
-        Text(
-            text = if (isArabic) "الحديد ١" else "Al-Hadid 1",
+            text = if (isArabic) dhikr.arabicQuote else dhikr.englishQuote,
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-            fontWeight = FontWeight.Bold,
-            fontSize = 9.sp,
-            letterSpacing = if (isArabic) 0.sp else 0.8.sp,
-            color = AtharAccentInk.copy(alpha = 0.82f)
+            fontWeight = FontWeight.Medium,
+            fontSize = if (isArabic) 11.5.sp else 9.5.sp,
+            lineHeight = if (isArabic) 18.sp else 12.5.sp,
+            color = AtharAccentInk.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            minLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 2.dp)
         )
-    }
-}
-
-/** Three compact dhikr chips, one of them lit. */
-@Composable
-private fun DhikrPills(
-    selected: Int,
-    isArabic: Boolean,
-    onSelect: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Dhikr.entries.forEachIndexed { index, dhikr ->
-            val active = index == selected
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        if (active) AtharPrimary.copy(alpha = 0.16f) else Color.Transparent
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (active) AtharPrimary.copy(alpha = 0.72f) else AtharCardBorder,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { onSelect(index) }
-                    )
-                    .padding(horizontal = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (isArabic) dhikr.arabic else dhikr.english,
-                    fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                    fontWeight = if (active) FontWeight.Black else FontWeight.Bold,
-                    fontSize = if (isArabic) 12.5.sp else 10.5.sp,
-                    color = if (active) AtharPrimaryLight else AtharTextSecondary,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
     }
 }
 
@@ -523,10 +545,9 @@ private fun DhikrPills(
 private fun SibhaRing(
     count: Int,
     cycle: Int,
-    dhikr: Dhikr,
-    isArabic: Boolean,
     numberStyle: NumberStylePreference,
     onCount: (Int) -> Unit,
+    contentShift: Dp,
     modifier: Modifier = Modifier
 ) {
     val stepRad = (2f * PI / BEADS).toFloat()
@@ -599,7 +620,7 @@ private fun SibhaRing(
                 .pointerInput(BEADS) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val center = Offset(size.width / 2f, size.height * 0.42f)
                         var last = angleOf(down.position, center)
                         var accum = 0f
                         var travelled = 0f
@@ -625,10 +646,10 @@ private fun SibhaRing(
                     }
                 }
         ) {
-            val center = Offset(size.width / 2f, size.height / 2f)
+            val center = Offset(size.width / 2f, size.height * 0.42f)
             val minDim = size.minDimension
-            val beadRadius = minDim * 0.029f
-            val radius = minDim * 0.305f
+            val beadRadius = minDim * 0.032f
+            val radius = minDim * 0.40f
 
             // Soft halo so the pearls lift off the dark page.
             drawCircle(
@@ -772,23 +793,17 @@ private fun SibhaRing(
         }
 
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = -contentShift),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = if (isArabic) dhikr.arabic else dhikr.english,
-                fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 10.5.sp,
-                color = AtharAccentInk.copy(alpha = 0.85f),
-                maxLines = 1
-            )
             Text(
                 text = formatDigits(count.toString(), numberStyle),
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 46.sp,
-                lineHeight = 50.sp,
+                fontSize = 56.sp,
+                lineHeight = 60.sp,
                 color = AtharTextPrimary
             )
             Text(
@@ -814,7 +829,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
 ) {
     val topY = center.y + radius + beadRadius * 0.6f
     val imamWidth = beadRadius * 1.35f
-    val imamHeight = beadRadius * 2.0f
+    val imamHeight = beadRadius * 1.8f
     val imamCenter = Offset(center.x, topY + imamHeight / 2f)
 
     // The thread that carries the loop down into the imam bead.
@@ -885,7 +900,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
     )
 
     val threadTop = knot.y + beadRadius * 0.25f
-    val threadLength = beadRadius * 2.8f
+    val threadLength = beadRadius * 2.0f
     for (i in 0..4) {
         val spread = (i - 2) / 2f
         val endX = center.x + spread * beadRadius * 1.4f

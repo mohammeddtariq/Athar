@@ -4,7 +4,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">الرئيسية</string>
-    <string name="nav_quran">القرآن</string>
+    <string name="nav_quran">الفُرقان</string>
     <string name="nav_duas">الأدعية</string>
     <string name="nav_qibla">القبلة</string>
     <string name="nav_masbaha">اليَاقُوت</string>
@@ -422,5 +422,6 @@
     <string name="home_prayer_note_maghrib">تُفلتُ الشمسُ النهارَ، فيلتقطُه المغربُ في صلاة.</string>
     <string name="home_prayer_note_isha">يُسدلُ الليلُ ستارَه، ويُبقي العشاءُ لك مصباحًا.</string>
     <string name="home_deck_hint">اسحب للأسفل لعرض البطاقات</string>
+    <string name="scratch_label">اخدش</string>
 </resources>
 
