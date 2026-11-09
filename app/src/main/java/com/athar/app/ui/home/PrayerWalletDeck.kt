@@ -37,7 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.RotateRight
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -946,7 +946,7 @@ private fun FlipHint(modifier: Modifier = Modifier) {
     )
 
     Icon(
-        imageVector = Icons.Rounded.RotateRight,
+        imageVector = Icons.AutoMirrored.Rounded.RotateRight,
         contentDescription = null,
         tint = AtharPrimaryLight.copy(alpha = 0.8f),
         modifier = modifier

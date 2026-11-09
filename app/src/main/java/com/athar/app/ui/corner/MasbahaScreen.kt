@@ -39,10 +39,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material.icons.rounded.VolumeOff
-import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -273,7 +273,7 @@ fun MasbahaScreen(
                     modifier = Modifier.weight(1f)
                 )
                 ControlPill(
-                    icon = if (soundOn) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
+                    icon = if (soundOn) Icons.AutoMirrored.Rounded.VolumeUp else Icons.AutoMirrored.Rounded.VolumeOff,
                     label = stringResource(R.string.masbaha_sound),
                     active = soundOn,
                     onClick = {
@@ -674,7 +674,7 @@ private fun SibhaRing(
                     x = (from.x + to.x) / 2f - dy / len * wrinkle,
                     y = (from.y + to.y) / 2f + dx / len * wrinkle
                 )
-                string.quadraticBezierTo(control.x, control.y, to.x, to.y)
+                string.quadraticTo(control.x, control.y, to.x, to.y)
             }
             string.close()
             drawPath(
@@ -892,7 +892,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImamAndTassel(
         val endY = threadTop + threadLength * (1f - abs(spread) * 0.18f)
         val path = Path().apply {
             moveTo(center.x, threadTop)
-            quadraticBezierTo(
+            quadraticTo(
                 center.x + spread * beadRadius * 0.5f,
                 threadTop + threadLength * 0.55f,
                 endX,
