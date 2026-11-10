@@ -4,7 +4,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">الرئيسية</string>
-    <string name="nav_quran">الفُرقان</string>
+    <string name="nav_quran">القرآن</string>
     <string name="nav_duas">الأدعية</string>
     <string name="nav_qibla">القبلة</string>
     <string name="nav_masbaha">اليَاقُوت</string>
@@ -110,7 +110,8 @@
     <string name="qibla_distance">%1$s كم إلى مكة</string>
 
     <!-- Quran -->
-    <string name="quran_title">القرآن الكريم</string>
+    <string name="quran_title">الفُرقان</string>
+    <string name="quran_header_title">القرآن الكريم</string>
     <string name="quran_search">ابحث في السور…</string>
     <string name="quran_ayahs">%1$d آيات</string>
     <string name="quran_coming">النص الكامل قادم في النسخة التجريبية التالية — الفاتحة وقصار السور متاحة الآن.</string>

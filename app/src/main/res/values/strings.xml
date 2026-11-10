@@ -4,7 +4,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
-    <string name="nav_quran">Al-Furqan</string>
+    <string name="nav_quran">Quran</string>
     <string name="nav_duas">Duas</string>
     <string name="nav_qibla">Qibla</string>
     <string name="nav_masbaha">Al-Yaqut</string>
@@ -110,7 +110,8 @@
     <string name="qibla_distance">%1$s km to Makkah</string>
 
     <!-- Quran -->
-    <string name="quran_title">Holy Quran</string>
+    <string name="quran_title">Al-Furqan</string>
+    <string name="quran_header_title">The Holy Quran</string>
     <string name="quran_search">Search surahs…</string>
     <string name="quran_ayahs">%1$d ayahs</string>
     <string name="quran_coming">Full text coming in the next beta — Fatiha and short surahs are readable now.</string>

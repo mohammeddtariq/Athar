@@ -804,7 +804,7 @@ private fun SurahListScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             // Matches the Duas screen header exactly.
                             Text(
-                                stringResource(R.string.nav_quran),
+                                stringResource(R.string.quran_header_title),
                                 fontFamily = ThmanyahSans,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 22.sp,
