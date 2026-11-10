@@ -596,8 +596,8 @@ private fun PrayerCardBack(
                 text = "أَثَر",
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 42.sp,
-                lineHeight = 50.sp,
+                fontSize = 38.sp,
+                lineHeight = 45.sp,
                 color = AtharPrimaryLight,
                 textAlign = TextAlign.Center
             )
@@ -605,8 +605,8 @@ private fun PrayerCardBack(
                 text = "A T H A R",
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.5.sp,
-                letterSpacing = 6.sp,
+                fontSize = 10.5.sp,
+                letterSpacing = 5.5.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center
             )
@@ -794,31 +794,68 @@ private fun ScratchAyah(
         ) {
             if (reveal.value >= 1f) return@Canvas
 
-            // Plain silver foil.
+            // Polished foil: a chrome ramp whose light bands run across the
+            // strip, then a brushed grain so it has tooth rather than reading
+            // as flat grey card.
             drawRect(
                 brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF0F0F4),
-                        Color(0xFFBEBEC7),
-                        Color(0xFFD9D9E0)
-                    )
+                    0f to Color(0xFFFDFDFF),
+                    0.10f to Color(0xFFE7E8EE),
+                    0.26f to Color(0xFFB9BBC7),
+                    0.38f to Color(0xFFF3F4F8),
+                    0.50f to Color(0xFFA9ABB8),
+                    0.64f to Color(0xFFDDDFE8),
+                    0.78f to Color(0xFFF7F8FC),
+                    0.90f to Color(0xFF9EA0AD),
+                    1f to Color(0xFF878995)
                 )
             )
-            // A slow diagonal sheen, so it reads as brushed metal.
+            // Faint horizontal grain.
+            val grain = 1.25.dp.toPx()
+            var grainY = 0f
+            var grainAlt = false
+            while (grainY < size.height) {
+                drawLine(
+                    color = if (grainAlt) {
+                        Color.White.copy(alpha = 0.07f)
+                    } else {
+                        Color.Black.copy(alpha = 0.06f)
+                    },
+                    start = Offset(0f, grainY),
+                    end = Offset(size.width, grainY),
+                    strokeWidth = grain * 0.5f
+                )
+                grainY += grain
+                grainAlt = !grainAlt
+            }
+            // One broad reflection travelling across the metal.
             drawRect(
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.40f),
-                        Color.Transparent,
-                        Color.Black.copy(alpha = 0.12f)
-                    ),
-                    start = Offset.Zero,
-                    end = Offset(size.width, size.height)
+                    0f to Color.White.copy(alpha = 0.30f),
+                    0.24f to Color.White.copy(alpha = 0.04f),
+                    0.44f to Color.Black.copy(alpha = 0.10f),
+                    0.58f to Color.White.copy(alpha = 0.22f),
+                    0.74f to Color.White.copy(alpha = 0.02f),
+                    1f to Color.Black.copy(alpha = 0.14f),
+                    start = Offset(0f, size.height),
+                    end = Offset(size.width, 0f)
                 )
             )
+            // The strip is set into the card: a lit top lip, a shadow under it,
+            // and a dark line where the metal leaves the card at the bottom.
             drawRect(
-                color = Color.White.copy(alpha = 0.55f),
+                color = Color.White.copy(alpha = 0.92f),
                 topLeft = Offset(0f, 0f),
+                size = Size(size.width, 1.dp.toPx())
+            )
+            drawRect(
+                color = Color.Black.copy(alpha = 0.18f),
+                topLeft = Offset(0f, 1.dp.toPx()),
+                size = Size(size.width, 0.5.dp.toPx())
+            )
+            drawRect(
+                color = Color.Black.copy(alpha = 0.45f),
+                topLeft = Offset(0f, size.height - 1.dp.toPx()),
                 size = Size(size.width, 1.dp.toPx())
             )
             // One word only: Scratch.
