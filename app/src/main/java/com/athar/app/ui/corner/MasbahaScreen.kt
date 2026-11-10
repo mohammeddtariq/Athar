@@ -501,6 +501,9 @@ private fun DhikrWheel(
     modifier: Modifier = Modifier
 ) {
     val itemPx = with(LocalDensity.current) { itemHeight.toPx() }
+    // The neighbouring dhikr sit closer than a full drum step would put them:
+    // a clock face with the selected name under the eye, not a gap around it.
+    val stepPx = itemPx * 0.74f
     val nameSize = if (itemHeight >= 52.dp) 24.sp else 21.sp
 
     var offset by remember { mutableFloatStateOf(0f) }
@@ -517,9 +520,9 @@ private fun DhikrWheel(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(itemHeight * 2.7f)
+            .height(itemHeight * 2.25f)
             .clipToBounds()
-            .pointerInput(itemPx) {
+            .pointerInput(stepPx) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     offset = settle
@@ -535,25 +538,25 @@ private fun DhikrWheel(
                             val dy = change.position.y - lastY
                             lastY = change.position.y
                             accum += dy
-                            while (accum > itemPx / 2f) {
+                            while (accum > stepPx / 2f) {
                                 if (working > 0) {
                                     working -= 1
-                                    accum -= itemPx
+                                    accum -= stepPx
                                     stepRef.value()
                                     selectRef.value(working)
                                 } else {
-                                    accum = itemPx / 2f
+                                    accum = stepPx / 2f
                                     break
                                 }
                             }
-                            while (accum < -itemPx / 2f) {
+                            while (accum < -stepPx / 2f) {
                                 if (working < Dhikr.entries.lastIndex) {
                                     working += 1
-                                    accum += itemPx
+                                    accum += stepPx
                                     stepRef.value()
                                     selectRef.value(working)
                                 } else {
-                                    accum = -itemPx / 2f
+                                    accum = -stepPx / 2f
                                     break
                                 }
                             }
@@ -567,8 +570,8 @@ private fun DhikrWheel(
             }
     ) {
         for (i in Dhikr.entries.indices) {
-            val dy = (i - selected) * itemPx + settle
-            val closeness = (1f - abs(dy) / itemPx).coerceIn(0f, 1f)
+            val dy = (i - selected) * stepPx + settle
+            val closeness = (1f - abs(dy) / stepPx).coerceIn(0f, 1f)
             val dhikr = Dhikr.entries[i]
             Box(
                 modifier = Modifier
@@ -576,7 +579,7 @@ private fun DhikrWheel(
                     .offset { IntOffset(0, dy.roundToInt()) }
                     .height(itemHeight)
                     .graphicsLayer {
-                        val scale = 0.82f + 0.26f * closeness
+                        val scale = 0.86f + 0.22f * closeness
                         scaleX = scale
                         scaleY = scale
                         alpha = 0.26f + 0.74f * closeness
