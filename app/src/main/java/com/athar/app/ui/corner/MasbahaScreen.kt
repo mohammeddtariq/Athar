@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.MasbahaNotificationSnapshot
 import com.athar.app.data.NumberStylePreference
 import com.athar.app.data.VolumeKeyRouter
 import com.athar.app.data.formatDigits
@@ -211,6 +212,7 @@ fun MasbahaScreen(
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val language by prefs.selectedLanguage.collectAsState(initial = "ar")
     val isArabic = language == "ar"
+    val notificationOn by prefs.masbahaNotificationEnabled.collectAsState(initial = false)
 
     var counts by remember { mutableStateOf<List<Int>?>(null) }
     LaunchedEffect(storedCounts) {
@@ -237,16 +239,35 @@ fun MasbahaScreen(
         onDispose { tick.release() }
     }
 
+    /**
+     * Repaints the ongoing card from the values already on screen, so the
+     * shade shows the new tally before the write to disk has landed.
+     */
+    fun publishNotification(nextCounts: List<Int>, nextSelected: Int) {
+        if (!notificationOn) return
+        MasbahaNotificationManager.post(
+            context,
+            MasbahaNotificationSnapshot(
+                counts = nextCounts,
+                selected = nextSelected,
+                isArabic = isArabic,
+                numberStyle = numberStyle,
+                enabled = true
+            )
+        )
+    }
+
     fun step(amount: Int) {
         if (amount <= 0) return
         val slot = Dhikr.entries[selected].storeIndex
         val base = counts ?: live
         val before = base[slot]
         val after = before + amount
-        counts = base.toMutableList().also { it[slot] = after }
+        val next = base.toMutableList().also { it[slot] = after }
+        counts = next
+        publishNotification(next, selected)
         scope.launch {
             prefs.setMasbahaCount(slot, after)
-            MasbahaNotificationManager.update(context)
         }
         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         if (soundOn) tick.tick()
@@ -256,10 +277,11 @@ fun MasbahaScreen(
     fun reset() {
         val slot = Dhikr.entries[selected].storeIndex
         val base = counts ?: live
-        counts = base.toMutableList().also { it[slot] = 0 }
+        val next = base.toMutableList().also { it[slot] = 0 }
+        counts = next
+        publishNotification(next, selected)
         scope.launch {
             prefs.setMasbahaCount(slot, 0)
-            MasbahaNotificationManager.update(context)
         }
         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         if (soundOn) tick.tick()
@@ -309,10 +331,10 @@ fun MasbahaScreen(
                 onSelect = {
                     if (it != selected) {
                         selected = it
+                        publishNotification(counts ?: live, it)
                         if (hapticsOn) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         scope.launch {
                             prefs.setMasbahaSelected(it)
-                            MasbahaNotificationManager.update(context)
                         }
                     }
                 },

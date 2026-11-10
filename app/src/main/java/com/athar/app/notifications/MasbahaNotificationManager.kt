@@ -11,12 +11,15 @@ import androidx.core.app.NotificationCompat
 import com.athar.app.MainActivity
 import com.athar.app.R
 import com.athar.app.data.AppPreferences
+import com.athar.app.data.MasbahaNotificationSnapshot
 import com.athar.app.data.formatDigits
 import com.athar.app.ui.corner.Dhikr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val ACTION_INCREMENT = "com.athar.app.masbaha.INCREMENT"
@@ -33,6 +36,10 @@ private const val REQUEST_CONTENT = 9575
  * Mirrors Al-Yaqut's tally in an ongoing notification, the way the live prayer
  * card mirrors the next prayer. The notification carries its own +1, next-dhikr
  * and reset actions so the count can keep going after the app is left.
+ *
+ * The card is drawn from a snapshot so an action can repaint it *before* the
+ * write lands: pressing +1 shows the new number immediately and the store is
+ * updated behind it.
  */
 object MasbahaNotificationManager {
 
@@ -70,26 +77,30 @@ object MasbahaNotificationManager {
             cancel(context)
             return@withContext
         }
+        post(context, prefs.masbahaSnapshot())
+    }
+
+    /** Draws the card for [snapshot]; no store access, so it can run first. */
+    fun post(context: Context, snapshot: MasbahaNotificationSnapshot) {
+        if (!snapshot.enabled) {
+            cancel(context)
+            return
+        }
         ensureChannel(context)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            ?: return@withContext
+            ?: return
 
-        val counts = prefs.masbahaCounts.first()
-        val selected = prefs.masbahaSelected.first().coerceIn(0, Dhikr.entries.lastIndex)
-        val language = prefs.selectedLanguage.first()
-        val numberStyle = prefs.numberStyle.first()
-        val isArabic = language == "ar"
-
+        val selected = snapshot.selected.coerceIn(0, Dhikr.entries.lastIndex)
         val dhikr = Dhikr.entries[selected]
-        val count = counts[dhikr.storeIndex]
+        val count = snapshot.counts.getOrElse(dhikr.storeIndex) { 0 }
         val cycle = if (count == 0) 0 else ((count - 1) % CYCLE) + 1
 
-        val title = if (isArabic) dhikr.arabic else dhikr.english
+        val title = if (snapshot.isArabic) dhikr.arabic else dhikr.english
         val text = context.getString(
             R.string.masbaha_notification_count,
-            formatDigits(count.toString(), numberStyle),
-            formatDigits(cycle.toString(), numberStyle),
-            formatDigits(CYCLE.toString(), numberStyle)
+            formatDigits(count.toString(), snapshot.numberStyle),
+            formatDigits(cycle.toString(), snapshot.numberStyle),
+            formatDigits(CYCLE.toString(), snapshot.numberStyle)
         )
 
         val contentIntent = Intent(context, MainActivity::class.java).apply {
@@ -169,26 +180,60 @@ class MasbahaNotificationActionReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val prefs = AppPreferences(app)
-                val selected = prefs.masbahaSelected.first().coerceIn(0, Dhikr.entries.lastIndex)
-                when (action) {
-                    ACTION_INCREMENT -> {
-                        val dhikr = Dhikr.entries[selected]
-                        val counts = prefs.masbahaCounts.first()
-                        prefs.setMasbahaCount(dhikr.storeIndex, counts[dhikr.storeIndex] + 1)
-                    }
-                    ACTION_NEXT -> {
-                        prefs.setMasbahaSelected((selected + 1) % Dhikr.entries.size)
-                    }
-                    ACTION_RESET -> {
-                        prefs.setMasbahaCount(Dhikr.entries[selected].storeIndex, 0)
-                    }
-                }
-                MasbahaNotificationManager.updateNow(app)
+                actionMutex.withLock { applyAction(app, action) }
             } finally {
                 pendingResult.finish()
             }
         }
+    }
+
+    private suspend fun applyAction(app: Context, action: String) {
+        val prefs = AppPreferences(app)
+        val snapshot = prefs.masbahaSnapshot()
+        if (!snapshot.enabled) return
+        val selected = snapshot.selected.coerceIn(0, Dhikr.entries.lastIndex)
+
+        // Work out the next state and paint it straight away, then let the
+        // write catch up: the count in the shade should never wait on the disk.
+        val counts = snapshot.counts.toMutableList()
+        var nextSelected = selected
+        when (action) {
+            ACTION_INCREMENT -> {
+                val slot = Dhikr.entries[selected].storeIndex
+                counts[slot] = counts.getOrElse(slot) { 0 } + 1
+            }
+            ACTION_NEXT -> nextSelected = (selected + 1) % Dhikr.entries.size
+            ACTION_RESET -> {
+                val slot = Dhikr.entries[selected].storeIndex
+                counts[slot] = 0
+            }
+        }
+
+        MasbahaNotificationManager.post(
+            app,
+            snapshot.copy(counts = counts, selected = nextSelected)
+        )
+
+        when (action) {
+            ACTION_INCREMENT -> {
+                val slot = Dhikr.entries[selected].storeIndex
+                prefs.setMasbahaCount(slot, counts[slot])
+            }
+            ACTION_NEXT -> prefs.setMasbahaSelected(nextSelected)
+            ACTION_RESET -> {
+                val slot = Dhikr.entries[selected].storeIndex
+                prefs.setMasbahaCount(slot, 0)
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Serialises the actions. Two quick +1 taps arrive as two broadcasts;
+         * without this they would both read the same old tally and one would
+         * be lost.
+         */
+        private val actionMutex = Mutex()
     }
 }
 

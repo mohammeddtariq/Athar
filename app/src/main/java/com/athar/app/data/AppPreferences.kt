@@ -640,6 +640,29 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[MASBAHA_SELECTED_KEY] = index.coerceIn(0, 2) }
     }
 
+    /**
+     * Everything Al-Yaqut's ongoing notification needs, read in one pass.
+     *
+     * The notification's actions run outside the app and used to collect five
+     * separate flows before they could repaint the card, which is why the +1
+     * lagged behind the tap. One read of the store keeps the repaint immediate.
+     */
+    suspend fun masbahaSnapshot(): MasbahaNotificationSnapshot {
+        val data = context.dataStore.data.first()
+        val language = data[LANGUAGE_KEY] ?: "ar"
+        return MasbahaNotificationSnapshot(
+            counts = listOf(
+                data[MASBAHA_SUBHAN_KEY] ?: 0,
+                data[MASBAHA_HAMD_KEY] ?: 0,
+                data[MASBAHA_AKBAR_KEY] ?: 0
+            ),
+            selected = (data[MASBAHA_SELECTED_KEY] ?: 0).coerceIn(0, 2),
+            isArabic = language == "ar",
+            numberStyle = NumberStylePreference.fromId(data[NUMBER_STYLE_KEY] ?: "western"),
+            enabled = data[MASBAHA_NOTIFICATION_ENABLED_KEY] ?: false
+        )
+    }
+
     suspend fun saveLastReadPosition(
         surahNumber: Int,
         surahNameAr: String,
@@ -848,6 +871,15 @@ enum class NumberStylePreference(val id: String) {
         fun fromId(id: String): NumberStylePreference = entries.firstOrNull { it.id == id } ?: WESTERN
     }
 }
+
+/** Everything Al-Yaqut's ongoing notification card needs to draw itself. */
+data class MasbahaNotificationSnapshot(
+    val counts: List<Int>,
+    val selected: Int,
+    val isArabic: Boolean,
+    val numberStyle: NumberStylePreference,
+    val enabled: Boolean = true
+)
 
 fun formatDigits(text: String, style: NumberStylePreference): String {
     return when (style) {
