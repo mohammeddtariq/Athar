@@ -39,11 +39,11 @@ enum class AtharBackgroundStyle(
     );
 
     companion object {
-        /** Falls back to the geometric backdrop for unknown or missing ids. */
+        /** Falls back to the letter weave for unknown or missing ids. */
         fun fromId(id: String?): AtharBackgroundStyle =
-            entries.firstOrNull { it.id == id } ?: ISLAMIC
+            entries.firstOrNull { it.id == id } ?: LETTERS
 
-        val default: AtharBackgroundStyle = ISLAMIC
+        val default: AtharBackgroundStyle = LETTERS
     }
 }
 
