@@ -109,6 +109,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
@@ -157,8 +158,8 @@ private const val CYCLE = 33
 /** The hanging strand carries the full thirty-three, not a shorthand. */
 private const val STRAND_BEADS = BEADS
 
-/** The room the strand leaves free at either end of the width. */
-private const val STRAND_MARGIN = 0.045f
+/** How far past each edge the strand runs, so it reads as endless. */
+private const val STRAND_OVERHANG = 0.11f
 
 /** The faces of an ivory pearl. */
 private val StrandPearlLight = Color(0xFFFFFFFF)
@@ -180,8 +181,8 @@ private enum class SibhaStyle(val id: String) {
 
 // The loop is a teardrop: round at the top, gathering to a point at the
 // bottom where the imam bead and its tassel hang.
-private const val LOOP_TOP = 0.09f
-private const val LOOP_BOTTOM = 0.735f
+private const val LOOP_TOP = 0.05f
+private const val LOOP_BOTTOM = 0.762f
 private const val LOOP_CENTER_Y = (LOOP_TOP + LOOP_BOTTOM) / 2f
 
 /**
@@ -708,8 +709,8 @@ private fun SibhaRing(
             val loop = teardropPath(size.width, size.height)
             val measure = PathMeasure().apply { setPath(loop, false) }
             val loopLength = measure.length.coerceAtLeast(1f)
-            val beadRadius = (loopLength / BEADS * 0.46f)
-                .coerceIn(size.minDimension * 0.016f, size.minDimension * 0.060f)
+            val beadRadius = (loopLength / BEADS * 0.50f)
+                .coerceIn(size.minDimension * 0.017f, size.minDimension * 0.066f)
             val tip = measure.getPosition(0f)
 
             // Soft halo so the pearls lift off the dark page.
@@ -867,9 +868,11 @@ private fun CountReadout(
 }
 
 /**
- * The other sibha: a straight strand of thirty-three white pearls running left
- * to right across the page, tied off at both ends. A white beam of light rides
- * along the strand as the cycle advances, so the eye follows the count.
+ * The other sibha: one endless strand of white pearls that runs in from beyond
+ * the left edge and out past the right, bowing gently upward through the middle
+ * of the page the way a masbaha rests between two fingers. A beam of white
+ * light rides from pearl to pearl as the cycle fills, every pearl breathes on
+ * its own beat, and the whole strand floats a hair so it never sits still.
  * Dragging along the strand counts one bead per bead crossed; tapping counts one.
  */
 @Composable
@@ -883,24 +886,36 @@ private fun SibhaStrand(
     val pulse = remember { Animatable(1f) }
     LaunchedEffect(count) {
         if (count > 0) {
-            pulse.snapTo(0.968f)
-            pulse.animateTo(1f, spring(dampingRatio = 0.34f, stiffness = 340f))
+            pulse.snapTo(0.986f)
+            pulse.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 320f))
         }
     }
 
-    val drift = rememberInfiniteTransition(label = "strandFloat")
-    val sway by drift.animateFloat(
+    val drift = rememberInfiniteTransition(label = "strandDrift")
+    // A breath that travels along the strand, pearl by pearl.
+    val breath by drift.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(5200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "strandBreath"
+    )
+    // A slow sideways float, so the strand reads as hung rather than printed.
+    val float by drift.animateFloat(
         initialValue = -1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(7000, easing = FastOutSlowInEasing),
+            animation = tween(9400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "strandSway"
+        label = "strandFloat"
     )
+    // The beam glides to its new pearl instead of jumping to it.
     val beam by animateFloatAsState(
         targetValue = cycle.toFloat(),
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
+        animationSpec = tween(420, easing = FastOutSlowInEasing),
         label = "strandBeam"
     )
     val countRef = rememberUpdatedState(onCount)
@@ -909,17 +924,14 @@ private fun SibhaStrand(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    rotationZ = sway * 0.35f
-                }
                 .pointerInput(STRAND_BEADS) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         down.consume()
-                        val left = size.width * STRAND_MARGIN
-                        val span = size.width * (1f - STRAND_MARGIN * 2f)
+                        val overhang = size.width * STRAND_OVERHANG
+                        val span = size.width + overhang * 2f
                         fun indexAt(x: Float): Int =
-                            (((x - left) / span) * (STRAND_BEADS - 1))
+                            (((x + overhang) / span) * (STRAND_BEADS - 1))
                                 .roundToInt()
                                 .coerceIn(0, STRAND_BEADS - 1)
 
@@ -944,78 +956,125 @@ private fun SibhaStrand(
                     }
                 }
         ) {
-            val left = size.width * STRAND_MARGIN
-            val span = size.width * (1f - STRAND_MARGIN * 2f)
+            val overhang = size.width * STRAND_OVERHANG
+            val left = -overhang + float * 2.4.dp.toPx()
+            val span = size.width + overhang * 2f
             val spacing = span / (STRAND_BEADS - 1)
-            val beadR = spacing * 0.46f
-            val lineY = size.height * 0.58f
+            val beadR = spacing * 0.60f
+            val baseY = size.height * 0.735f
+            val lift = size.height * 0.058f
 
             val points = ArrayList<Offset>(STRAND_BEADS)
             for (i in 0 until STRAND_BEADS) {
-                points += Offset(left + spacing * i, lineY)
+                val t = i / (STRAND_BEADS - 1f)
+                points += Offset(
+                    x = left + spacing * i,
+                    y = baseY - lift * sin(PI * t.toDouble()).toFloat()
+                )
             }
 
             // The strand's shadow keeps it resting on the page.
             drawOval(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color.Black.copy(alpha = 0.26f), Color.Transparent),
-                    center = Offset(size.width / 2f, lineY + beadR * 0.9f),
-                    radius = span * 0.50f
+                    colors = listOf(Color.Black.copy(alpha = 0.30f), Color.Transparent),
+                    center = Offset(size.width / 2f, baseY + beadR * 1.1f),
+                    radius = size.width * 0.62f
                 ),
-                topLeft = Offset(left - beadR, lineY - beadR * 0.4f),
-                size = androidx.compose.ui.geometry.Size(span + beadR * 2f, beadR * 3.4f)
+                topLeft = Offset(left, baseY - beadR * 0.2f),
+                size = androidx.compose.ui.geometry.Size(span, beadR * 3.2f)
             )
 
-            // The thread through the pearls.
-            drawLine(
-                color = Color.Black.copy(alpha = 0.40f),
-                start = Offset(points.first().x - beadR, lineY),
-                end = Offset(points.last().x + beadR, lineY),
-                strokeWidth = 2.4.dp.toPx(),
-                cap = StrokeCap.Round
+            // The thread, bowing with the strand.
+            val thread = Path().apply {
+                moveTo(points[0].x, points[0].y)
+                for (i in 0 until points.lastIndex) {
+                    val from = points[i]
+                    val to = points[i + 1]
+                    quadraticTo(
+                        (from.x + to.x) / 2f,
+                        (from.y + to.y) / 2f + beadR * 0.10f,
+                        to.x,
+                        to.y
+                    )
+                }
+            }
+            drawPath(
+                path = thread,
+                color = Color.Black.copy(alpha = 0.42f),
+                style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round)
             )
-            drawLine(
-                color = Color(0xFFF3EFE7).copy(alpha = 0.85f),
-                start = Offset(points.first().x - beadR, lineY),
-                end = Offset(points.last().x + beadR, lineY),
-                strokeWidth = 1.1.dp.toPx(),
-                cap = StrokeCap.Round
+            drawPath(
+                path = thread,
+                color = Color(0xFFF3EFE7).copy(alpha = 0.55f),
+                style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
             )
 
-            // The beam rides from the first pearl to the last as the cycle fills.
-            val beamX = left + spacing * (beam - 1f).coerceIn(0f, STRAND_BEADS - 1f)
+            // Where the beam is, interpolated between two pearls.
+            val beamPos = (beam - 1f).coerceIn(0f, STRAND_BEADS - 1f)
             val hasBeam = cycle > 0
+            val beamLow = floor(beamPos).toInt().coerceIn(0, STRAND_BEADS - 1)
+            val beamHigh = (beamLow + 1).coerceAtMost(STRAND_BEADS - 1)
+            val beamT = beamPos - beamLow
+            val beamPoint = Offset(
+                x = points[beamLow].x + (points[beamHigh].x - points[beamLow].x) * beamT,
+                y = points[beamLow].y + (points[beamHigh].y - points[beamLow].y) * beamT
+            )
+
+            if (hasBeam) {
+                // The shaft of light the beam carries, standing on the strand.
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.05f),
+                            Color.White.copy(alpha = 0.20f),
+                            Color.White.copy(alpha = 0.05f),
+                            Color.Transparent
+                        ),
+                        startY = beamPoint.y - beadR * 4.6f,
+                        endY = beamPoint.y + beadR * 2.4f
+                    ),
+                    topLeft = Offset(beamPoint.x - beadR * 0.85f, beamPoint.y - beadR * 4.6f),
+                    size = androidx.compose.ui.geometry.Size(beadR * 1.7f, beadR * 7f)
+                )
+            }
 
             for (i in 0 until STRAND_BEADS) {
                 val point = points[i]
-                val r = beadR * (0.97f + 0.03f * sin(i * 1.7f + 1.2f)) * pulse.value
+                // Every pearl breathes on its own offset, so the strand ripples.
+                val breathe = sin(2.0 * PI * (breath + i * 0.075)).toFloat()
+                val r = beadR * (1f + 0.05f * breathe) * pulse.value
                 val spacer = i == 11 || i == 22
+                val near = if (hasBeam) {
+                    (1f - abs(i - beamPos) / 1.7f).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
 
-                if (hasBeam) {
-                    val near = (1f - abs(point.x - beamX) / (beadR * 4.4f)).coerceIn(0f, 1f)
-                    if (near > 0f) {
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.32f * near),
-                                    AtharPrimary.copy(alpha = 0.14f * near),
-                                    Color.Transparent
-                                ),
-                                center = point,
-                                radius = r * 3.0f
+                if (near > 0f) {
+                    val glow = r * (2.6f + 0.5f * breathe)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.40f * near),
+                                AtharPrimaryLight.copy(alpha = 0.16f * near),
+                                Color.Transparent
                             ),
-                            radius = r * 3.0f,
-                            center = point
-                        )
-                    }
+                            center = point,
+                            radius = glow
+                        ),
+                        radius = glow,
+                        center = point
+                    )
                 }
 
                 drawCircle(
-                    color = Color.Black.copy(alpha = 0.30f),
+                    color = Color.Black.copy(alpha = 0.32f),
                     radius = r * 0.98f,
-                    center = point + Offset(0f, r * 0.20f)
+                    center = point + Offset(0f, r * 0.22f)
                 )
                 if (spacer) {
+                    // A divider after every eleven pearls, in the theme colour.
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
@@ -1026,12 +1085,12 @@ private fun SibhaStrand(
                             center = point - Offset(r * 0.30f, r * 0.32f),
                             radius = r * 1.5f
                         ),
-                        radius = r * 0.92f,
+                        radius = r * 0.86f,
                         center = point
                     )
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.35f),
-                        radius = r * 0.92f,
+                        color = Color.White.copy(alpha = 0.40f),
+                        radius = r * 0.86f,
                         center = point,
                         style = Stroke(width = 0.6.dp.toPx())
                     )
@@ -1045,19 +1104,19 @@ private fun SibhaStrand(
                                 StrandPearlDeep
                             ),
                             center = point - Offset(r * 0.34f, r * 0.38f),
-                            radius = r * 1.8f
+                            radius = r * 1.85f
                         ),
                         radius = r,
                         center = point
                     )
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.50f),
+                        color = Color.White.copy(alpha = 0.45f + 0.35f * near),
                         radius = r,
                         center = point,
                         style = Stroke(width = 0.6.dp.toPx())
                     )
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.90f),
+                        color = Color.White.copy(alpha = 0.92f),
                         radius = r * 0.20f,
                         center = point - Offset(r * 0.32f, r * 0.36f)
                     )
@@ -1065,70 +1124,30 @@ private fun SibhaStrand(
             }
 
             if (hasBeam) {
-                // A soft shaft of white light around the pearl the beam holds.
-                drawRect(
-                    brush = Brush.verticalGradient(
+                // A bright core where the beam stands, so the eye lands on it.
+                drawCircle(
+                    brush = Brush.radialGradient(
                         colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.16f),
-                            AtharPrimaryLight.copy(alpha = 0.26f),
-                            Color.White.copy(alpha = 0.16f),
+                            Color.White.copy(alpha = 0.55f),
                             Color.Transparent
                         ),
-                        startY = lineY - beadR * 3.4f,
-                        endY = lineY + beadR * 3.4f
+                        center = beamPoint,
+                        radius = beadR * 2.2f
                     ),
-                    topLeft = Offset(beamX - beadR * 0.55f, lineY - beadR * 3.4f),
-                    size = androidx.compose.ui.geometry.Size(beadR * 1.1f, beadR * 6.8f)
+                    radius = beadR * 2.2f,
+                    center = beamPoint
                 )
             }
-
-            drawStrandTassel(anchor = points.first(), beadR = beadR)
-            drawStrandTassel(anchor = points.last(), beadR = beadR)
         }
 
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = maxHeight * 0.26f),
+                .offset(y = maxHeight * 0.24f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CountReadout(count = count, cycle = cycle, numberStyle = numberStyle)
         }
-    }
-}
-
-/** The little tassel that finishes off each end of the strand. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStrandTassel(
-    anchor: Offset,
-    beadR: Float
-) {
-    val knot = Offset(anchor.x, anchor.y + beadR * 0.80f)
-    // A theme-coloured bead gathered at the join.
-    drawCircle(color = AtharPrimaryDeep, radius = beadR * 0.26f, center = knot)
-    drawCircle(
-        color = AtharPrimaryLight.copy(alpha = 0.70f),
-        radius = beadR * 0.26f,
-        center = knot,
-        style = Stroke(width = 0.7.dp.toPx())
-    )
-    // The threads fall straight down and splay only a little.
-    for (i in 0..3) {
-        val spread = (i - 1.5f) / 1.5f
-        val path = Path().apply {
-            moveTo(knot.x, knot.y + beadR * 0.16f)
-            quadraticTo(
-                knot.x + spread * beadR * 0.34f,
-                knot.y + beadR * 0.95f,
-                knot.x + spread * beadR * 0.80f,
-                knot.y + beadR * 1.75f
-            )
-        }
-        drawPath(
-            path = path,
-            color = AtharPrimary.copy(alpha = 0.75f),
-            style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
-        )
     }
 }
 
@@ -1352,7 +1371,7 @@ private fun teardropPath(width: Float, height: Float): Path {
     val bottom = height * LOOP_BOTTOM
     val body = (bottom - top).coerceAtLeast(1f)
     val cy = top + body * 0.40f
-    val rx = minOf(width * 0.42f, body * 0.42f)
+    val rx = minOf(width * 0.462f, body * 0.462f)
     return Path().apply {
         moveTo(cx, bottom)
         cubicTo(
