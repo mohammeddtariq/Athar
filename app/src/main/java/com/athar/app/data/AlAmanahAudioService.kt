@@ -131,19 +131,22 @@ class AlAmanahAudioService : Service() {
     fun updateNotificationAndSession() {
         val session = mediaSession ?: return
         val isPlaying = AlAmanahAudioController.isPlaying
-        val surah = AlAmanahAudioController.currentSurah
-        val reciter = AlAmanahAudioController.currentReciter
+        val isLive = AlAmanahAudioController.isLiveStream
+        val title = AlAmanahAudioController.nowPlayingTitle
+        val subtitle = AlAmanahAudioController.nowPlayingSubtitle
         val positionMs = AlAmanahAudioController.currentPositionMs
         val durationMs = AlAmanahAudioController.totalDurationMs
 
         // 1. Update PlaybackState in MediaSession
-        val stateActions = PlaybackState.ACTION_PLAY or
+        var stateActions = PlaybackState.ACTION_PLAY or
                 PlaybackState.ACTION_PAUSE or
                 PlaybackState.ACTION_PLAY_PAUSE or
                 PlaybackState.ACTION_SKIP_TO_NEXT or
                 PlaybackState.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackState.ACTION_SEEK_TO or
                 PlaybackState.ACTION_STOP
+        if (!isLive) {
+            stateActions = stateActions or PlaybackState.ACTION_SEEK_TO
+        }
 
         val playbackState = PlaybackState.Builder()
             .setActions(stateActions)
@@ -157,8 +160,8 @@ class AlAmanahAudioService : Service() {
 
         // 2. Update MediaMetadata in MediaSession
         val metadata = MediaMetadata.Builder()
-            .putString(MediaMetadata.METADATA_KEY_TITLE, "سورة ${surah.arabicName} • ${surah.englishName}")
-            .putString(MediaMetadata.METADATA_KEY_ARTIST, reciter.arabicName)
+            .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+            .putString(MediaMetadata.METADATA_KEY_ARTIST, subtitle)
             .putString(MediaMetadata.METADATA_KEY_ALBUM, "الأَمَنَة")
             .putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs)
             .build()
@@ -214,8 +217,8 @@ class AlAmanahAudioService : Service() {
 
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quran_book)
-            .setContentTitle("سورة ${surah.arabicName}")
-            .setContentText("${reciter.arabicName} • الجزء ${surah.juz}")
+            .setContentTitle(title)
+            .setContentText(subtitle)
             .setSubText("الأَمَنَة")
             .setContentIntent(mainPending)
             .setDeleteIntent(stopPending)

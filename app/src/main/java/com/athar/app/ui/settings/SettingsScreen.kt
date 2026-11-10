@@ -104,6 +104,7 @@ import com.athar.app.data.WidgetBgStyle
 import com.athar.app.data.WidgetFontStyle
 import com.athar.app.data.LiveStatusStyle
 import com.athar.app.notifications.LiveStatusNotificationManager
+import com.athar.app.notifications.MasbahaNotificationManager
 import com.athar.app.data.formatDigits
 import com.athar.app.data.rememberLocationEnabler
 import com.athar.app.widget.AtharWidgetUpdater
@@ -274,6 +275,7 @@ fun SettingsScreen(
     val liveStatusStyle by prefs.liveStatusStyle.collectAsState(initial = LiveStatusStyle.HERO)
     val liveStatusNumberStyle by prefs.liveStatusNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val liveStatusLanguage by prefs.liveStatusLanguage.collectAsState(initial = "match_app")
+    val masbahaNotificationEnabled by prefs.masbahaNotificationEnabled.collectAsState(initial = false)
 
     var showMethods by remember { mutableStateOf(false) }
     var showCities by remember { mutableStateOf(false) }
@@ -1618,6 +1620,73 @@ fun SettingsScreen(
                                 numberStyle = liveStatusNumberStyle,
                                 liveStatusLanguage = liveStatusLanguage,
                                 appLanguage = language
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Al-Yaqut Notification ──
+            item(key = "masbaha_notification") {
+                SectionCard(
+                    title = stringResource(R.string.settings_masbaha_notification_title)
+                ) {
+                    Text(
+                        stringResource(R.string.settings_masbaha_notification_subtitle),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 12.sp,
+                        color = AtharTextSecondary
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_masbaha_notification_enable),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.5.sp,
+                            color = AtharTextPrimary
+                        )
+                        Switch(
+                            checked = masbahaNotificationEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPerm = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (!hasPerm) {
+                                        notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }
+                                scope.launch {
+                                    prefs.setMasbahaNotificationEnabled(enabled)
+                                    MasbahaNotificationManager.update(context)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AtharTextOnPrimary,
+                                checkedTrackColor = AtharPrimary,
+                                uncheckedThumbColor = AtharTextSecondary,
+                                uncheckedTrackColor = AtharCardBorder
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(visible = masbahaNotificationEnabled) {
+                        Column {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                stringResource(R.string.settings_masbaha_notification_hint),
+                                fontFamily = ThmanyahSans,
+                                fontSize = 11.5.sp,
+                                lineHeight = 17.sp,
+                                color = AtharTextSecondary
                             )
                         }
                     }

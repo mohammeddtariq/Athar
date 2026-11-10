@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import java.util.Locale
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,50 @@ object AlAmanahAudioController {
     var isOfflinePlayback by mutableStateOf(false)
         private set
 
+    /** What the player is currently carrying: a surah, a live radio stream, or a tawasheeh track. */
+    enum class AudioSource { SURAH, RADIO, TAWASHEEH }
+
+    var audioSource by mutableStateOf(AudioSource.SURAH)
+        private set
+
+    var currentStation by mutableStateOf<AmanahRadioStation?>(null)
+        private set
+
+    var currentTawasheehIndex by mutableIntStateOf(-1)
+        private set
+
+    val currentTawasheeh: AmanahTawasheehTrack?
+        get() = AmanahTawasheehTracks.getOrNull(currentTawasheehIndex)
+
+    val isLiveStream: Boolean
+        get() = audioSource == AudioSource.RADIO
+
+    /** Title for the media notification; the screen builds its own localised labels. */
+    val nowPlayingTitle: String
+        get() = when (audioSource) {
+            AudioSource.RADIO -> currentStation?.nameAr ?: "إذاعة القرآن الكريم"
+            AudioSource.TAWASHEEH -> currentTawasheeh?.titleAr ?: "تواشيح"
+            AudioSource.SURAH -> "سورة ${currentSurah.arabicName}"
+        }
+
+    val nowPlayingSubtitle: String
+        get() = when (audioSource) {
+            AudioSource.RADIO -> buildString {
+                append("بث مباشر")
+                currentStation?.let { station ->
+                    if (!station.frequency.isNullOrBlank()) append(" • ${station.frequency}")
+                    append(" • ${station.countryAr}")
+                }
+            }
+            AudioSource.TAWASHEEH -> buildString {
+                append("الشيخ سيد النقشبندي")
+                if (currentTawasheehIndex >= 0) {
+                    append(" • ${currentTawasheehIndex + 1}/${AmanahTawasheehTracks.size}")
+                }
+            }
+            AudioSource.SURAH -> "${currentReciter.arabicName} • الجزء ${currentSurah.juz}"
+        }
+
     // Download progress map: surahNumber -> 0.0f..1.0f (or null if not downloading)
     val downloadProgressMap = mutableStateMapOf<Int, Float>()
 
@@ -133,6 +178,9 @@ object AlAmanahAudioController {
         appContext = context.applicationContext
         initAudioRoutingListener(context)
         val selectedReciter = reciter ?: currentReciter
+        audioSource = AudioSource.SURAH
+        currentStation = null
+        currentTawasheehIndex = -1
         currentSurah = surah
         currentReciter = selectedReciter
         isLoading = true
@@ -268,6 +316,98 @@ object AlAmanahAudioController {
         }
     }
 
+    /**
+     * Tune into a live Quran radio station. The station is a continuous MP3
+     * stream, so it is handed to the same [MediaPlayer] engine as a surah;
+     * duration is unknown and seeking is disabled in the UI.
+     */
+    fun playRadio(context: Context, station: AmanahRadioStation) {
+        appContext = context.applicationContext
+        initAudioRoutingListener(context)
+        audioSource = AudioSource.RADIO
+        currentStation = station
+        currentTawasheehIndex = -1
+        isLoading = true
+        isPlaying = false
+        isOfflinePlayback = false
+        chapterTiming = null
+        activeVerseNumber = null
+        totalDurationMs = 0L
+        currentPositionMs = 0L
+        releasePlayer()
+        playJob?.cancel()
+        playJob = scope.launch {
+            playStream(context, station.url)
+        }
+    }
+
+    /** Play one track from the tawasheeh playlist, streaming it from the archive. */
+    fun playTawasheeh(context: Context, index: Int = 0) {
+        val track = AmanahTawasheehTracks.getOrNull(index) ?: return
+        appContext = context.applicationContext
+        initAudioRoutingListener(context)
+        audioSource = AudioSource.TAWASHEEH
+        currentTawasheehIndex = index
+        currentStation = null
+        isLoading = true
+        isPlaying = false
+        isOfflinePlayback = false
+        chapterTiming = null
+        activeVerseNumber = null
+        totalDurationMs = 0L
+        currentPositionMs = 0L
+        releasePlayer()
+        playJob?.cancel()
+        playJob = scope.launch {
+            playStream(context, track.url)
+        }
+    }
+
+    /** Shared remote-stream setup for radio and tawasheeh. */
+    private fun playStream(context: Context, url: String) {
+        try {
+            val player = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+                setVolume(playerVolume, playerVolume)
+                val headers = mapOf(
+                    "User-Agent" to "AtharApp/1.0.6",
+                    "Accept" to "*/*"
+                )
+                setDataSource(context, Uri.parse(url), headers)
+            }
+            player.setOnPreparedListener { mp ->
+                isLoading = false
+                totalDurationMs = mp.duration.toLong().coerceAtLeast(0L)
+                applyAudioRouting(context)
+                mp.start()
+                isPlaying = true
+                startSyncLoop(context)
+                AlAmanahAudioService.startOrUpdate(context)
+            }
+            player.setOnCompletionListener {
+                isPlaying = false
+                handleTrackCompletion(context)
+            }
+            player.setOnErrorListener { mp, _, _ ->
+                runCatching { mp.reset(); mp.release() }
+                isLoading = false
+                isPlaying = false
+                true
+            }
+            mediaPlayer = player
+            applyAudioRouting(context)
+            player.prepareAsync()
+        } catch (_: Exception) {
+            isLoading = false
+            isPlaying = false
+        }
+    }
+
     private fun playFallbackStream(context: Context, surah: SurahMeta, reciter: QuranReciter) {
         val fallbackUrl = reciter.getFallbackAudioUrl(surah.number)
         try {
@@ -315,6 +455,12 @@ object AlAmanahAudioController {
 
     fun togglePlayPause(context: Context? = null) {
         if (context != null) appContext = context.applicationContext
+        if (audioSource == AudioSource.RADIO && !isPlaying) {
+            // A live stream cannot resume where it paused: reconnect to live.
+            val ctx = context ?: appContext ?: return
+            currentStation?.let { playRadio(ctx, it) }
+            return
+        }
         val player = mediaPlayer ?: return
         try {
             if (player.isPlaying) {
@@ -347,6 +493,23 @@ object AlAmanahAudioController {
     }
 
     private fun handleTrackCompletion(context: Context) {
+        if (audioSource == AudioSource.TAWASHEEH) {
+            if (playbackMode == PlaybackMode.REPEAT_ONE) {
+                seekTo(0)
+                mediaPlayer?.start()
+                isPlaying = true
+                startSyncLoop(context)
+            } else {
+                val next = (currentTawasheehIndex + 1) % AmanahTawasheehTracks.size
+                playTawasheeh(context, next)
+            }
+            return
+        }
+        if (audioSource == AudioSource.RADIO) {
+            // A live stream should not end; if the server drops it, reconnect.
+            currentStation?.let { playRadio(context, it) }
+            return
+        }
         when (playbackMode) {
             PlaybackMode.REPEAT_ONE -> {
                 seekTo(0)
@@ -382,6 +545,17 @@ object AlAmanahAudioController {
     }
 
     fun skipNext(context: Context) {
+        if (audioSource == AudioSource.RADIO) {
+            val stations = AmanahRadioStations
+            val index = stations.indexOfFirst { it.id == currentStation?.id }
+            playRadio(context, stations[(index + 1).mod(stations.size)])
+            return
+        }
+        if (audioSource == AudioSource.TAWASHEEH) {
+            val next = (currentTawasheehIndex + 1) % AmanahTawasheehTracks.size
+            playTawasheeh(context, next)
+            return
+        }
         if (playbackMode == PlaybackMode.SHUFFLE) {
             playRandomSurah(context)
             return
@@ -399,6 +573,17 @@ object AlAmanahAudioController {
     }
 
     fun skipPrevious(context: Context) {
+        if (audioSource == AudioSource.RADIO) {
+            val stations = AmanahRadioStations
+            val index = stations.indexOfFirst { it.id == currentStation?.id }
+            playRadio(context, stations[(index - 1).mod(stations.size)])
+            return
+        }
+        if (audioSource == AudioSource.TAWASHEEH) {
+            val previous = (currentTawasheehIndex - 1).mod(AmanahTawasheehTracks.size)
+            playTawasheeh(context, previous)
+            return
+        }
         if (playbackMode == PlaybackMode.SHUFFLE) {
             playRandomSurah(context)
             return
@@ -455,6 +640,7 @@ object AlAmanahAudioController {
     }
 
     fun changeReciter(context: Context, newReciter: QuranReciter) {
+        if (audioSource != AudioSource.SURAH) return
         if (newReciter == currentReciter) return
         currentReciter = newReciter
         playSurah(context, currentSurah, newReciter)
@@ -773,14 +959,18 @@ object AlAmanahAudioController {
         ) {
             val wasPlaying = isPlaying
             val position = runCatching { player.currentPosition.toLong() }.getOrDefault(currentPositionMs)
-            playSurah(
-                context = context,
-                surah = currentSurah,
-                reciter = currentReciter,
-                startPositionMs = position,
-                autoPlay = wasPlaying,
-                recordHistory = false
-            )
+            when (audioSource) {
+                AudioSource.RADIO -> currentStation?.let { playRadio(context, it) }
+                AudioSource.TAWASHEEH -> playTawasheeh(context, currentTawasheehIndex)
+                AudioSource.SURAH -> playSurah(
+                    context = context,
+                    surah = currentSurah,
+                    reciter = currentReciter,
+                    startPositionMs = position,
+                    autoPlay = wasPlaying,
+                    recordHistory = false
+                )
+            }
         } else {
             applyAudioRouting(context, target)
         }

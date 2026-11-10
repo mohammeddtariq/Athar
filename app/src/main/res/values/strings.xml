@@ -412,5 +412,17 @@
     <string name="home_prayer_note_isha">Night draws its curtain, and Isha leaves one lamp burning for you.</string>
     <string name="home_deck_hint">Swipe down to fan the cards</string>
     <string name="scratch_label">Scratch</string>
+
+    <!-- Al-Yaqut notification -->
+    <string name="settings_masbaha_notification_title">Al-Yaqut Notification</string>
+    <string name="settings_masbaha_notification_subtitle">Keep your tasbih tally in the notification drawer after you leave Al-Yaqut</string>
+    <string name="settings_masbaha_notification_enable">Mirror Al-Yaqut in notifications</string>
+    <string name="settings_masbaha_notification_hint">Tap +1 to count, switch dhikr, or reset without opening the app.</string>
+    <string name="masbaha_notification_channel_name">Al-Yaqut tally</string>
+    <string name="masbaha_notification_channel_desc">Ongoing tasbih count with quick counting controls</string>
+    <string name="masbaha_notification_action_increment">+1</string>
+    <string name="masbaha_notification_action_next">Next dhikr</string>
+    <string name="masbaha_notification_action_reset">Reset</string>
+    <string name="masbaha_notification_count">%1$s total • %2$s/%3$s this cycle</string>
 </resources>
 

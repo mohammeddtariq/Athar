@@ -794,32 +794,31 @@ private fun ScratchAyah(
         ) {
             if (reveal.value >= 1f) return@Canvas
 
-            // Polished foil: a chrome ramp whose light bands run across the
-            // strip, then a brushed grain so it has tooth rather than reading
-            // as flat grey card.
+            // Dark-silver foil: a brushed graphite plate with a faint
+            // barcode grain, so it reads as a scratch strip, not chrome.
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color(0xFFFDFDFF),
-                    0.10f to Color(0xFFE7E8EE),
-                    0.26f to Color(0xFFB9BBC7),
-                    0.38f to Color(0xFFF3F4F8),
-                    0.50f to Color(0xFFA9ABB8),
-                    0.64f to Color(0xFFDDDFE8),
-                    0.78f to Color(0xFFF7F8FC),
-                    0.90f to Color(0xFF9EA0AD),
-                    1f to Color(0xFF878995)
+                    0f to Color(0xFF7C7E88),
+                    0.08f to Color(0xFF5B5D66),
+                    0.24f to Color(0xFF3C3E46),
+                    0.36f to Color(0xFF62646E),
+                    0.50f to Color(0xFF33343B),
+                    0.62f to Color(0xFF55575F),
+                    0.76f to Color(0xFF3A3B42),
+                    0.90f to Color(0xFF6A6C76),
+                    1f to Color(0xFF232429)
                 )
             )
-            // Faint horizontal grain.
-            val grain = 1.25.dp.toPx()
+            // Fine horizontal brushing.
+            val grain = 1.1.dp.toPx()
             var grainY = 0f
             var grainAlt = false
             while (grainY < size.height) {
                 drawLine(
                     color = if (grainAlt) {
-                        Color.White.copy(alpha = 0.07f)
+                        Color.White.copy(alpha = 0.055f)
                     } else {
-                        Color.Black.copy(alpha = 0.06f)
+                        Color.Black.copy(alpha = 0.10f)
                     },
                     start = Offset(0f, grainY),
                     end = Offset(size.width, grainY),
@@ -828,15 +827,33 @@ private fun ScratchAyah(
                 grainY += grain
                 grainAlt = !grainAlt
             }
-            // One broad reflection travelling across the metal.
+            // Faint barcode bars beneath the brushing.
+            val bar = 2.6.dp.toPx()
+            var barX = 0f
+            var barIndex = 0
+            while (barX < size.width) {
+                val wide = barIndex % 3 == 0
+                drawRect(
+                    color = if (barIndex % 2 == 0) {
+                        Color.Black.copy(alpha = 0.10f)
+                    } else {
+                        Color.White.copy(alpha = 0.035f)
+                    },
+                    topLeft = Offset(barX, 0f),
+                    size = Size(if (wide) bar * 0.7f else bar * 0.35f, size.height)
+                )
+                barX += bar
+                barIndex++
+            }
+            // A slow sheen travelling across the metal.
             drawRect(
                 brush = Brush.linearGradient(
-                    0f to Color.White.copy(alpha = 0.30f),
-                    0.24f to Color.White.copy(alpha = 0.04f),
-                    0.44f to Color.Black.copy(alpha = 0.10f),
-                    0.58f to Color.White.copy(alpha = 0.22f),
-                    0.74f to Color.White.copy(alpha = 0.02f),
-                    1f to Color.Black.copy(alpha = 0.14f),
+                    0f to Color.White.copy(alpha = 0.10f),
+                    0.22f to Color.White.copy(alpha = 0.01f),
+                    0.44f to Color.Black.copy(alpha = 0.14f),
+                    0.60f to Color.White.copy(alpha = 0.07f),
+                    0.76f to Color.White.copy(alpha = 0.00f),
+                    1f to Color.Black.copy(alpha = 0.20f),
                     start = Offset(0f, size.height),
                     end = Offset(size.width, 0f)
                 )
@@ -844,17 +861,17 @@ private fun ScratchAyah(
             // The strip is set into the card: a lit top lip, a shadow under it,
             // and a dark line where the metal leaves the card at the bottom.
             drawRect(
-                color = Color.White.copy(alpha = 0.92f),
+                color = Color.White.copy(alpha = 0.30f),
                 topLeft = Offset(0f, 0f),
                 size = Size(size.width, 1.dp.toPx())
             )
             drawRect(
-                color = Color.Black.copy(alpha = 0.18f),
+                color = Color.Black.copy(alpha = 0.28f),
                 topLeft = Offset(0f, 1.dp.toPx()),
                 size = Size(size.width, 0.5.dp.toPx())
             )
             drawRect(
-                color = Color.Black.copy(alpha = 0.45f),
+                color = Color.Black.copy(alpha = 0.55f),
                 topLeft = Offset(0f, size.height - 1.dp.toPx()),
                 size = Size(size.width, 1.dp.toPx())
             )

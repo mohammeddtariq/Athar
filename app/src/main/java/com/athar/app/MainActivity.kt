@@ -20,6 +20,7 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.data.BatteryOptimizationHelper
 import com.athar.app.data.LauncherIconController
 import com.athar.app.data.VolumeKeyRouter
+import com.athar.app.notifications.MasbahaNotificationManager
 import com.athar.app.notifications.PrayerNotifications
 import com.athar.app.ui.MainScreen
 import com.athar.app.ui.components.AppUpdateDialog
@@ -102,6 +103,9 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra("open_widget_settings", false) == true) {
             openWidgetSettingsState.value = true
         }
+        // Re-post the Al-Yaqut card if the user keeps it mirrored and the
+        // system dropped it while the app was away.
+        MasbahaNotificationManager.update(this)
 
         setContent {
             val isOnboardingCompleted by appPreferences.isOnboardingCompleted

@@ -424,5 +424,15 @@
     <string name="home_prayer_note_isha">يُسدلُ الليلُ ستارَه، ويُبقي العشاءُ لك مصباحًا.</string>
     <string name="home_deck_hint">اسحب للأسفل لعرض البطاقات</string>
     <string name="scratch_label">اخدش</string>
+    <string name="masbaha_notification_channel_desc">عدّاد تسبيح مستمر مع أزرار سريعة</string>
+    <string name="masbaha_notification_action_increment">‎+1‎</string>
+    <string name="masbaha_notification_action_next">الذكر التالي</string>
+    <string name="masbaha_notification_action_reset">تصفير</string>
+    <string name="masbaha_notification_count">%1$s إجمالاً • %2$s/%3$s في الدورة</string>
+    <string name="settings_masbaha_notification_title">إشعار الياقوت</string>
+    <string name="settings_masbaha_notification_subtitle">أبقِ عدّاد التسبيح في شريط الإشعارات بعد مغادرة الياقوت</string>
+    <string name="settings_masbaha_notification_enable">إظهار الياقوت في الإشعارات</string>
+    <string name="settings_masbaha_notification_hint">اضغط ‎+1‎ للتسبيح، أو بدّل الذكر، أو أعد التصفير دون فتح التطبيق.</string>
+    <string name="masbaha_notification_channel_name">عدّاد الياقوت</string>
 </resources>
 

@@ -325,6 +325,7 @@ class BootReceiver : BroadcastReceiver() {
                     PrayerNotifications.scheduleNext(context)
                     com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
                     LiveStatusNotificationManager.update(context)
+                    MasbahaNotificationManager.update(context)
                     com.athar.app.updater.UpdateCheckWorker.schedule(context)
                     // Poll GitHub soon after boot/update, then every ~30 minutes via alarms
                     com.athar.app.updater.UpdateAlarmScheduler.schedule(context, delayMinutes = 3)

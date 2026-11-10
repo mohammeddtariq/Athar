@@ -71,6 +71,8 @@ class AppPreferences(private val context: Context) {
         private val MASBAHA_HAPTICS_KEY = booleanPreferencesKey("masbaha_haptics")
         private val MASBAHA_SOUND_KEY = booleanPreferencesKey("masbaha_sound")
         private val MASBAHA_STYLE_KEY = stringPreferencesKey("masbaha_style")
+        private val MASBAHA_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("masbaha_notification_enabled")
+        private val MASBAHA_SELECTED_KEY = intPreferencesKey("masbaha_selected")
 
         // Quran Appearance & Audio
         private val QURAN_THEME_KEY = stringPreferencesKey("quran_theme_mode")
@@ -232,6 +234,16 @@ class AppPreferences(private val context: Context) {
     /** Which sibha is on show: the strung loop or the hanging strand. */
     val masbahaStyle: Flow<String> = context.dataStore.data.map {
         it[MASBAHA_STYLE_KEY] ?: "classic"
+    }
+
+    /** Mirror Al-Yaqut's tally in an ongoing notification. */
+    val masbahaNotificationEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[MASBAHA_NOTIFICATION_ENABLED_KEY] ?: false
+    }
+
+    /** The dhikr the wheel last settled on, shared with the notification. */
+    val masbahaSelected: Flow<Int> = context.dataStore.data.map {
+        (it[MASBAHA_SELECTED_KEY] ?: 0).coerceIn(0, 2)
     }
 
     val latitude: Flow<Double?> = context.dataStore.data.map { it[LAT_KEY] }
@@ -618,6 +630,14 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setMasbahaStyle(style: String) {
         context.dataStore.edit { it[MASBAHA_STYLE_KEY] = style }
+    }
+
+    suspend fun setMasbahaNotificationEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[MASBAHA_NOTIFICATION_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun setMasbahaSelected(index: Int) {
+        context.dataStore.edit { it[MASBAHA_SELECTED_KEY] = index.coerceIn(0, 2) }
     }
 
     suspend fun saveLastReadPosition(
