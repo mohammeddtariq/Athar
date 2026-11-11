@@ -46,6 +46,9 @@ object AlAmanahAudioController {
     /** How long a stream may take to prepare before it is treated as failed. */
     private const val STREAM_TIMEOUT_MS = 15000L
 
+    /** Archive tracks take longer to spin up than a live radio edge. */
+    private const val TAWASHEEH_TIMEOUT_MS = 30000L
+
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
     private var playJob: Job? = null
@@ -190,6 +193,13 @@ object AlAmanahAudioController {
 
     fun isTawasheehDownloaded(context: Context, track: AmanahTawasheehTrack): Boolean =
         getTawasheehFile(context, track).run { exists() && length() > 1024L }
+
+    /**
+     * The resolved redirect target of an archive stream, reused so a repeat play
+     * or a download starts at once instead of paying for the negotiation again.
+     * Live radio is deliberately not cached: its edge URL is minted per request.
+     */
+    private val resolvedStreamCache = HashMap<String, String>()
 
     fun playSurah(
         context: Context,
@@ -418,16 +428,20 @@ object AlAmanahAudioController {
         streamError = null
 
         val isRadio = audioSource == AudioSource.RADIO
+        val isTawasheeh = audioSource == AudioSource.TAWASHEEH
 
         // Live radio is a continuous feed. Handing the player the canonical URL
         // lets it open its own fresh edge connection right at the live point.
         // Pre-resolving the redirect handed the player a token minted for a
         // throwaway request, which is what left the broadcast playing behind
-        // live.
+        // live. Archive tracks are resolved once and cached instead, because
+        // their redirect is slow to negotiate and the target stays stable.
         val resolved = when {
             isLocal -> url
             isRadio -> url
-            else -> resolveStreamUrl(url)
+            else -> resolvedStreamCache[url] ?: resolveStreamUrl(url).also { target ->
+                if (target != url) resolvedStreamCache[url] = target
+            }
         }
 
         try {
@@ -483,13 +497,16 @@ object AlAmanahAudioController {
             if (attempt == streamAttempt) failStream()
         }
 
-        // If prepare never settles, say so instead of spinning forever.
+        // An archive item can be slow to spin up, so give it longer than a
+        // radio edge, which answers immediately.
+        val timeout = if (isTawasheeh) TAWASHEEH_TIMEOUT_MS else STREAM_TIMEOUT_MS
         scope.launch {
-            delay(STREAM_TIMEOUT_MS)
+            delay(timeout)
             if (attempt == streamAttempt && isLoading && !isPlaying) {
                 if (retriesLeft > 0) {
                     retryStream(context, url, isRadio, retriesLeft)
                 } else {
+                    if (isTawasheeh) resolvedStreamCache.remove(url)
                     failStream()
                 }
             }
@@ -498,8 +515,8 @@ object AlAmanahAudioController {
 
     /**
      * One more try after a failed or timed-out prepare. Live radio falls back to
-     * the resolved edge host; an archive track starts again from the canonical
-     * URL.
+     * the resolved edge host; an archive track drops a stale cached redirect and
+     * starts again from the canonical URL.
      */
     private suspend fun retryStream(
         context: Context,
@@ -511,13 +528,20 @@ object AlAmanahAudioController {
         mediaPlayer = null
         stopSyncLoop()
 
-        val retryUrl = if (isRadio) resolveStreamUrl(url) else url
-        if (retryUrl != url) {
-            playStream(context, retryUrl, false, retriesLeft - 1)
-        } else if (audioSource == AudioSource.TAWASHEEH) {
-            playStream(context, url, false, retriesLeft - 1)
-        } else {
-            failStream()
+        when {
+            isRadio -> {
+                val retryUrl = resolveStreamUrl(url)
+                if (retryUrl != url) {
+                    playStream(context, retryUrl, false, retriesLeft - 1)
+                } else {
+                    failStream()
+                }
+            }
+            audioSource == AudioSource.TAWASHEEH -> {
+                resolvedStreamCache.remove(url)
+                playStream(context, url, false, retriesLeft - 1)
+            }
+            else -> failStream()
         }
     }
 
@@ -1040,7 +1064,9 @@ object AlAmanahAudioController {
 
         scope.launch(Dispatchers.IO) {
             try {
-                val audioUrl = resolveStreamUrl(track.url)
+                val audioUrl = resolvedStreamCache[track.url] ?: resolveStreamUrl(track.url).also { target ->
+                    if (target != track.url) resolvedStreamCache[track.url] = target
+                }
                 val targetFile = getTawasheehFile(context, track)
                 val tempFile = File(targetFile.parentFile, "${targetFile.name}.tmp")
 

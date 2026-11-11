@@ -1619,9 +1619,9 @@ private fun AmanahTawasheehCover(
         modifier = modifier.background(
             Brush.linearGradient(
                 colors = listOf(
-                    Color(0xFF2A1A10),
-                    Color(0xFF4A2E18),
-                    Color(0xFF8A6A2F)
+                    Color(0xFF241710),
+                    Color(0xFF3A2415),
+                    Color(0xFF55391C)
                 ),
                 start = Offset.Zero,
                 end = Offset(1100f, 1500f)
@@ -1629,10 +1629,26 @@ private fun AmanahTawasheehCover(
         ),
         contentAlignment = Alignment.Center
     ) {
+        // A soft dark vignette keeps the lettering legible over the gold.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.42f),
+                            Color.Black.copy(alpha = 0.18f),
+                            Color.Transparent
+                        ),
+                        center = Offset.Unspecified,
+                        radius = 900f
+                    )
+                )
+        )
         IslamicPlaylistOrnament(
             styleIndex = 3,
             modifier = Modifier.fillMaxSize(0.82f),
-            tint = Color.White.copy(alpha = 0.20f)
+            tint = Color.White.copy(alpha = 0.18f)
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -1640,16 +1656,30 @@ private fun AmanahTawasheehCover(
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
                 fontSize = 40.sp,
-                color = Color.White
+                color = Color.White,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.65f),
+                        offset = Offset(0f, 2f),
+                        blurRadius = 10f
+                    )
+                )
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (isArabic) "وإبتهالات النقشبندي" else "Al-Naqshabandy",
                 fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 12.sp,
                 letterSpacing = if (isArabic) 0.sp else 2.sp,
-                color = Color.White.copy(alpha = 0.80f)
+                color = Color.White.copy(alpha = 0.92f),
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.55f),
+                        offset = Offset(0f, 1.5f),
+                        blurRadius = 8f
+                    )
+                )
             )
             Spacer(Modifier.height(18.dp))
             Row(
