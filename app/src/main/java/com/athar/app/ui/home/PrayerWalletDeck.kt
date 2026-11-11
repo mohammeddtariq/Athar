@@ -62,7 +62,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -596,8 +595,8 @@ private fun PrayerCardBack(
                 text = "أَثَر",
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 38.sp,
-                lineHeight = 45.sp,
+                fontSize = 30.sp,
+                lineHeight = 36.sp,
                 color = AtharPrimaryLight,
                 textAlign = TextAlign.Center
             )
@@ -605,12 +604,12 @@ private fun PrayerCardBack(
                 text = "A T H A R",
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 10.5.sp,
-                letterSpacing = 5.5.sp,
+                fontSize = 9.sp,
+                letterSpacing = 5.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             ScratchAyah(
                 row = row,
                 isArabic = isArabic,
@@ -619,8 +618,18 @@ private fun PrayerCardBack(
                 onCardTap = onCardTap,
                 scratchSound = scratchSound,
                 modifier = Modifier
-                    .fillMaxWidth(0.82f)
-                    .height(48.dp)
+                    .fillMaxWidth(0.88f)
+                    .height(64.dp)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.scratch_label) + "!",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 0.4.sp,
+                color = AtharTextPrimary.copy(alpha = 0.88f),
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -646,7 +655,6 @@ private fun ScratchAyah(
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    val label = stringResource(R.string.scratch_label)
     val shape = RoundedCornerShape(9.dp)
 
     val strokes = remember { mutableStateListOf<ScratchStroke>() }
@@ -674,12 +682,12 @@ private fun ScratchAyah(
     val totalCells = SCRATCH_COLS * SCRATCH_ROWS
     // The card only relaxes once the strip has been scratched through.
     val revealAt = (totalCells * 0.97f).roundToInt()
-    val labelStyle = TextStyle(
-        color = Color(0xFFF2ECDF),
+    val foilStyle = TextStyle(
+        color = Color(0xFF7E8089),
         fontFamily = ThmanyahSans,
         fontWeight = FontWeight.Bold,
-        fontSize = 8.sp,
-        letterSpacing = 2.2.sp
+        fontSize = 8.5.sp,
+        letterSpacing = 2.4.sp
     )
 
     Box(
@@ -700,19 +708,19 @@ private fun ScratchAyah(
                 text = ayah.arabic,
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Bold,
-                fontSize = 9.5.sp,
-                lineHeight = 12.5.sp,
+                fontSize = 10.5.sp,
+                lineHeight = 14.sp,
                 color = AtharTextPrimary,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = if (isArabic) ayah.referenceAr else ayah.referenceEn,
                 fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 8.sp,
-                lineHeight = 11.sp,
+                fontSize = 8.5.sp,
+                lineHeight = 11.5.sp,
                 color = AtharPrimaryLight.copy(alpha = 0.92f),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
@@ -723,8 +731,8 @@ private fun ScratchAyah(
                     text = ayah.meaning,
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 6.5.sp,
-                    lineHeight = 8.sp,
+                    fontSize = 7.5.sp,
+                    lineHeight = 9.5.sp,
                     color = AtharTextSecondary,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -794,31 +802,31 @@ private fun ScratchAyah(
         ) {
             if (reveal.value >= 1f) return@Canvas
 
-            // Dark-silver foil: a brushed graphite plate with a faint
-            // barcode grain, so it reads as a scratch strip, not chrome.
+            // Light silver foil, like a fresh lottery panel: a soft brushed
+            // plate carrying a repeating wordmark, so it reads as a strip to
+            // be scratched rather than a barcode.
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color(0xFF7C7E88),
-                    0.08f to Color(0xFF5B5D66),
-                    0.24f to Color(0xFF3C3E46),
-                    0.36f to Color(0xFF62646E),
-                    0.50f to Color(0xFF33343B),
-                    0.62f to Color(0xFF55575F),
-                    0.76f to Color(0xFF3A3B42),
-                    0.90f to Color(0xFF6A6C76),
-                    1f to Color(0xFF232429)
+                    0f to Color(0xFFF7F7F9),
+                    0.14f to Color(0xFFE2E3E8),
+                    0.30f to Color(0xFFFBFBFC),
+                    0.46f to Color(0xFFD3D5DC),
+                    0.60f to Color(0xFFEFF0F3),
+                    0.76f to Color(0xFFC6C8D0),
+                    0.90f to Color(0xFFE9EAEE),
+                    1f to Color(0xFFBFC1C9)
                 )
             )
             // Fine horizontal brushing.
-            val grain = 1.1.dp.toPx()
+            val grain = 1.2.dp.toPx()
             var grainY = 0f
             var grainAlt = false
             while (grainY < size.height) {
                 drawLine(
                     color = if (grainAlt) {
-                        Color.White.copy(alpha = 0.055f)
+                        Color.White.copy(alpha = 0.16f)
                     } else {
-                        Color.Black.copy(alpha = 0.10f)
+                        Color.Black.copy(alpha = 0.025f)
                     },
                     start = Offset(0f, grainY),
                     end = Offset(size.width, grainY),
@@ -827,33 +835,32 @@ private fun ScratchAyah(
                 grainY += grain
                 grainAlt = !grainAlt
             }
-            // Faint barcode bars beneath the brushing.
-            val bar = 2.6.dp.toPx()
-            var barX = 0f
-            var barIndex = 0
-            while (barX < size.width) {
-                val wide = barIndex % 3 == 0
-                drawRect(
-                    color = if (barIndex % 2 == 0) {
-                        Color.Black.copy(alpha = 0.10f)
-                    } else {
-                        Color.White.copy(alpha = 0.035f)
-                    },
-                    topLeft = Offset(barX, 0f),
-                    size = Size(if (wide) bar * 0.7f else bar * 0.35f, size.height)
-                )
-                barX += bar
-                barIndex++
+            // A repeating "SCRATCH · ATHAR" wordmark across the plate.
+            val tileText = if (isArabic) "اخدش · أثر · " else "SCRATCH · ATHAR · "
+            val tile = textMeasurer.measure(AnnotatedString(tileText), style = foilStyle)
+            val tileWidth = tile.size.width
+            val tileHeight = tile.size.height
+            if (tileWidth > 0f) {
+                val rows = 3
+                val rowGap = size.height / rows
+                for (rowIndex in 0 until rows) {
+                    val y = rowGap * rowIndex + (rowGap - tileHeight) / 2f
+                    var x = if (rowIndex % 2 == 0) -tileWidth * 0.35f else -tileWidth * 0.85f
+                    while (x < size.width) {
+                        drawText(textLayoutResult = tile, topLeft = Offset(x, y))
+                        x += tileWidth
+                    }
+                }
             }
             // A slow sheen travelling across the metal.
             drawRect(
                 brush = Brush.linearGradient(
-                    0f to Color.White.copy(alpha = 0.10f),
-                    0.22f to Color.White.copy(alpha = 0.01f),
-                    0.44f to Color.Black.copy(alpha = 0.14f),
-                    0.60f to Color.White.copy(alpha = 0.07f),
-                    0.76f to Color.White.copy(alpha = 0.00f),
-                    1f to Color.Black.copy(alpha = 0.20f),
+                    0f to Color.White.copy(alpha = 0.16f),
+                    0.24f to Color.White.copy(alpha = 0.02f),
+                    0.46f to Color.Black.copy(alpha = 0.05f),
+                    0.62f to Color.White.copy(alpha = 0.14f),
+                    0.80f to Color.White.copy(alpha = 0.00f),
+                    1f to Color.Black.copy(alpha = 0.08f),
                     start = Offset(0f, size.height),
                     end = Offset(size.width, 0f)
                 )
@@ -861,39 +868,19 @@ private fun ScratchAyah(
             // The strip is set into the card: a lit top lip, a shadow under it,
             // and a dark line where the metal leaves the card at the bottom.
             drawRect(
-                color = Color.White.copy(alpha = 0.30f),
+                color = Color.White.copy(alpha = 0.60f),
                 topLeft = Offset(0f, 0f),
                 size = Size(size.width, 1.dp.toPx())
             )
             drawRect(
-                color = Color.Black.copy(alpha = 0.28f),
+                color = Color.Black.copy(alpha = 0.14f),
                 topLeft = Offset(0f, 1.dp.toPx()),
                 size = Size(size.width, 0.5.dp.toPx())
             )
             drawRect(
-                color = Color.Black.copy(alpha = 0.55f),
+                color = Color.Black.copy(alpha = 0.28f),
                 topLeft = Offset(0f, size.height - 1.dp.toPx()),
                 size = Size(size.width, 1.dp.toPx())
-            )
-            // One word only: Scratch.
-            val measured = textMeasurer.measure(AnnotatedString(label), style = labelStyle)
-            val padH = 10.dp.toPx()
-            val padV = 4.dp.toPx()
-            val chipWidth = measured.size.width + padH * 2
-            val chipHeight = measured.size.height + padV * 2
-            val chipTopLeft = Offset(
-                (size.width - chipWidth) / 2f,
-                (size.height - chipHeight) / 2f
-            )
-            drawRoundRect(
-                color = Color(0xFF1B1B1F).copy(alpha = 0.88f),
-                topLeft = chipTopLeft,
-                size = Size(chipWidth, chipHeight),
-                cornerRadius = CornerRadius(chipHeight / 2f)
-            )
-            drawText(
-                textLayoutResult = measured,
-                topLeft = Offset(chipTopLeft.x + padH, chipTopLeft.y + padV)
             )
             // Erase where the finger has been.
             for (stroke in strokes) {
@@ -962,10 +949,10 @@ private fun ayahFor(key: String): AyahReveal = when (key) {
         meaning = "Establish prayer at the decline of the sun."
     )
     "asr" -> AyahReveal(
-        arabic = "وَالْعَصْرِ ۙ إِنَّ الْإِنسَانَ لَفِي خُسْرٍ",
-        referenceAr = "العصر ١–٢",
-        referenceEn = "Al-Asr 1–2",
-        meaning = "By the passing time, humanity is indeed in loss."
+        arabic = "حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ وَقُومُوا لِلَّهِ قَانِتِينَ",
+        referenceAr = "البقرة ٢٣٨",
+        referenceEn = "Al-Baqarah 238",
+        meaning = "Guard strictly the prayers, especially the middle prayer, and stand before Allah devoutly obedient."
     )
     "maghrib" -> AyahReveal(
         arabic = "فَسُبْحَانَ اللَّهِ حِينَ تُمْسُونَ",
