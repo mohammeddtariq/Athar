@@ -137,6 +137,10 @@ object AlAmanahAudioController {
     // Download progress map: surahNumber -> 0.0f..1.0f (or null if not downloading)
     val downloadProgressMap = mutableStateMapOf<Int, Float>()
 
+    /** Bumped whenever a download completes or is removed, so rows refresh. */
+    var downloadRevision by mutableIntStateOf(0)
+        private set
+
     // Volume level 0f..1f
     var playerVolume by mutableStateOf(1f)
         private set
@@ -177,6 +181,15 @@ object AlAmanahAudioController {
 
     fun isSurahDownloaded(context: Context, surahNumber: Int, reciter: QuranReciter): Boolean =
         getDownloadedFile(context, surahNumber, reciter).run { exists() && length() > 1024L }
+
+    // Tawasheeh downloads, keyed by track id so a reciter change never mixes them up.
+    val tawasheehDownloadProgress = mutableStateMapOf<String, Float>()
+
+    fun getTawasheehFile(context: Context, track: AmanahTawasheehTrack): File =
+        File(getAudioStorageDir(context), "tawasheeh_${track.id}.mp3")
+
+    fun isTawasheehDownloaded(context: Context, track: AmanahTawasheehTrack): Boolean =
+        getTawasheehFile(context, track).run { exists() && length() > 1024L }
 
     fun playSurah(
         context: Context,
@@ -365,16 +378,22 @@ object AlAmanahAudioController {
         currentStation = null
         isLoading = true
         isPlaying = false
-        isOfflinePlayback = false
         chapterTiming = null
         activeVerseNumber = null
         totalDurationMs = 0L
         currentPositionMs = 0L
         streamError = null
         releasePlayer()
+
+        // A downloaded track plays straight from disk; the rest stream from the
+        // archive, which is slower to answer on a cold item.
+        val local = getTawasheehFile(context, track)
+        val isLocal = local.exists() && local.length() > 1024L
+        isOfflinePlayback = isLocal
+
         playJob?.cancel()
         playJob = scope.launch {
-            playStream(context, track.url)
+            playStream(context, if (isLocal) local.toURI().toString() else track.url, isLocal)
         }
     }
 
@@ -387,13 +406,29 @@ object AlAmanahAudioController {
      * The redirect is resolved here, and a watchdog turns a stuck prepare into
      * a visible error.
      */
-    private suspend fun playStream(context: Context, url: String) {
+    private suspend fun playStream(
+        context: Context,
+        url: String,
+        isLocal: Boolean = false,
+        retriesLeft: Int = 1
+    ) {
         val attempt = ++streamAttempt
         isLoading = true
         isPlaying = false
         streamError = null
 
-        val resolved = resolveStreamUrl(url)
+        val isRadio = audioSource == AudioSource.RADIO
+
+        // Live radio is a continuous feed. Handing the player the canonical URL
+        // lets it open its own fresh edge connection right at the live point.
+        // Pre-resolving the redirect handed the player a token minted for a
+        // throwaway request, which is what left the broadcast playing behind
+        // live.
+        val resolved = when {
+            isLocal -> url
+            isRadio -> url
+            else -> resolveStreamUrl(url)
+        }
 
         try {
             val player = MediaPlayer().apply {
@@ -432,7 +467,13 @@ object AlAmanahAudioController {
             }
             player.setOnErrorListener { mp, _, _ ->
                 runCatching { mp.reset(); mp.release() }
-                if (attempt == streamAttempt) failStream()
+                if (attempt == streamAttempt) {
+                    if (retriesLeft > 0) {
+                        scope.launch { retryStream(context, url, isRadio, retriesLeft) }
+                    } else {
+                        failStream()
+                    }
+                }
                 true
             }
             mediaPlayer = player
@@ -445,7 +486,38 @@ object AlAmanahAudioController {
         // If prepare never settles, say so instead of spinning forever.
         scope.launch {
             delay(STREAM_TIMEOUT_MS)
-            if (attempt == streamAttempt && isLoading && !isPlaying) failStream()
+            if (attempt == streamAttempt && isLoading && !isPlaying) {
+                if (retriesLeft > 0) {
+                    retryStream(context, url, isRadio, retriesLeft)
+                } else {
+                    failStream()
+                }
+            }
+        }
+    }
+
+    /**
+     * One more try after a failed or timed-out prepare. Live radio falls back to
+     * the resolved edge host; an archive track starts again from the canonical
+     * URL.
+     */
+    private suspend fun retryStream(
+        context: Context,
+        url: String,
+        isRadio: Boolean,
+        retriesLeft: Int
+    ) {
+        runCatching { mediaPlayer?.release() }
+        mediaPlayer = null
+        stopSyncLoop()
+
+        val retryUrl = if (isRadio) resolveStreamUrl(url) else url
+        if (retryUrl != url) {
+            playStream(context, retryUrl, false, retriesLeft - 1)
+        } else if (audioSource == AudioSource.TAWASHEEH) {
+            playStream(context, url, false, retriesLeft - 1)
+        } else {
+            failStream()
         }
     }
 
@@ -579,10 +651,17 @@ object AlAmanahAudioController {
 
     /**
      * Nudges the current track by [deltaMs]. A live stream has no timeline, so
-     * the nudge is ignored there and only real recordings move.
+     * a forward nudge reconnects to the live edge instead (catching the
+     * broadcast back up to now), and a backward nudge is ignored.
      */
     fun seekBy(deltaMs: Long) {
-        if (audioSource == AudioSource.RADIO) return
+        if (audioSource == AudioSource.RADIO) {
+            if (deltaMs > 0) {
+                val ctx = appContext ?: return
+                currentStation?.let { playRadio(ctx, it) }
+            }
+            return
+        }
         val duration = totalDurationMs
         if (duration <= 0L) return
         val target = (currentPositionMs + deltaMs).coerceIn(0L, duration)
@@ -911,6 +990,7 @@ object AlAmanahAudioController {
                         if (currentSurah.number == surahNum) {
                             isOfflinePlayback = true
                         }
+                        downloadRevision++
                         onComplete(true)
                     }
                 } else {
@@ -937,6 +1017,96 @@ object AlAmanahAudioController {
         if (currentSurah.number == surahNumber && currentReciter == reciter) {
             isOfflinePlayback = false
         }
+        downloadRevision++
+    }
+
+    /**
+     * Downloads a tawasheeh track so it can be played from disk. The archive
+     * redirect is resolved first, so the transfer starts on the real edge host
+     * instead of paying for the negotiation again.
+     */
+    fun downloadTawasheeh(
+        context: Context,
+        track: AmanahTawasheehTrack,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        if (isTawasheehDownloaded(context, track)) {
+            onComplete(true)
+            return
+        }
+
+        val trackId = track.id
+        tawasheehDownloadProgress[trackId] = 0.05f
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val audioUrl = resolveStreamUrl(track.url)
+                val targetFile = getTawasheehFile(context, track)
+                val tempFile = File(targetFile.parentFile, "${targetFile.name}.tmp")
+
+                val conn = (URI.create(audioUrl).toURL().openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 20000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", "AtharApp/1.0.6")
+                    setRequestProperty("Accept", "*/*")
+                }
+
+                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                    val contentLength = conn.contentLength.toLong()
+                    conn.inputStream.use { input ->
+                        FileOutputStream(tempFile).use { output ->
+                            val buffer = ByteArray(8192)
+                            var bytesRead: Int
+                            var totalRead = 0L
+
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                totalRead += bytesRead
+                                if (contentLength > 0) {
+                                    val progress = 0.05f + ((totalRead.toFloat() / contentLength) * 0.95f)
+                                    withContext(Dispatchers.Main) {
+                                        tawasheehDownloadProgress[trackId] = progress.coerceIn(0f, 1f)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (tempFile.exists() && tempFile.length() > 1024L) {
+                        if (targetFile.exists()) targetFile.delete()
+                        tempFile.renameTo(targetFile)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        tawasheehDownloadProgress.remove(trackId)
+                        if (currentTawasheeh?.id == trackId) {
+                            isOfflinePlayback = true
+                        }
+                        downloadRevision++
+                        onComplete(true)
+                    }
+                } else {
+                    tempFile.delete()
+                    withContext(Dispatchers.Main) {
+                        tawasheehDownloadProgress.remove(trackId)
+                        onComplete(false)
+                    }
+                }
+            } catch (_: Exception) {
+                withContext(Dispatchers.Main) {
+                    tawasheehDownloadProgress.remove(trackId)
+                    onComplete(false)
+                }
+            }
+        }
+    }
+
+    fun deleteDownloadedTawasheeh(context: Context, track: AmanahTawasheehTrack) {
+        val file = getTawasheehFile(context, track)
+        if (file.exists()) file.delete()
+        if (currentTawasheeh?.id == track.id) isOfflinePlayback = false
+        downloadRevision++
     }
 
     enum class AudioOutputType {
