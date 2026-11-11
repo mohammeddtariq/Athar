@@ -778,6 +778,10 @@ fun AlAmanahScreen(
                             onPlaySurah = { surah ->
                                 AlAmanahAudioController.playSurah(context, surah)
                                 isPlayerExpanded = true
+                            },
+                            onPlayTawasheeh = { index ->
+                                AlAmanahAudioController.playTawasheeh(context, index)
+                                isPlayerExpanded = true
                             }
                         )
                         AmanahTab.SETTINGS -> AmanahSettingsScreen(
@@ -882,10 +886,10 @@ fun AlAmanahScreen(
                 )
             }
 
-            // ─── FULLSCREEN LIVE RADIO PLAYER OVERLAY ───
+            // ─── FULLSCREEN STREAM PLAYER OVERLAY (RADIO & TAWASHEEH) ───
             AnimatedVisibility(
                 visible = isPlayerExpanded &&
-                    AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.RADIO,
+                    AlAmanahAudioController.audioSource != AlAmanahAudioController.AudioSource.SURAH,
                 enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(360, easing = FastOutSlowInEasing)) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)) + fadeOut()
             ) {
@@ -894,6 +898,7 @@ fun AlAmanahScreen(
                     onCollapse = { isPlayerExpanded = false },
                     onTogglePlay = { AlAmanahAudioController.togglePlayPause(context) },
                     onNext = { AlAmanahAudioController.skipNext(context) },
+                    onOpenPlaylist = { showTawasheehSheet = true },
                     onOpenSleepTimer = { showSleepTimerSheet = true },
                     onOpenAudioOutput = { showAudioOutputSheet = true }
                 )
@@ -984,6 +989,7 @@ fun AlAmanahScreen(
                         onPlayTrack = { index ->
                             AlAmanahAudioController.playTawasheeh(context, index)
                             showTawasheehSheet = false
+                            isPlayerExpanded = true
                         },
                         onClose = { showTawasheehSheet = false }
                     )
@@ -1581,6 +1587,70 @@ private fun AmanahStationCover(
     }
 }
 
+/**
+ * The playlist cover that stands in for lyrics on tawasheeh: a warm manuscript
+ * gradient with a medallion and the playlist's name set in the display face.
+ */
+@Composable
+private fun AmanahTawasheehCover(
+    isArabic: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.background(
+            Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF2A1A10),
+                    Color(0xFF4A2E18),
+                    Color(0xFF8A6A2F)
+                ),
+                start = Offset.Zero,
+                end = Offset(1100f, 1500f)
+            )
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        IslamicPlaylistOrnament(
+            styleIndex = 3,
+            modifier = Modifier.fillMaxSize(0.82f),
+            tint = Color.White.copy(alpha = 0.20f)
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = if (isArabic) "تواشيح" else "Tawasheeh",
+                fontFamily = ThmanyahSerifDisplay,
+                fontWeight = FontWeight.Black,
+                fontSize = 40.sp,
+                color = Color.White
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (isArabic) "وإبتهالات النقشبندي" else "Al-Naqshabandy",
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                letterSpacing = if (isArabic) 0.sp else 2.sp,
+                color = Color.White.copy(alpha = 0.80f)
+            )
+            Spacer(Modifier.height(18.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf(10, 22, 34, 18, 28, 12, 24, 16, 30, 8).forEach { height ->
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(height.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color.White.copy(alpha = 0.55f))
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun AmanahTawasheehBanner(
     isArabic: Boolean,
@@ -2134,11 +2204,12 @@ private fun AmanahLibraryScreen(
     isArabic: Boolean,
     favorites: Set<Int>,
     onToggleFavorite: (Int) -> Unit,
-    onPlaySurah: (SurahMeta) -> Unit
+    onPlaySurah: (SurahMeta) -> Unit,
+    onPlayTawasheeh: (Int) -> Unit
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
-    // selectedPlaylist: 0: Full Quran (All 114), 1: Favorites, 2: Downloaded, 3: Juz Collections
+    // selectedPlaylist: 0: Full Quran (All 114), 1: Favorites, 2: Downloaded, 3: Juz Collections, 4: Tawasheeh
     var selectedPlaylist by remember { mutableStateOf(0) }
 
     val downloadedCount = remember {
@@ -2211,6 +2282,12 @@ private fun AmanahLibraryScreen(
                             if (isArabic) "أجزاء المصحف" else "30 Juz' Divisions",
                             if (isArabic) "تصفح حسب أجزاء المصحف الشريف" else "Arranged by the thirty Juz'",
                             Brush.linearGradient(listOf(Color(0xFF654EA3), Color(0xFFEAAFC8)))
+                        ),
+                        AmanahPlaylistCardItem(
+                            4,
+                            if (isArabic) "التواشيح والإبتهالات" else "Tawasheeh & Supplications",
+                            if (isArabic) "الشيخ سيد النقشبندي • القائمة كاملة" else "Al-Naqshabandy • full playlist",
+                            Brush.linearGradient(listOf(Color(0xFF2A1A10), Color(0xFF8A6A2F)))
                         )
                     )
 
@@ -2261,6 +2338,7 @@ private fun AmanahLibraryScreen(
                                             1 -> Icons.Rounded.Star
                                             2 -> Icons.Rounded.CloudDone
                                             3 -> Icons.Rounded.DateRange
+                                            4 -> Icons.Rounded.Campaign
                                             else -> Icons.Rounded.LibraryMusic
                                         },
                                         contentDescription = null,
@@ -2310,47 +2388,65 @@ private fun AmanahLibraryScreen(
             }
         }
 
-        // ─── SEARCH INPUT ───
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                TextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = {
-                        Text(
-                            text = if (isArabic) "ابحث عن سورة بالاسم أو الرقم..." else "Search surah by name or number...",
-                            fontFamily = ThmanyahSans,
-                            fontSize = 13.sp,
-                            color = AmoledMutedText
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = null,
-                            tint = AmoledMutedText,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = AmoledCard,
-                        unfocusedContainerColor = AmoledCard,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, AmoledCardBorder, RoundedCornerShape(14.dp))
-                )
+        // ─── SEARCH INPUT (surah playlists only) ───
+        if (selectedPlaylist != 4) {
+            item {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = {
+                            Text(
+                                text = if (isArabic) "ابحث عن سورة بالاسم أو الرقم..." else "Search surah by name or number...",
+                                fontFamily = ThmanyahSans,
+                                fontSize = 13.sp,
+                                color = AmoledMutedText
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = null,
+                                tint = AmoledMutedText,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = AmoledCard,
+                            unfocusedContainerColor = AmoledCard,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, AmoledCardBorder, RoundedCornerShape(14.dp))
+                    )
+                }
             }
         }
 
         // ─── PLAYLIST TRACK ROWS / JUZ GROUP ───
-        if (selectedPlaylist == 3) {
+        if (selectedPlaylist == 4) {
+            itemsIndexed(AmanahTawasheehTracks) { index, track ->
+                val isCurrent = AlAmanahAudioController.audioSource ==
+                    AlAmanahAudioController.AudioSource.TAWASHEEH &&
+                    AlAmanahAudioController.currentTawasheehIndex == index
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    AmanahTawasheehRow(
+                        index = index,
+                        title = if (isArabic) track.titleAr else track.titleEn,
+                        isArabic = isArabic,
+                        isPlaying = isCurrent && AlAmanahAudioController.isPlaying,
+                        isActive = isCurrent,
+                        onClick = { onPlayTawasheeh(index) }
+                    )
+                }
+            }
+        } else if (selectedPlaylist == 3) {
             // Group by Juz view
             items(30) { juzIndex ->
                 val juzNum = juzIndex + 1
@@ -2501,6 +2597,89 @@ private fun AmanahPlaylistTrackRow(
                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = null,
                 tint = if (isPlaying) AmoledAccent else Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+/** One tawasheeh recording inside the library playlist. */
+@Composable
+private fun AmanahTawasheehRow(
+    index: Int,
+    title: String,
+    isArabic: Boolean,
+    isPlaying: Boolean,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isActive) Color.White.copy(alpha = 0.08f) else Color.Transparent)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 10.dp, vertical = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isActive) AmoledAccent.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isActive && isPlaying) {
+                    Icon(
+                        imageVector = Icons.Rounded.GraphicEq,
+                        contentDescription = null,
+                        tint = AmoledAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text(
+                        text = "${index + 1}",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (isActive) AmoledAccent else Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (isArabic) "الشيخ سيد النقشبندي" else "Sheikh Sayed Al-Naqshabandy",
+                    fontFamily = ThmanyahSans,
+                    fontSize = 11.5.sp,
+                    color = AmoledMutedText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = if (isActive && isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                contentDescription = null,
+                tint = if (isActive) AmoledAccent else Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -4627,6 +4806,7 @@ private fun AmanahStreamPlayer(
     onCollapse: () -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
+    onOpenPlaylist: () -> Unit,
     onOpenSleepTimer: () -> Unit,
     onOpenAudioOutput: () -> Unit
 ) {
@@ -4739,6 +4919,28 @@ private fun AmanahStreamPlayer(
                         fontSize = 13.sp,
                         color = AmoledMutedText
                     )
+                    if (!isLive) {
+                        Spacer(Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onOpenPlaylist
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                                contentDescription = if (isArabic) "قائمة التشغيل" else "Playlist",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
 
                 // ─── COVER ART ───
@@ -4763,23 +4965,10 @@ private fun AmanahStreamPlayer(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(Color(0xFF3A2A16), Color(0xFF1E1B16), Color(0xFF0E0E0E))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Campaign,
-                                    contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.35f),
-                                    modifier = Modifier.size(84.dp)
-                                )
-                            }
+                            AmanahTawasheehCover(
+                                isArabic = isArabic,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
 
                         // A soft playing glow on the artwork.
