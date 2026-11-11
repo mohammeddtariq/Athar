@@ -43,6 +43,9 @@ import java.net.URI
  */
 object AlAmanahAudioController {
 
+    /** How long a stream may take to prepare before it is treated as failed. */
+    private const val STREAM_TIMEOUT_MS = 15000L
+
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
     private var playJob: Job? = null
@@ -62,6 +65,15 @@ object AlAmanahAudioController {
 
     var isLoading by mutableStateOf(false)
         private set
+
+    /**
+     * Set when a stream could not be prepared. The player uses it to say so and
+     * offer a retry instead of leaving the spinner running forever.
+     */
+    var streamError by mutableStateOf<String?>(null)
+        private set
+
+    private var streamAttempt = 0
 
     var currentPositionMs by mutableLongStateOf(0L)
         private set
@@ -185,6 +197,7 @@ object AlAmanahAudioController {
         currentReciter = selectedReciter
         isLoading = true
         isPlaying = false
+        streamError = null
 
         // Record playback and add surah to user's real listening history
         if (recordHistory) {
@@ -334,6 +347,7 @@ object AlAmanahAudioController {
         activeVerseNumber = null
         totalDurationMs = 0L
         currentPositionMs = 0L
+        streamError = null
         releasePlayer()
         playJob?.cancel()
         playJob = scope.launch {
@@ -356,6 +370,7 @@ object AlAmanahAudioController {
         activeVerseNumber = null
         totalDurationMs = 0L
         currentPositionMs = 0L
+        streamError = null
         releasePlayer()
         playJob?.cancel()
         playJob = scope.launch {
@@ -363,8 +378,23 @@ object AlAmanahAudioController {
         }
     }
 
-    /** Shared remote-stream setup for radio and tawasheeh. */
-    private fun playStream(context: Context, url: String) {
+    /**
+     * Shared remote-stream setup for radio and tawasheeh.
+     *
+     * Two things used to make these streams hang: the provider redirects to a
+     * plain-http edge host (blocked by the platform unless the network config
+     * allows it), and a prepare that never settled left the spinner running.
+     * The redirect is resolved here, and a watchdog turns a stuck prepare into
+     * a visible error.
+     */
+    private suspend fun playStream(context: Context, url: String) {
+        val attempt = ++streamAttempt
+        isLoading = true
+        isPlaying = false
+        streamError = null
+
+        val resolved = resolveStreamUrl(url)
+
         try {
             val player = MediaPlayer().apply {
                 setAudioAttributes(
@@ -376,12 +406,18 @@ object AlAmanahAudioController {
                 setVolume(playerVolume, playerVolume)
                 val headers = mapOf(
                     "User-Agent" to "AtharApp/1.0.6",
-                    "Accept" to "*/*"
+                    "Accept" to "*/*",
+                    "Icy-MetaData" to "1"
                 )
-                setDataSource(context, Uri.parse(url), headers)
+                setDataSource(context, Uri.parse(resolved), headers)
             }
             player.setOnPreparedListener { mp ->
+                if (attempt != streamAttempt) {
+                    runCatching { mp.release() }
+                    return@setOnPreparedListener
+                }
                 isLoading = false
+                streamError = null
                 totalDurationMs = mp.duration.toLong().coerceAtLeast(0L)
                 applyAudioRouting(context)
                 mp.start()
@@ -390,22 +426,69 @@ object AlAmanahAudioController {
                 AlAmanahAudioService.startOrUpdate(context)
             }
             player.setOnCompletionListener {
+                if (attempt != streamAttempt) return@setOnCompletionListener
                 isPlaying = false
                 handleTrackCompletion(context)
             }
             player.setOnErrorListener { mp, _, _ ->
                 runCatching { mp.reset(); mp.release() }
-                isLoading = false
-                isPlaying = false
+                if (attempt == streamAttempt) failStream()
                 true
             }
             mediaPlayer = player
             applyAudioRouting(context)
             player.prepareAsync()
         } catch (_: Exception) {
-            isLoading = false
-            isPlaying = false
+            if (attempt == streamAttempt) failStream()
         }
+
+        // If prepare never settles, say so instead of spinning forever.
+        scope.launch {
+            delay(STREAM_TIMEOUT_MS)
+            if (attempt == streamAttempt && isLoading && !isPlaying) failStream()
+        }
+    }
+
+    /** Follows the provider's redirects off the main thread before handing the URL over. */
+    private suspend fun resolveStreamUrl(url: String): String = withContext(Dispatchers.IO) {
+        var current = url
+        repeat(4) {
+            val connection = runCatching {
+                (java.net.URL(current).openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", "AtharApp/1.0.6")
+                    setRequestProperty("Accept", "*/*")
+                }
+            }.getOrNull() ?: return@withContext current
+            try {
+                val code = connection.responseCode
+                if (code in 300..399) {
+                    val location = connection.getHeaderField("Location")
+                        ?: return@withContext current
+                    current = java.net.URL(java.net.URL(current), location).toString()
+                } else {
+                    return@withContext current
+                }
+            } catch (_: Exception) {
+                return@withContext current
+            } finally {
+                runCatching { connection.disconnect() }
+            }
+        }
+        current
+    }
+
+    /** Ends a stream that could not be prepared and leaves a reason behind. */
+    private fun failStream() {
+        isLoading = false
+        isPlaying = false
+        stopSyncLoop()
+        runCatching { mediaPlayer?.release() }
+        mediaPlayer = null
+        streamError = if (audioSource == AudioSource.RADIO) "radio" else "tawasheeh"
     }
 
     private fun playFallbackStream(context: Context, surah: SurahMeta, reciter: QuranReciter) {
@@ -461,7 +544,15 @@ object AlAmanahAudioController {
             currentStation?.let { playRadio(ctx, it) }
             return
         }
-        val player = mediaPlayer ?: return
+        val player = mediaPlayer
+        if (player == null) {
+            // A stream that failed has no player left: retry it from the top.
+            val ctx = context ?: appContext ?: return
+            if (audioSource == AudioSource.TAWASHEEH) {
+                playTawasheeh(ctx, currentTawasheehIndex.coerceAtLeast(0))
+            }
+            return
+        }
         try {
             if (player.isPlaying) {
                 player.pause()
@@ -484,6 +575,18 @@ object AlAmanahAudioController {
             updateActiveVerse(positionMs)
             appContext?.let { AlAmanahAudioService.startOrUpdate(it) }
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Nudges the current track by [deltaMs]. A live stream has no timeline, so
+     * the nudge is ignored there and only real recordings move.
+     */
+    fun seekBy(deltaMs: Long) {
+        if (audioSource == AudioSource.RADIO) return
+        val duration = totalDurationMs
+        if (duration <= 0L) return
+        val target = (currentPositionMs + deltaMs).coerceIn(0L, duration)
+        seekTo(target)
     }
 
     fun seekToVerse(verseNumber: Int) {

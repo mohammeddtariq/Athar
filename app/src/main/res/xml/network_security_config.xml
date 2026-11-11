@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Live radio providers answer the https stream with a redirect to a plain
+    http edge host. Android blocks cleartext by default, which is why the
+    station would sit on "loading" forever. Only the radio provider's own
+    hosts may fall back to http; everything else stays https-only.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">radiojar.com</domain>
+    </domain-config>
+</network-security-config>

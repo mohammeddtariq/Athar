@@ -3,10 +3,9 @@ package com.athar.app.data
 /**
  * The live Quran radio stations Al-Amanah can tune into.
  *
- * The first two are the official Quran Kareem broadcasts from Cairo and
- * Makkah; the rest are continuous Quran streams that are reliable and
- * HTTPS-friendly. All URLs are direct MP3 streams, so the existing
- * MediaPlayer engine can play them without a second player.
+ * For now only the two official Quran Kareem broadcasts are carried: Cairo
+ * and Makkah. Both are direct MP3 streams, so the existing MediaPlayer engine
+ * can play them without a second player.
  */
 data class AmanahRadioStation(
     val id: String,
@@ -48,51 +47,6 @@ val AmanahRadioStations: List<AmanahRadioStation> = listOf(
         countryEn = "Saudi Arabia",
         frequency = null,
         url = "https://stream.radiojar.com/0tpy1h0kxtzuv"
-    ),
-    AmanahRadioStation(
-        id = "tarateel",
-        nameAr = "تراتيل قصيرة متميزة",
-        nameEn = "Short Recitations — Tarateel",
-        countryAr = "بث قرآني",
-        countryEn = "Quran stream",
-        frequency = null,
-        url = "https://qurango.net/radio/tarateel"
-    ),
-    AmanahRadioStation(
-        id = "sakeenah",
-        nameAr = "آيات السكينة",
-        nameEn = "Verses of Tranquility",
-        countryAr = "بث قرآني",
-        countryEn = "Quran stream",
-        frequency = null,
-        url = "https://qurango.net/radio/sakeenah"
-    ),
-    AmanahRadioStation(
-        id = "quran_mix",
-        nameAr = "الإذاعة العامة للقرآن",
-        nameEn = "Quran Mix",
-        countryAr = "بث قرآني",
-        countryEn = "Quran stream",
-        frequency = null,
-        url = "https://qurango.net/radio/mix"
-    ),
-    AmanahRadioStation(
-        id = "mishary",
-        nameAr = "إذاعة مشاري العفاسي",
-        nameEn = "Mishary Al-Afasy Radio",
-        countryAr = "الكويت",
-        countryEn = "Kuwait",
-        frequency = null,
-        url = "https://qurango.net/radio/mishary_alafasi"
-    ),
-    AmanahRadioStation(
-        id = "abdulbasit",
-        nameAr = "إذاعة عبد الباسط عبد الصمد",
-        nameEn = "Abdul Basit Radio",
-        countryAr = "مصر",
-        countryEn = "Egypt",
-        frequency = null,
-        url = "https://qurango.net/radio/abdulbasit_abdulsamad"
     )
 )
 
