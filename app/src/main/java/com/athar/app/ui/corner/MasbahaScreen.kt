@@ -156,11 +156,14 @@ enum class Dhikr(
 private const val BEADS = 33
 private const val CYCLE = 33
 
-/** The hanging strand carries the full thirty-three, not a shorthand. */
-private const val STRAND_BEADS = BEADS
+/**
+ * The hanging strand shows fewer, larger pearls than the full thirty-three,
+ * so there is visible thread between them and the beam can travel across.
+ */
+private const val STRAND_BEADS = 13
 
 /** How far past each edge the strand runs, so it reads as endless. */
-private const val STRAND_OVERHANG = 0.11f
+private const val STRAND_OVERHANG = 0.05f
 
 /** The faces of an ivory pearl. */
 private val StrandPearlLight = Color(0xFFFFFFFF)
@@ -937,12 +940,21 @@ private fun SibhaStrand(
         ),
         label = "strandFloat"
     )
-    // The beam glides to its new pearl instead of jumping to it.
-    val beam by animateFloatAsState(
-        targetValue = cycle.toFloat(),
-        animationSpec = tween(420, easing = FastOutSlowInEasing),
-        label = "strandBeam"
-    )
+    // The beam glides to its new pearl instead of jumping to it. It maps the
+    // thirty-three count onto the fewer visible pearls, and snaps back to the
+    // start when the cycle rolls over rather than sweeping right to left.
+    val beam = remember { Animatable(0f) }
+    LaunchedEffect(cycle) {
+        if (cycle <= 0) {
+            beam.snapTo(0f)
+        } else {
+            val target = ((cycle - 1f) / (CYCLE - 1f)) * (STRAND_BEADS - 1)
+            // A fresh cycle starts again at the left edge; snap there rather
+            // than sweeping the beam all the way back.
+            if (target < beam.value) beam.snapTo(0f)
+            beam.animateTo(target, tween(420, easing = FastOutSlowInEasing))
+        }
+    }
     val countRef = rememberUpdatedState(onCount)
 
     BoxWithConstraints(modifier = modifier) {
@@ -985,9 +997,10 @@ private fun SibhaStrand(
             val left = -overhang + float * 2.4.dp.toPx()
             val span = size.width + overhang * 2f
             val spacing = span / (STRAND_BEADS - 1)
-            val beadR = spacing * 0.60f
+            // Large pearls, but with thread showing between them.
+            val beadR = spacing * 0.44f
             val baseY = size.height * 0.735f
-            val lift = size.height * 0.058f
+            val lift = size.height * 0.075f
 
             val points = ArrayList<Offset>(STRAND_BEADS)
             for (i in 0 until STRAND_BEADS) {
@@ -1035,7 +1048,7 @@ private fun SibhaStrand(
             )
 
             // Where the beam is, interpolated between two pearls.
-            val beamPos = (beam - 1f).coerceIn(0f, STRAND_BEADS - 1f)
+            val beamPos = beam.value.coerceIn(0f, STRAND_BEADS - 1f)
             val hasBeam = cycle > 0
             val beamLow = floor(beamPos).toInt().coerceIn(0, STRAND_BEADS - 1)
             val beamHigh = (beamLow + 1).coerceAtMost(STRAND_BEADS - 1)
@@ -1069,7 +1082,7 @@ private fun SibhaStrand(
                 // Every pearl breathes on its own offset, so the strand ripples.
                 val breathe = sin(2.0 * PI * (breath + i * 0.075)).toFloat()
                 val r = beadR * (1f + 0.05f * breathe) * pulse.value
-                val spacer = i == 11 || i == 22
+                val spacer = i == 4 || i == 8
                 val near = if (hasBeam) {
                     (1f - abs(i - beamPos) / 1.7f).coerceIn(0f, 1f)
                 } else {
