@@ -5387,13 +5387,15 @@ private fun AmanahStreamPlayer(
                         onClick = { AlAmanahAudioController.seekBy(-15_000L) }
                     )
 
-                    // Center: the LIVE control in place of play.
+                    // Center: a black transport square in place of the play pill.
+                    // Live radio has no timeline, so the control is play/pause
+                    // only — no LIVE caption inside the button.
                     Box(
                         modifier = Modifier
-                            .width(152.dp)
-                            .height(108.dp)
-                            .clip(RoundedCornerShape(40.dp))
-                            .background(Color.White)
+                            .size(104.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(Color(0xFF111111))
+                            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(28.dp))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -5403,34 +5405,17 @@ private fun AmanahStreamPlayer(
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                color = Color.Black,
+                                color = Color.White,
                                 strokeWidth = 3.dp,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(34.dp)
                             )
                         } else {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = when {
-                                        !isPlaying -> Icons.Rounded.PlayArrow
-                                        isLive -> Icons.Rounded.GraphicEq
-                                        else -> Icons.Rounded.Pause
-                                    },
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    tint = Color(0xFF111111),
-                                    modifier = Modifier.size(38.dp)
-                                )
-                                if (isLive) {
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        text = "LIVE",
-                                        fontFamily = ThmanyahSans,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 11.sp,
-                                        letterSpacing = 2.sp,
-                                        color = Color(0xFF111111)
-                                    )
-                                }
-                            }
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(46.dp)
+                            )
                         }
                     }
 
