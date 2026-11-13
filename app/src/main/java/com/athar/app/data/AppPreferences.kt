@@ -110,6 +110,8 @@ class AppPreferences(private val context: Context) {
         // App Feature Announcements
         private val APP_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("app_announcement_seen")
         private val AMANAH_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("amanah_announcement_seen")
+        private val TAWASHEEH_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("tawasheeh_announcement_seen")
+        private val THEME_ENGINE_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("theme_engine_announcement_seen")
 
         // After Prayer Adhkar
         private val AFTER_PRAYER_AUTO_ADVANCE_KEY = booleanPreferencesKey("after_prayer_auto_advance")
@@ -137,6 +139,14 @@ class AppPreferences(private val context: Context) {
 
     val hasSeenAmanahAnnouncement: Flow<Boolean> = context.dataStore.data.map {
         it[AMANAH_ANNOUNCEMENT_SEEN_KEY] ?: false
+    }
+
+    val hasSeenTawasheehAnnouncement: Flow<Boolean> = context.dataStore.data.map {
+        it[TAWASHEEH_ANNOUNCEMENT_SEEN_KEY] ?: false
+    }
+
+    val hasSeenThemeEngineAnnouncement: Flow<Boolean> = context.dataStore.data.map {
+        it[THEME_ENGINE_ANNOUNCEMENT_SEEN_KEY] ?: false
     }
 
     /** Whether the after-prayer counter automatically moves to the next dhikr on completion. */
@@ -515,6 +525,14 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setHasSeenAmanahAnnouncement(seen: Boolean) {
         context.dataStore.edit { it[AMANAH_ANNOUNCEMENT_SEEN_KEY] = seen }
+    }
+
+    suspend fun setHasSeenTawasheehAnnouncement(seen: Boolean) {
+        context.dataStore.edit { it[TAWASHEEH_ANNOUNCEMENT_SEEN_KEY] = seen }
+    }
+
+    suspend fun setHasSeenThemeEngineAnnouncement(seen: Boolean) {
+        context.dataStore.edit { it[THEME_ENGINE_ANNOUNCEMENT_SEEN_KEY] = seen }
     }
 
     suspend fun setAmanahHighRefreshRate(enabled: Boolean) {

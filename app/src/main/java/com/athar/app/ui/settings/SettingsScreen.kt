@@ -209,6 +209,7 @@ fun SettingsScreen(
     val listState = rememberLazyListState()
     var isNotifHighlighted by remember { mutableStateOf(false) }
     var isWidgetHighlighted by remember { mutableStateOf(false) }
+    var isThemeHighlighted by remember { mutableStateOf(false) }
 
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateStatusMessage by remember { mutableStateOf<String?>(null) }
@@ -244,6 +245,13 @@ fun SettingsScreen(
             onTargetSectionConsumed()
             delay(2000)
             isWidgetHighlighted = false
+        } else if (targetSection == "theme") {
+            // The theme card is the first section under the title.
+            listState.animateScrollToItem(1)
+            isThemeHighlighted = true
+            onTargetSectionConsumed()
+            delay(2000)
+            isThemeHighlighted = false
         }
     }
 
@@ -372,7 +380,10 @@ fun SettingsScreen(
 
             // ── Theme — "أختر طابع أثرك" ──
             item {
-                SectionCard(title = stringResource(R.string.settings_theme)) {
+                SectionCard(
+                    title = stringResource(R.string.settings_theme),
+                    isHighlighted = isThemeHighlighted
+                ) {
                     Text(
                         stringResource(R.string.settings_theme_choose),
                         fontFamily = ThmanyahSerifDisplay,

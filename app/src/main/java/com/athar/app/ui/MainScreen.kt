@@ -75,6 +75,8 @@ import com.athar.app.data.AppPreferences
 import com.athar.app.ui.components.edgeMotionBlur
 import com.athar.app.ui.components.rememberMotionBlurState
 import com.athar.app.ui.corner.AppAnnouncementDialog
+import com.athar.app.ui.corner.TawasheehAnnouncementDialog
+import com.athar.app.ui.corner.ThemeEngineAnnouncementDialog
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -192,21 +194,33 @@ fun MainScreen(
     val appPrefs = remember { AppPreferences(context.applicationContext) }
     val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = null)
     val hasSeenAmanahAnnouncement by appPrefs.hasSeenAmanahAnnouncement.collectAsState(initial = null)
+    val hasSeenTawasheehAnnouncement by appPrefs.hasSeenTawasheehAnnouncement.collectAsState(initial = null)
+    val hasSeenThemeEngineAnnouncement by appPrefs.hasSeenThemeEngineAnnouncement.collectAsState(initial = null)
     val motionBlurEnabled by appPrefs.motionBlurEnabled.collectAsState(initial = true)
     var showDirayahAnnouncement by remember { mutableStateOf(false) }
     var showAmanahAnnouncement by remember { mutableStateOf(false) }
+    var showTawasheehAnnouncement by remember { mutableStateOf(false) }
+    var showThemeEngineAnnouncement by remember { mutableStateOf(false) }
     var openDirayahDirectly by remember { mutableStateOf(false) }
     var showUnifiedSearch by remember { mutableStateOf(false) }
     var quranSearchTarget by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var duasSearchTarget by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
 
-    LaunchedEffect(hasSeenAmanahAnnouncement, hasSeenDirayahAnnouncement) {
+    LaunchedEffect(
+        hasSeenAmanahAnnouncement,
+        hasSeenDirayahAnnouncement,
+        hasSeenTawasheehAnnouncement,
+        hasSeenThemeEngineAnnouncement
+    ) {
         val amanahSeen = hasSeenAmanahAnnouncement ?: return@LaunchedEffect
         val dirayahSeen = hasSeenDirayahAnnouncement ?: return@LaunchedEffect
-        if (!amanahSeen) {
-            showAmanahAnnouncement = true
-        } else if (!dirayahSeen) {
-            showDirayahAnnouncement = true
+        val tawasheehSeen = hasSeenTawasheehAnnouncement ?: return@LaunchedEffect
+        val themeEngineSeen = hasSeenThemeEngineAnnouncement ?: return@LaunchedEffect
+        when {
+            !amanahSeen -> showAmanahAnnouncement = true
+            !dirayahSeen -> showDirayahAnnouncement = true
+            !tawasheehSeen -> showTawasheehAnnouncement = true
+            !themeEngineSeen -> showThemeEngineAnnouncement = true
         }
     }
 
@@ -380,7 +394,7 @@ fun MainScreen(
             )
         }
 
-        // Feature Announcements (Al-Amanah or Al-Dirayah)
+        // Feature Announcements (Al-Amanah → Al-Dirayah → Tawasheeh → theming)
         if (showAmanahAnnouncement) {
             AlAmanahAnnouncementDialog(
                 onExplore = {
@@ -391,8 +405,10 @@ fun MainScreen(
                 onDismiss = {
                     showAmanahAnnouncement = false
                     scope.launch { appPrefs.setHasSeenAmanahAnnouncement(true) }
-                    if (hasSeenDirayahAnnouncement == false) {
-                        showDirayahAnnouncement = true
+                    when {
+                        hasSeenDirayahAnnouncement == false -> showDirayahAnnouncement = true
+                        hasSeenTawasheehAnnouncement == false -> showTawasheehAnnouncement = true
+                        hasSeenThemeEngineAnnouncement == false -> showThemeEngineAnnouncement = true
                     }
                 }
             )
@@ -407,6 +423,38 @@ fun MainScreen(
                 onDismiss = {
                     showDirayahAnnouncement = false
                     scope.launch { appPrefs.setHasSeenAppAnnouncement(true) }
+                    when {
+                        hasSeenTawasheehAnnouncement == false -> showTawasheehAnnouncement = true
+                        hasSeenThemeEngineAnnouncement == false -> showThemeEngineAnnouncement = true
+                    }
+                }
+            )
+        } else if (showTawasheehAnnouncement) {
+            TawasheehAnnouncementDialog(
+                onExplore = {
+                    showTawasheehAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenTawasheehAnnouncement(true) }
+                    navController.navigateToTab(Screen.Amanah)
+                },
+                onDismiss = {
+                    showTawasheehAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenTawasheehAnnouncement(true) }
+                    if (hasSeenThemeEngineAnnouncement == false) {
+                        showThemeEngineAnnouncement = true
+                    }
+                }
+            )
+        } else if (showThemeEngineAnnouncement) {
+            ThemeEngineAnnouncementDialog(
+                onExplore = {
+                    showThemeEngineAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenThemeEngineAnnouncement(true) }
+                    targetSettingsSection = "theme"
+                    navController.navigateToTab(Screen.Settings)
+                },
+                onDismiss = {
+                    showThemeEngineAnnouncement = false
+                    scope.launch { appPrefs.setHasSeenThemeEngineAnnouncement(true) }
                 }
             )
         }
