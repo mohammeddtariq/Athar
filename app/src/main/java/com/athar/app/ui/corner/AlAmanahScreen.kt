@@ -866,10 +866,11 @@ fun AlAmanahScreen(
                 )
             }
 
-            // ─── FULLSCREEN RECITATION PLAYER OVERLAY ───
+            // ─── FULLSCREEN RECITATION / TAWASHEEH PLAYER OVERLAY ───
             AnimatedVisibility(
                 visible = isPlayerExpanded &&
-                    AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.SURAH,
+                    (AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.SURAH ||
+                        AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.TAWASHEEH),
                 enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(360, easing = FastOutSlowInEasing)) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)) + fadeOut()
             ) {
@@ -881,7 +882,11 @@ fun AlAmanahScreen(
                     onPlaySurah = { surah ->
                         AlAmanahAudioController.playSurah(context, surah)
                     },
+                    onPlayTawasheeh = { index ->
+                        AlAmanahAudioController.playTawasheeh(context, index)
+                    },
                     onOpenReciter = { showReciterSheet = true },
+                    onOpenTawasheeh = { showTawasheehSheet = true },
                     onOpenSleepTimer = { showSleepTimerSheet = true },
                     onOpenAudioOutput = { showAudioOutputSheet = true }
                 )
@@ -900,24 +905,6 @@ fun AlAmanahScreen(
                     onTogglePlay = { AlAmanahAudioController.togglePlayPause(context) },
                     onNext = { AlAmanahAudioController.skipNext(context) },
                     onOpenPlaylist = { showTawasheehSheet = true },
-                    onOpenSleepTimer = { showSleepTimerSheet = true },
-                    onOpenAudioOutput = { showAudioOutputSheet = true }
-                )
-            }
-
-            // ─── FULLSCREEN TAWASHEEH PLAYER OVERLAY ───
-            AnimatedVisibility(
-                visible = isPlayerExpanded &&
-                    AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.TAWASHEEH,
-                enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(360, easing = FastOutSlowInEasing)) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)) + fadeOut()
-            ) {
-                AmanahTawasheehPlayer(
-                    isArabic = isArabic,
-                    onCollapse = { isPlayerExpanded = false },
-                    onPlayTrack = { index ->
-                        AlAmanahAudioController.playTawasheeh(context, index)
-                    },
                     onOpenSleepTimer = { showSleepTimerSheet = true },
                     onOpenAudioOutput = { showAudioOutputSheet = true }
                 )
@@ -1009,8 +996,7 @@ fun AlAmanahScreen(
                             AlAmanahAudioController.playTawasheeh(context, index)
                             showTawasheehSheet = false
                             isPlayerExpanded = true
-                        },
-                        onClose = { showTawasheehSheet = false }
+                        }
                     )
                 }
             }
@@ -1793,8 +1779,7 @@ private fun AmanahTawasheehBanner(
 @Composable
 private fun AmanahTawasheehSheetContent(
     isArabic: Boolean,
-    onPlayTrack: (Int) -> Unit,
-    onClose: () -> Unit
+    onPlayTrack: (Int) -> Unit
 ) {
     val activeIndex = if (
         AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.TAWASHEEH
@@ -1803,137 +1788,74 @@ private fun AmanahTawasheehSheetContent(
     } else {
         -1
     }
-    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 24.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (isArabic) "تواشيح النقشبندي" else "Al-Naqshabandy Tawasheeh",
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = if (isArabic) {
-                        "إبتهالات وتواشيح • ${AmanahTawasheehTracks.size} مقطوعة"
-                    } else {
-                        "Voices of praise • ${AmanahTawasheehTracks.size} tracks"
-                    },
-                    fontFamily = ThmanyahSans,
-                    fontSize = 12.sp,
-                    color = AmoledMutedText
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onClose
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = if (isArabic) "إغلاق" else "Close",
-                    tint = AmoledMutedText,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
+        Text(
+            text = if (isArabic) {
+                "قائمة تواشيح النقشبندي (${AmanahTawasheehTracks.size})"
+            } else {
+                "Tawasheeh Queue (${AmanahTawasheehTracks.size})"
+            },
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            color = Color.White
+        )
+        Spacer(Modifier.height(14.dp))
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 460.dp),
+            modifier = Modifier.height(440.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(AmanahTawasheehTracks) { index, track ->
-                val active = index == activeIndex
-                Row(
+                val isSelected = index == activeIndex
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (active) Color.White.copy(alpha = 0.10f) else Color.Transparent)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) AmoledAccent.copy(alpha = 0.18f) else AmoledCard)
+                        .border(
+                            1.dp,
+                            if (isSelected) AmoledAccent.copy(alpha = 0.45f) else AmoledCardBorder,
+                            RoundedCornerShape(12.dp)
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = { onPlayTrack(index) }
                         )
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = if (active) 0.16f else 0.07f)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = if (active && AlAmanahAudioController.isPlaying) {
-                                Icons.Rounded.GraphicEq
-                            } else {
-                                Icons.Rounded.PlayArrow
-                            },
-                            contentDescription = null,
-                            tint = if (active) Color.White else AmoledMutedText,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${index + 1}.",
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (isSelected) AmoledAccent else AmoledMutedText
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (isArabic) track.titleAr else track.titleEn,
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         Text(
-                            text = if (isArabic) track.titleAr else track.titleEn,
+                            text = if (isArabic) "النقشبندي" else "Al-Naqshabandy",
                             fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.5.sp,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = if (isArabic) {
-                                "الشيخ سيد النقشبندي"
-                            } else {
-                                "Sheikh Sayed Al-Naqshabandy"
-                            },
-                            fontFamily = ThmanyahSans,
-                            fontSize = 10.5.sp,
-                            color = AmoledMutedText,
-                            maxLines = 1
-                        )
-                    }
-                    val revision = AlAmanahAudioController.downloadRevision
-                    val isDownloaded = remember(revision, track.id) {
-                        AlAmanahAudioController.isTawasheehDownloaded(context, track)
-                    }
-                    AmanahDownloadButton(
-                        downloaded = isDownloaded,
-                        progress = AlAmanahAudioController.tawasheehDownloadProgress[track.id],
-                        onDownload = { AlAmanahAudioController.downloadTawasheeh(context, track) },
-                        onDelete = { AlAmanahAudioController.deleteDownloadedTawasheeh(context, track) },
-                        modifier = Modifier.size(34.dp)
-                    )
-                    if (active) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (isArabic) "يُبث" else "Playing",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp,
+                            fontSize = 11.5.sp,
                             color = AmoledMutedText
                         )
                     }
@@ -2666,7 +2588,7 @@ private fun AmanahPlaylistTrackRow(
     }
 }
 
-/** One tawasheeh recording inside the library playlist. */
+/** One tawasheeh recording inside the library playlist, styled like a surah. */
 @Composable
 private fun AmanahTawasheehRow(
     index: Int,
@@ -2699,11 +2621,15 @@ private fun AmanahTawasheehRow(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Track index / artwork badge
             Box(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isActive) AmoledAccent.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.06f)),
+                    .background(
+                        if (isActive) AmoledAccent.copy(alpha = 0.20f)
+                        else Color.White.copy(alpha = 0.06f)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (isActive && isPlaying) {
@@ -2737,7 +2663,11 @@ private fun AmanahTawasheehRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = if (isArabic) "الشيخ سيد النقشبندي" else "Sheikh Sayed Al-Naqshabandy",
+                    text = if (isArabic) {
+                        "الشيخ سيد النقشبندي • ${index + 1}/${AmanahTawasheehTracks.size}"
+                    } else {
+                        "Sheikh Sayed Al-Naqshabandy • ${index + 1}/${AmanahTawasheehTracks.size}"
+                    },
                     fontFamily = ThmanyahSans,
                     fontSize = 11.5.sp,
                     color = AmoledMutedText,
@@ -2754,12 +2684,107 @@ private fun AmanahTawasheehRow(
                 modifier = Modifier.size(34.dp)
             )
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(4.dp))
 
             Icon(
                 imageVector = if (isActive && isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = null,
                 tint = if (isActive) AmoledAccent else Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+/** One tawasheeh recording inside the player's queue drawer (card style). */
+@Composable
+private fun AmanahTawasheehQueueRow(
+    index: Int,
+    title: String,
+    isArabic: Boolean,
+    isPlaying: Boolean,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AmoledCard)
+            .border(
+                1.dp,
+                if (isActive) AmoledAccent.copy(alpha = 0.4f) else AmoledCardBorder,
+                RoundedCornerShape(16.dp)
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (isActive && isPlaying) AmoledAccent.copy(alpha = 0.20f)
+                        else Color.White.copy(alpha = 0.05f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isActive && isPlaying) {
+                    Icon(
+                        imageVector = Icons.Rounded.GraphicEq,
+                        contentDescription = null,
+                        tint = AmoledAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text(
+                        text = "${index + 1}",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (isActive) AmoledAccent else Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (isArabic) {
+                        "الشيخ سيد النقشبندي • ${index + 1}/${AmanahTawasheehTracks.size}"
+                    } else {
+                        "Sheikh Sayed Al-Naqshabandy • ${index + 1}/${AmanahTawasheehTracks.size}"
+                    },
+                    fontFamily = ThmanyahSans,
+                    fontSize = 11.5.sp,
+                    color = AmoledMutedText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = if (isActive && isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                contentDescription = null,
+                tint = if (isActive) AmoledAccent else Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -4174,13 +4199,18 @@ private fun AmanahFullscreenPlayer(
     onToggleFavorite: (Int) -> Unit,
     onCollapse: () -> Unit,
     onPlaySurah: (SurahMeta) -> Unit,
+    onPlayTawasheeh: (Int) -> Unit,
     onOpenReciter: () -> Unit,
+    onOpenTawasheeh: () -> Unit,
     onOpenSleepTimer: () -> Unit,
     onOpenAudioOutput: () -> Unit
 ) {
     val context = LocalContext.current
+    val isTawasheeh = AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.TAWASHEEH
     val surah = AlAmanahAudioController.currentSurah
     val reciter = AlAmanahAudioController.currentReciter
+    val track = AlAmanahAudioController.currentTawasheeh
+    val trackIndex = AlAmanahAudioController.currentTawasheehIndex
     val isPlaying = AlAmanahAudioController.isPlaying
     val activeVerse = AlAmanahAudioController.activeVerseNumber ?: 1
     val isFavorite = favorites.contains(surah.number)
@@ -4202,13 +4232,15 @@ private fun AmanahFullscreenPlayer(
 
     val listState = rememberLazyListState()
     var surahVerses by remember(surah.number) { mutableStateOf<List<QuranVerse>>(emptyList()) }
-    LaunchedEffect(surah.number) {
+    LaunchedEffect(surah.number, isTawasheeh) {
+        if (isTawasheeh) return@LaunchedEffect
         val verses = QuranRepository.getSurahVerses(context, surah.number)
         surahVerses = verses ?: emptyList()
     }
 
     // Auto-scroll lyrics smoothly to active verse
-    LaunchedEffect(activeVerse, surahVerses) {
+    LaunchedEffect(activeVerse, surahVerses, isTawasheeh) {
+        if (isTawasheeh) return@LaunchedEffect
         val targetIdx = (activeVerse - 1).coerceAtLeast(0)
         if (targetIdx < surahVerses.size) {
             listState.animateScrollToItem(
@@ -4216,6 +4248,26 @@ private fun AmanahFullscreenPlayer(
                 scrollOffset = -180
             )
         }
+    }
+
+    val titleText = if (isTawasheeh) {
+        track?.let { if (isArabic) it.titleAr else it.titleEn } ?: ""
+    } else {
+        if (isArabic) surah.arabicName else surah.englishName
+    }
+    val metaText = if (isTawasheeh) {
+        buildString {
+            append(if (isArabic) "الشيخ سيد النقشبندي" else "Sheikh Sayed Al-Naqshabandy")
+            if (trackIndex >= 0) append(" • ${trackIndex + 1}/${AmanahTawasheehTracks.size}")
+        }
+    } else {
+        if (isArabic) "الجزء ${surah.juz} • ${surah.ayahs} آية"
+        else "Juz ${surah.juz} • ${surah.ayahs} verses"
+    }
+    val queueName = if (isTawasheeh) {
+        if (isArabic) "تواشيح النقشبندي" else "Al-Naqshabandy Tawasheeh"
+    } else {
+        if (isArabic) surah.arabicName else surah.englishName
     }
 
     // Persistent LTR layout direction so control positions are stable across all languages
@@ -4266,85 +4318,109 @@ private fun AmanahFullscreenPlayer(
                     )
                 }
 
-                // ─── SYNCHRONIZED AYAT RECITATION ───
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(22.dp)
+                // ─── SYNCHRONIZED AYAT RECITATION (or the tawasheeh cover) ───
+                if (isTawasheeh) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        itemsIndexed(surahVerses) { index, verse ->
-                            val isVerseActive = (index + 1) == activeVerse
-                            val targetAlpha = if (isVerseActive) 1.0f else 0.35f
-                            val animAlpha by animateFloatAsState(targetAlpha, tween(350), label = "verseAlpha")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.72f)
+                                .aspectRatio(1f)
+                                .shadow(30.dp, RoundedCornerShape(30.dp), spotColor = Color.Black)
+                                .clip(RoundedCornerShape(30.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(30.dp))
+                        ) {
+                            AmanahTawasheehCover(
+                                isArabic = isArabic,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(22.dp)
+                        ) {
+                            itemsIndexed(surahVerses) { index, verse ->
+                                val isVerseActive = (index + 1) == activeVerse
+                                val targetAlpha = if (isVerseActive) 1.0f else 0.35f
+                                val animAlpha by animateFloatAsState(targetAlpha, tween(350), label = "verseAlpha")
 
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .alpha(animAlpha)
-                                    .then(
-                                        if (!isVerseActive) Modifier.blur(2.6.dp) else Modifier
-                                    )
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = {
-                                            AlAmanahAudioController.seekToVerse(index + 1)
-                                        }
-                                    ),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                // Ayah Pill Badge
-                                Box(
+                                Column(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isVerseActive) AmoledAccent.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.05f))
-                                        .border(
-                                            width = 0.8.dp,
-                                            color = if (isVerseActive) AmoledAccent.copy(alpha = 0.6f) else Color.Transparent,
-                                            shape = RoundedCornerShape(10.dp)
+                                        .fillMaxWidth()
+                                        .alpha(animAlpha)
+                                        .then(
+                                            if (!isVerseActive) Modifier.blur(2.6.dp) else Modifier
                                         )
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {
+                                                AlAmanahAudioController.seekToVerse(index + 1)
+                                            }
+                                        ),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
+                                    // Ayah Pill Badge
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isVerseActive) AmoledAccent.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.05f))
+                                            .border(
+                                                width = 0.8.dp,
+                                                color = if (isVerseActive) AmoledAccent.copy(alpha = 0.6f) else Color.Transparent,
+                                                shape = RoundedCornerShape(10.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${surah.number}:${index + 1}",
+                                            fontFamily = ThmanyahSans,
+                                            fontSize = 10.sp,
+                                            fontWeight = if (isVerseActive) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isVerseActive) AmoledAccent else AmoledMutedText
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(8.dp))
+
+                                    // Verse Typography with Halo Glow
                                     Text(
-                                        text = "${surah.number}:${index + 1}",
-                                        fontFamily = ThmanyahSans,
-                                        fontSize = 10.sp,
+                                        text = verse.text,
+                                        fontFamily = QuranUthmanicHafs,
+                                        fontSize = if (isVerseActive) 26.sp else 22.sp,
                                         fontWeight = if (isVerseActive) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isVerseActive) AmoledAccent else AmoledMutedText
+                                        color = if (isVerseActive) Color.White else AmoledMutedText,
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = if (isVerseActive) 44.sp else 38.sp,
+                                        style = androidx.compose.ui.text.TextStyle(
+                                            shadow = if (isVerseActive) Shadow(
+                                                color = AmoledCyanGlow.copy(alpha = 0.50f),
+                                                offset = Offset(0f, 0f),
+                                                blurRadius = 18f
+                                            ) else null
+                                        )
                                     )
                                 }
-
-                                Spacer(Modifier.height(8.dp))
-
-                                // Verse Typography with Halo Glow
-                                Text(
-                                    text = verse.text,
-                                    fontFamily = QuranUthmanicHafs,
-                                    fontSize = if (isVerseActive) 26.sp else 22.sp,
-                                    fontWeight = if (isVerseActive) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isVerseActive) Color.White else AmoledMutedText,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = if (isVerseActive) 44.sp else 38.sp,
-                                    style = androidx.compose.ui.text.TextStyle(
-                                        shadow = if (isVerseActive) Shadow(
-                                            color = AmoledCyanGlow.copy(alpha = 0.50f),
-                                            offset = Offset(0f, 0f),
-                                            blurRadius = 18f
-                                        ) else null
-                                    )
-                                )
                             }
                         }
                     }
                 }
 
-                // ─── TRACK TITLE & METADATA (FAVORITE STAR ALONE ON RIGHT) ───
+                // ─── TRACK TITLE & METADATA (DOWNLOAD + FAVORITE) ───
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -4354,7 +4430,7 @@ private fun AmanahFullscreenPlayer(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isArabic) surah.arabicName else surah.englishName,
+                            text = titleText,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 26.sp,
@@ -4364,47 +4440,63 @@ private fun AmanahFullscreenPlayer(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = if (isArabic) "الجزء ${surah.juz} • ${surah.ayahs} آية"
-                            else "Juz ${surah.juz} • ${surah.ayahs} verses",
+                            text = metaText,
                             fontFamily = ThmanyahSans,
                             fontWeight = FontWeight.Normal,
                             fontSize = 13.5.sp,
-                            color = AmoledMutedText
+                            color = AmoledMutedText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    // Favorite Star Button ALONE
                     val revision = AlAmanahAudioController.downloadRevision
-                    val downloaded = remember(revision, surah.number, reciter) {
-                        AlAmanahAudioController.isSurahDownloaded(context, surah.number, reciter)
-                    }
-                    val downloadProgress = AlAmanahAudioController.downloadProgressMap[surah.number]
-                    AmanahDownloadButton(
-                        downloaded = downloaded,
-                        progress = downloadProgress,
-                        onDownload = { AlAmanahAudioController.downloadSurah(context, surah, reciter) },
-                        onDelete = { AlAmanahAudioController.deleteDownloadedSurah(context, surah.number, reciter) },
-                        modifier = Modifier.size(44.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { onToggleFavorite(surah.number) }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavorite) AmoledAccent else Color.White,
-                            modifier = Modifier.size(24.dp)
+                    if (isTawasheeh) {
+                        val downloaded = remember(revision, track?.id) {
+                            track?.let { AlAmanahAudioController.isTawasheehDownloaded(context, it) } ?: false
+                        }
+                        val downloadProgress = track?.let { AlAmanahAudioController.tawasheehDownloadProgress[it.id] }
+                        if (track != null) {
+                            AmanahDownloadButton(
+                                downloaded = downloaded,
+                                progress = downloadProgress,
+                                onDownload = { AlAmanahAudioController.downloadTawasheeh(context, track) },
+                                onDelete = { AlAmanahAudioController.deleteDownloadedTawasheeh(context, track) },
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+                    } else {
+                        val downloaded = remember(revision, surah.number, reciter) {
+                            AlAmanahAudioController.isSurahDownloaded(context, surah.number, reciter)
+                        }
+                        val downloadProgress = AlAmanahAudioController.downloadProgressMap[surah.number]
+                        AmanahDownloadButton(
+                            downloaded = downloaded,
+                            progress = downloadProgress,
+                            onDownload = { AlAmanahAudioController.downloadSurah(context, surah, reciter) },
+                            onDelete = { AlAmanahAudioController.deleteDownloadedSurah(context, surah.number, reciter) },
+                            modifier = Modifier.size(44.dp)
                         )
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { onToggleFavorite(surah.number) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                contentDescription = "Favorite",
+                                tint = if (isFavorite) AmoledAccent else Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
 
@@ -4444,7 +4536,16 @@ private fun AmanahFullscreenPlayer(
                             color = AmoledMutedText
                         )
                         Text(
-                            text = "• ${if (isArabic) "الجزء ${surah.juz}" else "Juz ${surah.juz}"} • ${surah.ayahs} ${if (isArabic) "آية" else "Verses"}",
+                            text = if (isTawasheeh) {
+                                buildString {
+                                    append(if (isArabic) "النقشبندي" else "Al-Naqshabandy")
+                                    if (trackIndex >= 0) {
+                                        append(" • ${trackIndex + 1}/${AmanahTawasheehTracks.size}")
+                                    }
+                                }
+                            } else {
+                                "• ${if (isArabic) "الجزء ${surah.juz}" else "Juz ${surah.juz}"} • ${surah.ayahs} ${if (isArabic) "آية" else "Verses"}"
+                            },
                             fontFamily = ThmanyahSans,
                             fontSize = 11.sp,
                             color = AmoledMutedText.copy(alpha = 0.65f)
@@ -4653,12 +4754,12 @@ private fun AmanahFullscreenPlayer(
                                 modifier = Modifier.clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                    onClick = onOpenReciter
+                                    onClick = if (isTawasheeh) onOpenTawasheeh else onOpenReciter
                                 )
                             ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Person,
-                                    contentDescription = "Select Reciter",
+                                    imageVector = if (isTawasheeh) Icons.AutoMirrored.Rounded.QueueMusic else Icons.Rounded.Person,
+                                    contentDescription = if (isTawasheeh) "Tawasheeh Playlist" else "Select Reciter",
                                     tint = Color.White,
                                     modifier = Modifier.size(19.dp)
                                 )
@@ -4759,20 +4860,25 @@ private fun AmanahFullscreenPlayer(
                     }
                 }
 
-                // Centered Reciter Name Label
+                // Centered Reciter / Playlist Label
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onOpenReciter
+                            onClick = if (isTawasheeh) onOpenTawasheeh else onOpenReciter
                         )
                         .padding(vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (isArabic) "بصوت القارئ ${reciter.arabicName}" else "Recited by ${reciter.englishName}",
+                        text = if (isTawasheeh) {
+                            if (isArabic) "الشيخ سيد النقشبندي • التواشيح"
+                            else "Sheikh Sayed Al-Naqshabandy • Tawasheeh"
+                        } else {
+                            if (isArabic) "بصوت القارئ ${reciter.arabicName}" else "Recited by ${reciter.englishName}"
+                        },
                         fontFamily = ThmanyahSans,
                         fontWeight = FontWeight.Medium,
                         fontSize = 11.5.sp,
@@ -4842,7 +4948,7 @@ private fun AmanahFullscreenPlayer(
                                     color = AmoledMutedText
                                 )
                                 Text(
-                                    text = if (isArabic) surah.arabicName else surah.englishName,
+                                    text = queueName,
                                     fontFamily = ThmanyahSans,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp,
@@ -4872,16 +4978,29 @@ private fun AmanahFullscreenPlayer(
                         contentPadding = PaddingValues(bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(allSurahs) { queueSurah ->
-                            val isCurrent = queueSurah.number == surah.number
-                            AmanahSurahRow(
-                                surah = queueSurah,
-                                isArabic = isArabic,
-                                isPlaying = isCurrent && isPlaying,
-                                onClick = {
-                                    onPlaySurah(queueSurah)
-                                }
-                            )
+                        if (isTawasheeh) {
+                            itemsIndexed(AmanahTawasheehTracks) { trackIdx, queueTrack ->
+                                AmanahTawasheehQueueRow(
+                                    index = trackIdx,
+                                    title = if (isArabic) queueTrack.titleAr else queueTrack.titleEn,
+                                    isArabic = isArabic,
+                                    isPlaying = trackIdx == trackIndex && isPlaying,
+                                    isActive = trackIdx == trackIndex,
+                                    onClick = { onPlayTawasheeh(trackIdx) }
+                                )
+                            }
+                        } else {
+                            items(allSurahs) { queueSurah ->
+                                val isCurrent = queueSurah.number == surah.number
+                                AmanahSurahRow(
+                                    surah = queueSurah,
+                                    isArabic = isArabic,
+                                    isPlaying = isCurrent && isPlaying,
+                                    onClick = {
+                                        onPlaySurah(queueSurah)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -5433,757 +5552,6 @@ private fun AmanahDownloadButton(
                 tint = Color.White.copy(alpha = 0.85f),
                 modifier = Modifier.size(21.dp)
             )
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 4c. FULLSCREEN TAWASHEEH PLAYER (mirrors the surah player)
-// ═══════════════════════════════════════════════════════════════════════════
-@Composable
-private fun AmanahTawasheehPlayer(
-    isArabic: Boolean,
-    onCollapse: () -> Unit,
-    onPlayTrack: (Int) -> Unit,
-    onOpenSleepTimer: () -> Unit,
-    onOpenAudioOutput: () -> Unit
-) {
-    val context = LocalContext.current
-    val track = AlAmanahAudioController.currentTawasheeh
-    val trackIndex = AlAmanahAudioController.currentTawasheehIndex
-    val isPlaying = AlAmanahAudioController.isPlaying
-    val isLoading = AlAmanahAudioController.isLoading
-    val error = AlAmanahAudioController.streamError
-    val density = LocalDensity.current
-
-    // Queue drawer geometry, shared with the surah player.
-    val peekHeight = 64.dp
-    val sheetMaxHeight = 490.dp
-    val peekHeightPx = with(density) { peekHeight.toPx() }
-    val sheetMaxHeightPx = with(density) { sheetMaxHeight.toPx() }
-    val collapsedOffset = sheetMaxHeightPx - peekHeightPx
-    val expandedOffset = 0f
-
-    var currentOffsetPx by remember { mutableFloatStateOf(collapsedOffset) }
-    val animatedOffsetPx by animateFloatAsState(
-        targetValue = currentOffsetPx,
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
-        label = "tawasheehQueueOffset"
-    )
-
-    val posMs = AlAmanahAudioController.currentPositionMs
-    val durMs = AlAmanahAudioController.totalDurationMs.coerceAtLeast(1L)
-    val progress = (posMs.toFloat() / durMs.toFloat()).coerceIn(0f, 1f)
-
-    val title = track?.let { if (isArabic) it.titleAr else it.titleEn } ?: ""
-    val revision = AlAmanahAudioController.downloadRevision
-    val downloaded = remember(revision, track?.id) {
-        track?.let { AlAmanahAudioController.isTawasheehDownloaded(context, it) } ?: false
-    }
-    val downloadProgress = track?.let { AlAmanahAudioController.tawasheehDownloadProgress[it.id] }
-    val isTimerActive = AlAmanahAudioController.sleepTimerMinutes != null
-    val outputType = AlAmanahAudioController.getActiveAudioOutputType(context)
-
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(AmoledBg)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF161616),
-                                Color(0xFF0C0C0C),
-                                AmoledBg
-                            )
-                        )
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-            ) {
-                // ─── PULL-DOWN HANDLE ───
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp, bottom = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 42.dp, height = 4.5.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(Color.White.copy(alpha = 0.35f))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onCollapse
-                            )
-                    )
-                }
-
-                // ─── HEADER: BACK · TITLE · QUEUE ───
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onCollapse
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.KeyboardArrowDown,
-                            contentDescription = if (isArabic) "طي" else "Collapse",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = if (isArabic) "تواشيح وإبتهالات" else "Tawasheeh & Supplications",
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = AmoledMutedText
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {
-                                    currentOffsetPx = if (currentOffsetPx < collapsedOffset / 2f) collapsedOffset else expandedOffset
-                                }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
-                            contentDescription = if (isArabic) "قائمة التشغيل" else "Queue",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                // ─── COVER ART ───
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.74f)
-                            .aspectRatio(1f)
-                            .shadow(30.dp, RoundedCornerShape(30.dp), spotColor = Color.Black)
-                            .clip(RoundedCornerShape(30.dp))
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(30.dp))
-                    ) {
-                        AmanahTawasheehCover(
-                            isArabic = isArabic,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        if (isPlaying) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.30f))
-                                        )
-                                    )
-                            )
-                        }
-                    }
-                }
-
-                // ─── TITLE · METADATA · DOWNLOAD ───
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = title,
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            lineHeight = 30.sp,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = buildString {
-                                append(if (isArabic) "الشيخ سيد النقشبندي" else "Sheikh Sayed Al-Naqshabandy")
-                                if (trackIndex >= 0) {
-                                    append(" • ${trackIndex + 1}/${AmanahTawasheehTracks.size}")
-                                }
-                                if (downloaded) append(if (isArabic) " • محمّلة" else " • Offline")
-                            },
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 12.5.sp,
-                            color = AmoledMutedText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    if (track != null) {
-                        Spacer(Modifier.width(12.dp))
-                        AmanahDownloadButton(
-                            downloaded = downloaded,
-                            progress = downloadProgress,
-                            onDownload = { AlAmanahAudioController.downloadTawasheeh(context, track) },
-                            onDelete = { AlAmanahAudioController.deleteDownloadedTawasheeh(context, track) }
-                        )
-                    }
-                }
-
-                if (error != null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF2A1414))
-                            .border(1.dp, Color(0xFFFFB4A9).copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Campaign,
-                            contentDescription = null,
-                            tint = Color(0xFFFFB4A9),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (isArabic) {
-                                "تعذّر تشغيل المقطوعة. تحقّق من اتصالك ثم أعد المحاولة."
-                            } else {
-                                "Couldn't play this track. Check your connection and try again."
-                            },
-                            fontFamily = ThmanyahSans,
-                            fontSize = 11.5.sp,
-                            color = Color(0xFFFFD7D0),
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = if (isArabic) "إعادة" else "Retry",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = Color.White,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(Color.White.copy(alpha = 0.12f))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = { AlAmanahAudioController.playTawasheeh(context, trackIndex.coerceAtLeast(0)) }
-                                )
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                Spacer(Modifier.height(6.dp))
-
-                // ─── WAVY SEEK BAR ───
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 22.dp)
-                ) {
-                    WavySeekSlider(
-                        progress = progress,
-                        onSeek = { frac ->
-                            AlAmanahAudioController.seekTo((frac * durMs).toLong())
-                        },
-                        isPlaying = isPlaying,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = formatAmanahTime(posMs),
-                            fontFamily = ThmanyahSans,
-                            fontSize = 11.sp,
-                            color = AmoledMutedText
-                        )
-                        Text(
-                            text = "• ${AmanahTawasheehTracks.size} ${if (isArabic) "مقطوعة" else "tracks"} •",
-                            fontFamily = ThmanyahSans,
-                            fontSize = 11.sp,
-                            color = AmoledMutedText.copy(alpha = 0.65f)
-                        )
-                        Text(
-                            text = "-${formatAmanahTime((durMs - posMs).coerceAtLeast(0L))}",
-                            fontFamily = ThmanyahSans,
-                            fontSize = 11.sp,
-                            color = AmoledMutedText
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                // ─── SLEEP TIMER (sits above the transport) ───
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (isTimerActive) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.08f))
-                            .border(
-                                1.dp,
-                                if (isTimerActive) AmoledAccent.copy(alpha = 0.5f) else Color.Transparent,
-                                RoundedCornerShape(50)
-                            )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onOpenSleepTimer
-                            )
-                            .padding(horizontal = 16.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Bedtime,
-                            contentDescription = if (isArabic) "مؤقت النوم" else "Sleep Timer",
-                            tint = if (isTimerActive) AmoledAccent else Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = AlAmanahAudioController.sleepTimerMinutes?.let {
-                                if (isArabic) "مؤقت النوم · $it د" else "Sleep timer · $it min"
-                            } ?: (if (isArabic) "مؤقت النوم" else "Sleep timer"),
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp,
-                            color = if (isTimerActive) AmoledAccent else Color.White.copy(alpha = 0.85f)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                // ─── TRANSPORT: PREVIOUS · PLAY · NEXT ───
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(92.dp)
-                            .height(98.dp)
-                            .clip(RoundedCornerShape(30.dp))
-                            .background(Color.White.copy(alpha = 0.12f))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { AlAmanahAudioController.skipPrevious(context) }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.SkipPrevious,
-                            contentDescription = "Previous",
-                            tint = Color.White,
-                            modifier = Modifier.size(38.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .width(152.dp)
-                            .height(108.dp)
-                            .clip(RoundedCornerShape(40.dp))
-                            .background(Color.White)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { AlAmanahAudioController.togglePlayPause(context) }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                color = Color.Black,
-                                strokeWidth = 3.dp,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color(0xFF111111),
-                                modifier = Modifier.size(50.dp)
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .width(92.dp)
-                            .height(98.dp)
-                            .clip(RoundedCornerShape(30.dp))
-                            .background(Color.White.copy(alpha = 0.12f))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { AlAmanahAudioController.skipNext(context) }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.SkipNext,
-                            contentDescription = "Next",
-                            tint = Color.White,
-                            modifier = Modifier.size(38.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                // ─── VOLUME ───
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.VolumeDown,
-                        contentDescription = null,
-                        tint = AmoledMutedText,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Slider(
-                        value = AlAmanahAudioController.playerVolume,
-                        onValueChange = { AlAmanahAudioController.setVolume(it) },
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White.copy(alpha = 0.60f),
-                            inactiveTrackColor = Color.White.copy(alpha = 0.15f)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 10.dp)
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
-                        contentDescription = null,
-                        tint = AmoledMutedText,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                // ─── BOTTOM: AUDIO OUTPUT · PLAYBACK MODE ───
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White.copy(alpha = 0.10f))
-                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onOpenAudioOutput
-                            )
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (outputType == AlAmanahAudioController.AudioOutputType.PHONE) {
-                                    Icons.Rounded.PhoneAndroid
-                                } else {
-                                    Icons.Rounded.Headphones
-                                },
-                                contentDescription = "Audio Output",
-                                tint = AmoledAccent,
-                                modifier = Modifier.size(19.dp)
-                            )
-                            Text(
-                                text = if (isArabic) "مخرج الصوت" else "Audio output",
-                                fontFamily = ThmanyahSans,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
-
-                    var showModeDropdown by remember { mutableStateOf(false) }
-                    val mode = AlAmanahAudioController.playbackMode
-                    val modeIcon = when (mode) {
-                        AlAmanahAudioController.PlaybackMode.SEQUENTIAL -> Icons.Rounded.FormatListNumbered
-                        AlAmanahAudioController.PlaybackMode.REPEAT_ALL -> Icons.Rounded.Repeat
-                        AlAmanahAudioController.PlaybackMode.REPEAT_ONE -> Icons.Rounded.RepeatOne
-                        AlAmanahAudioController.PlaybackMode.SHUFFLE -> Icons.Rounded.Shuffle
-                    }
-                    val isModeCustom = mode != AlAmanahAudioController.PlaybackMode.SEQUENTIAL
-
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(if (isModeCustom) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.08f))
-                                .border(
-                                    1.dp,
-                                    if (isModeCustom) AmoledAccent.copy(alpha = 0.5f) else Color.Transparent,
-                                    CircleShape
-                                )
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = { showModeDropdown = true }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = modeIcon,
-                                contentDescription = "Playback Mode",
-                                tint = if (isModeCustom) AmoledAccent else Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showModeDropdown,
-                            onDismissRequest = { showModeDropdown = false },
-                            modifier = Modifier
-                                .background(AmoledCard)
-                                .border(1.dp, AmoledCardBorder, RoundedCornerShape(12.dp))
-                        ) {
-                            val modes = listOf(
-                                Triple(AlAmanahAudioController.PlaybackMode.SEQUENTIAL, Icons.Rounded.FormatListNumbered, if (isArabic) "تشغيل متتالي" else "Play in Order"),
-                                Triple(AlAmanahAudioController.PlaybackMode.REPEAT_ALL, Icons.Rounded.Repeat, if (isArabic) "تكرار القائمة" else "Repeat All"),
-                                Triple(AlAmanahAudioController.PlaybackMode.REPEAT_ONE, Icons.Rounded.RepeatOne, if (isArabic) "تكرار المقطوعة" else "Repeat Current"),
-                                Triple(AlAmanahAudioController.PlaybackMode.SHUFFLE, Icons.Rounded.Shuffle, if (isArabic) "تشغيل عشوائي" else "Shuffle")
-                            )
-                            modes.forEach { (m, icon, label) ->
-                                val isSelected = mode == m
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = null,
-                                                tint = if (isSelected) AmoledAccent else AmoledMutedText,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = label,
-                                                fontFamily = ThmanyahSans,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSelected) AmoledAccent else Color.White
-                                            )
-                                        }
-                                    },
-                                    trailingIcon = if (isSelected) {
-                                        {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Check,
-                                                contentDescription = null,
-                                                tint = AmoledAccent,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    } else null,
-                                    onClick = {
-                                        AlAmanahAudioController.updatePlaybackMode(m)
-                                        showModeDropdown = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ─── SHEIKH LABEL ───
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isArabic) {
-                            "بصوت الشيخ سيد النقشبندي"
-                        } else {
-                            "Recited by Sheikh Sayed Al-Naqshabandy"
-                        },
-                        fontFamily = ThmanyahSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 11.5.sp,
-                        color = Color.White.copy(alpha = 0.55f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Spacer(Modifier.height(68.dp))
-            }
-
-            // ─── TOUCH-DRAGGABLE TRACK QUEUE ───
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(sheetMaxHeight)
-                    .offset { IntOffset(0, animatedOffsetPx.roundToInt()) }
-                    .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-                    .background(AmoledCard)
-                    .border(1.dp, AmoledCardBorder, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures(
-                                    onVerticalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        currentOffsetPx = (currentOffsetPx + dragAmount).coerceIn(expandedOffset, collapsedOffset)
-                                    },
-                                    onDragEnd = {
-                                        val midpoint = (collapsedOffset + expandedOffset) / 2f
-                                        currentOffsetPx = if (currentOffsetPx < midpoint) expandedOffset else collapsedOffset
-                                    }
-                                )
-                            }
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {
-                                    currentOffsetPx = if (currentOffsetPx < collapsedOffset / 2f) collapsedOffset else expandedOffset
-                                }
-                            )
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 38.dp, height = 4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(Color.White.copy(alpha = 0.35f))
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (isArabic) "تشغيل من " else "Playing from ",
-                                    fontFamily = ThmanyahSans,
-                                    fontSize = 11.5.sp,
-                                    color = AmoledMutedText
-                                )
-                                Text(
-                                    text = if (isArabic) "تواشيح النقشبندي" else "Al-Naqshabandy Tawasheeh",
-                                    fontFamily = ThmanyahSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = Color.White
-                                )
-                            }
-                            Icon(
-                                imageVector = if (currentOffsetPx < collapsedOffset / 2f) {
-                                    Icons.Rounded.KeyboardArrowDown
-                                } else {
-                                    Icons.AutoMirrored.Rounded.QueueMusic
-                                },
-                                contentDescription = "Queue",
-                                tint = Color.White.copy(alpha = 0.75f),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        itemsIndexed(AmanahTawasheehTracks) { index, item ->
-                            val isCurrent = index == trackIndex
-                            AmanahTawasheehRow(
-                                index = index,
-                                track = item,
-                                title = if (isArabic) item.titleAr else item.titleEn,
-                                isArabic = isArabic,
-                                isPlaying = isCurrent && isPlaying,
-                                isActive = isCurrent,
-                                onClick = { onPlayTrack(index) }
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
