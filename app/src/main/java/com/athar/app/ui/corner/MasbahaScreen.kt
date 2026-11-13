@@ -156,32 +156,10 @@ enum class Dhikr(
 private const val BEADS = 33
 private const val CYCLE = 33
 
-/**
- * The hanging strand shows fewer, larger pearls than the full thirty-three,
- * so there is visible thread between them and the beam can travel across.
- */
-private const val STRAND_BEADS = 13
-
-/** How far past each edge the strand runs, so it reads as endless. */
-private const val STRAND_OVERHANG = 0.05f
-
 /** The faces of an ivory pearl. */
 private val StrandPearlLight = Color(0xFFFFFFFF)
 private val StrandPearlMid = Color(0xFFF6F2EA)
 private val StrandPearlDeep = Color(0xFFDCD5C8)
-
-/** The two sibha the screen can wear; the choice is kept in preferences. */
-private enum class SibhaStyle(val id: String) {
-    CLASSIC("classic"),
-    STRAND("strand");
-
-    companion object {
-        fun fromId(id: String?): SibhaStyle = entries.firstOrNull { it.id == id } ?: CLASSIC
-
-        fun next(current: SibhaStyle): SibhaStyle =
-            if (current == CLASSIC) STRAND else CLASSIC
-    }
-}
 
 // The loop is a teardrop: round at the top, gathering to a point at the
 // bottom where the imam bead and its tassel hang.
@@ -207,9 +185,7 @@ fun MasbahaScreen(
     val haptics = LocalHapticFeedback.current
 
     val storedCounts by prefs.masbahaCounts.collectAsState(initial = null)
-    val storedStyle by prefs.masbahaStyle.collectAsState(initial = SibhaStyle.CLASSIC.id)
     val storedSelected by prefs.masbahaSelected.collectAsState(initial = 0)
-    val sibhaStyle = SibhaStyle.fromId(storedStyle)
     val hapticsOn by prefs.masbahaHaptics.collectAsState(initial = true)
     val soundOn by prefs.masbahaSound.collectAsState(initial = true)
     val numberStyle by prefs.numberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
@@ -317,11 +293,6 @@ fun MasbahaScreen(
             YaqutHeader(
                 isArabic = isArabic,
                 onBack = onBack,
-                onChangeStyle = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (soundOn) tick.tick()
-                    scope.launch { prefs.setMasbahaStyle(SibhaStyle.next(sibhaStyle).id) }
-                },
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
 
@@ -357,28 +328,13 @@ fun MasbahaScreen(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                Crossfade(
-                    targetState = sibhaStyle,
-                    animationSpec = tween(320, easing = FastOutSlowInEasing),
-                    label = "sibhaStyle"
-                ) { active ->
-                    when (active) {
-                        SibhaStyle.CLASSIC -> SibhaRing(
-                            count = count,
-                            cycle = cycle,
-                            numberStyle = numberStyle,
-                            onCount = { amount -> step(amount) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        SibhaStyle.STRAND -> SibhaStrand(
-                            count = count,
-                            cycle = cycle,
-                            numberStyle = numberStyle,
-                            onCount = { amount -> step(amount) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
+                SibhaRing(
+                    count = count,
+                    cycle = cycle,
+                    numberStyle = numberStyle,
+                    onCount = { amount -> step(amount) },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             Text(
@@ -453,7 +409,6 @@ fun MasbahaScreen(
 private fun YaqutHeader(
     isArabic: Boolean,
     onBack: () -> Unit,
-    onChangeStyle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -490,25 +445,8 @@ private fun YaqutHeader(
             color = AtharTextPrimary
         )
         Spacer(Modifier.weight(1f))
-        // Swaps the sibha for the other one the screen knows.
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onChangeStyle
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Rounded.SwapHoriz,
-                contentDescription = stringResource(R.string.masbaha_change_style),
-                tint = AtharPrimaryLight.copy(alpha = 0.85f),
-                modifier = Modifier.size(21.dp)
-            )
-        }
+        // Keeps the title optically centred against the back button.
+        Spacer(Modifier.size(44.dp))
     }
 }
 
@@ -893,300 +831,6 @@ private fun CountReadout(
         fontSize = 10.sp,
         color = AtharTextSecondary.copy(alpha = 0.85f)
     )
-}
-
-/**
- * The other sibha: one endless strand of white pearls that runs in from beyond
- * the left edge and out past the right, bowing gently upward through the middle
- * of the page the way a masbaha rests between two fingers. A beam of white
- * light rides from pearl to pearl as the cycle fills, every pearl breathes on
- * its own beat, and the whole strand floats a hair so it never sits still.
- * Dragging along the strand counts one bead per bead crossed; tapping counts one.
- */
-@Composable
-private fun SibhaStrand(
-    count: Int,
-    cycle: Int,
-    numberStyle: NumberStylePreference,
-    onCount: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val pulse = remember { Animatable(1f) }
-    LaunchedEffect(count) {
-        if (count > 0) {
-            pulse.snapTo(0.986f)
-            pulse.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 320f))
-        }
-    }
-
-    val drift = rememberInfiniteTransition(label = "strandDrift")
-    // A breath that travels along the strand, pearl by pearl.
-    val breath by drift.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(5200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "strandBreath"
-    )
-    // A slow sideways float, so the strand reads as hung rather than printed.
-    val float by drift.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(9400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "strandFloat"
-    )
-    // The beam glides to its new pearl instead of jumping to it. It maps the
-    // thirty-three count onto the fewer visible pearls, and snaps back to the
-    // start when the cycle rolls over rather than sweeping right to left.
-    val beam = remember { Animatable(0f) }
-    LaunchedEffect(cycle) {
-        if (cycle <= 0) {
-            beam.snapTo(0f)
-        } else {
-            val target = ((cycle - 1f) / (CYCLE - 1f)) * (STRAND_BEADS - 1)
-            // A fresh cycle starts again at the left edge; snap there rather
-            // than sweeping the beam all the way back.
-            if (target < beam.value) beam.snapTo(0f)
-            beam.animateTo(target, tween(420, easing = FastOutSlowInEasing))
-        }
-    }
-    val countRef = rememberUpdatedState(onCount)
-
-    BoxWithConstraints(modifier = modifier) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(STRAND_BEADS) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        down.consume()
-                        val overhang = size.width * STRAND_OVERHANG
-                        val span = size.width + overhang * 2f
-                        fun indexAt(x: Float): Int =
-                            (((x + overhang) / span) * (STRAND_BEADS - 1))
-                                .roundToInt()
-                                .coerceIn(0, STRAND_BEADS - 1)
-
-                        var last = indexAt(down.position.x)
-                        var lastPoint = down.position
-                        var travelled = 0f
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            change.consume()
-                            if (!change.pressed) break
-                            val point = change.position
-                            travelled += (point - lastPoint).getDistance()
-                            lastPoint = point
-                            val index = indexAt(point.x)
-                            if (index != last) {
-                                countRef.value(abs(index - last))
-                                last = index
-                            }
-                        }
-                        if (travelled < 6.dp.toPx()) countRef.value(1)
-                    }
-                }
-        ) {
-            val overhang = size.width * STRAND_OVERHANG
-            val left = -overhang + float * 2.4.dp.toPx()
-            val span = size.width + overhang * 2f
-            val spacing = span / (STRAND_BEADS - 1)
-            // Large pearls, but with thread showing between them.
-            val beadR = spacing * 0.44f
-            val baseY = size.height * 0.735f
-            val lift = size.height * 0.075f
-
-            val points = ArrayList<Offset>(STRAND_BEADS)
-            for (i in 0 until STRAND_BEADS) {
-                val t = i / (STRAND_BEADS - 1f)
-                points += Offset(
-                    x = left + spacing * i,
-                    y = baseY - lift * sin(PI * t.toDouble()).toFloat()
-                )
-            }
-
-            // The strand's shadow keeps it resting on the page.
-            drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(Color.Black.copy(alpha = 0.30f), Color.Transparent),
-                    center = Offset(size.width / 2f, baseY + beadR * 1.1f),
-                    radius = size.width * 0.62f
-                ),
-                topLeft = Offset(left, baseY - beadR * 0.2f),
-                size = androidx.compose.ui.geometry.Size(span, beadR * 3.2f)
-            )
-
-            // The thread, bowing with the strand.
-            val thread = Path().apply {
-                moveTo(points[0].x, points[0].y)
-                for (i in 0 until points.lastIndex) {
-                    val from = points[i]
-                    val to = points[i + 1]
-                    quadraticTo(
-                        (from.x + to.x) / 2f,
-                        (from.y + to.y) / 2f + beadR * 0.10f,
-                        to.x,
-                        to.y
-                    )
-                }
-            }
-            drawPath(
-                path = thread,
-                color = Color.Black.copy(alpha = 0.42f),
-                style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round)
-            )
-            drawPath(
-                path = thread,
-                color = Color(0xFFF3EFE7).copy(alpha = 0.55f),
-                style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
-            )
-
-            // Where the beam is, interpolated between two pearls.
-            val beamPos = beam.value.coerceIn(0f, STRAND_BEADS - 1f)
-            val hasBeam = cycle > 0
-            val beamLow = floor(beamPos).toInt().coerceIn(0, STRAND_BEADS - 1)
-            val beamHigh = (beamLow + 1).coerceAtMost(STRAND_BEADS - 1)
-            val beamT = beamPos - beamLow
-            val beamPoint = Offset(
-                x = points[beamLow].x + (points[beamHigh].x - points[beamLow].x) * beamT,
-                y = points[beamLow].y + (points[beamHigh].y - points[beamLow].y) * beamT
-            )
-
-            if (hasBeam) {
-                // The shaft of light the beam carries, standing on the strand.
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.05f),
-                            Color.White.copy(alpha = 0.20f),
-                            Color.White.copy(alpha = 0.05f),
-                            Color.Transparent
-                        ),
-                        startY = beamPoint.y - beadR * 4.6f,
-                        endY = beamPoint.y + beadR * 2.4f
-                    ),
-                    topLeft = Offset(beamPoint.x - beadR * 0.85f, beamPoint.y - beadR * 4.6f),
-                    size = androidx.compose.ui.geometry.Size(beadR * 1.7f, beadR * 7f)
-                )
-            }
-
-            for (i in 0 until STRAND_BEADS) {
-                val point = points[i]
-                // Every pearl breathes on its own offset, so the strand ripples.
-                val breathe = sin(2.0 * PI * (breath + i * 0.075)).toFloat()
-                val r = beadR * (1f + 0.05f * breathe) * pulse.value
-                val spacer = i == 4 || i == 8
-                val near = if (hasBeam) {
-                    (1f - abs(i - beamPos) / 1.7f).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-
-                if (near > 0f) {
-                    val glow = r * (2.6f + 0.5f * breathe)
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.40f * near),
-                                AtharPrimaryLight.copy(alpha = 0.16f * near),
-                                Color.Transparent
-                            ),
-                            center = point,
-                            radius = glow
-                        ),
-                        radius = glow,
-                        center = point
-                    )
-                }
-
-                drawCircle(
-                    color = Color.Black.copy(alpha = 0.32f),
-                    radius = r * 0.98f,
-                    center = point + Offset(0f, r * 0.22f)
-                )
-                if (spacer) {
-                    // A divider after every eleven pearls, in the theme colour.
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                AtharPrimaryLight,
-                                AtharPrimary,
-                                AtharPrimaryDeep
-                            ),
-                            center = point - Offset(r * 0.30f, r * 0.32f),
-                            radius = r * 1.5f
-                        ),
-                        radius = r * 0.86f,
-                        center = point
-                    )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.40f),
-                        radius = r * 0.86f,
-                        center = point,
-                        style = Stroke(width = 0.6.dp.toPx())
-                    )
-                } else {
-                    // White pearl, lit from the upper left.
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                StrandPearlLight,
-                                StrandPearlMid,
-                                StrandPearlDeep
-                            ),
-                            center = point - Offset(r * 0.34f, r * 0.38f),
-                            radius = r * 1.85f
-                        ),
-                        radius = r,
-                        center = point
-                    )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.45f + 0.35f * near),
-                        radius = r,
-                        center = point,
-                        style = Stroke(width = 0.6.dp.toPx())
-                    )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.92f),
-                        radius = r * 0.20f,
-                        center = point - Offset(r * 0.32f, r * 0.36f)
-                    )
-                }
-            }
-
-            if (hasBeam) {
-                // A bright core where the beam stands, so the eye lands on it.
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.55f),
-                            Color.Transparent
-                        ),
-                        center = beamPoint,
-                        radius = beadR * 2.2f
-                    ),
-                    radius = beadR * 2.2f,
-                    center = beamPoint
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = maxHeight * 0.24f),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            CountReadout(count = count, cycle = cycle, numberStyle = numberStyle)
-        }
-    }
 }
 
 /**
