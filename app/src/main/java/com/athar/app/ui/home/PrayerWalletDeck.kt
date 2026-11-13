@@ -802,41 +802,42 @@ private fun ScratchAyah(
         ) {
             if (reveal.value >= 1f) return@Canvas
 
-            // Light silver foil, like a fresh lottery panel: a soft brushed
-            // plate carrying a repeating wordmark, so it reads as a strip to
-            // be scratched rather than a barcode.
+            // A cool silver plate, brushed with a fine diagonal grain and
+            // warmed by a champagne sheen, so it reads as a fresh panel
+            // waiting to be scratched.
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color(0xFFF7F7F9),
-                    0.14f to Color(0xFFE2E3E8),
-                    0.30f to Color(0xFFFBFBFC),
-                    0.46f to Color(0xFFD3D5DC),
-                    0.60f to Color(0xFFEFF0F3),
-                    0.76f to Color(0xFFC6C8D0),
-                    0.90f to Color(0xFFE9EAEE),
-                    1f to Color(0xFFBFC1C9)
+                    0f to Color(0xFFFDFDFE),
+                    0.10f to Color(0xFFEDEFF4),
+                    0.24f to Color(0xFFFAFBFC),
+                    0.38f to Color(0xFFD9DCE4),
+                    0.52f to Color(0xFFF2F3F7),
+                    0.66f to Color(0xFFCED2DB),
+                    0.80f to Color(0xFFEDEEF2),
+                    0.93f to Color(0xFFD5D8E0),
+                    1f to Color(0xFFC3C7D1)
                 )
             )
-            // Fine horizontal brushing.
-            val grain = 1.2.dp.toPx()
-            var grainY = 0f
+            // Fine diagonal brushing across the metal.
+            val grain = 1.4.dp.toPx()
+            var grainX = -size.height
             var grainAlt = false
-            while (grainY < size.height) {
+            while (grainX < size.width) {
                 drawLine(
                     color = if (grainAlt) {
-                        Color.White.copy(alpha = 0.16f)
+                        Color.White.copy(alpha = 0.18f)
                     } else {
-                        Color.Black.copy(alpha = 0.025f)
+                        Color.Black.copy(alpha = 0.028f)
                     },
-                    start = Offset(0f, grainY),
-                    end = Offset(size.width, grainY),
-                    strokeWidth = grain * 0.5f
+                    start = Offset(grainX, 0f),
+                    end = Offset(grainX + size.height, size.height),
+                    strokeWidth = grain * 0.45f
                 )
-                grainY += grain
+                grainX += grain
                 grainAlt = !grainAlt
             }
-            // A repeating "SCRATCH · ATHAR" wordmark across the plate.
-            val tileText = if (isArabic) "اخدش · أثر · " else "SCRATCH · ATHAR · "
+            // A repeating "SCRATCH" wordmark, embossed into the plate.
+            val tileText = if (isArabic) "اخدش · " else "SCRATCH · "
             val tile = textMeasurer.measure(AnnotatedString(tileText), style = foilStyle)
             val tileWidth = tile.size.width
             val tileHeight = tile.size.height
@@ -847,6 +848,11 @@ private fun ScratchAyah(
                     val y = rowGap * rowIndex + (rowGap - tileHeight) / 2f
                     var x = if (rowIndex % 2 == 0) -tileWidth * 0.35f else -tileWidth * 0.85f
                     while (x < size.width) {
+                        drawText(
+                            textLayoutResult = tile,
+                            color = Color.White.copy(alpha = 0.70f),
+                            topLeft = Offset(x + 0.7f, y + 0.8f)
+                        )
                         drawText(textLayoutResult = tile, topLeft = Offset(x, y))
                         x += tileWidth
                     }
@@ -855,32 +861,42 @@ private fun ScratchAyah(
             // A slow sheen travelling across the metal.
             drawRect(
                 brush = Brush.linearGradient(
-                    0f to Color.White.copy(alpha = 0.16f),
-                    0.24f to Color.White.copy(alpha = 0.02f),
-                    0.46f to Color.Black.copy(alpha = 0.05f),
-                    0.62f to Color.White.copy(alpha = 0.14f),
-                    0.80f to Color.White.copy(alpha = 0.00f),
-                    1f to Color.Black.copy(alpha = 0.08f),
+                    0f to Color.White.copy(alpha = 0.18f),
+                    0.24f to Color.White.copy(alpha = 0.03f),
+                    0.44f to Color(0xFFE8D9B8).copy(alpha = 0.10f),
+                    0.62f to Color.White.copy(alpha = 0.16f),
+                    0.82f to Color.White.copy(alpha = 0.00f),
+                    1f to Color.Black.copy(alpha = 0.10f),
                     start = Offset(0f, size.height),
                     end = Offset(size.width, 0f)
                 )
             )
             // The strip is set into the card: a lit top lip, a shadow under it,
-            // and a dark line where the metal leaves the card at the bottom.
+            // side hairlines, and a dark line where the metal leaves the card.
             drawRect(
-                color = Color.White.copy(alpha = 0.60f),
+                color = Color.White.copy(alpha = 0.72f),
                 topLeft = Offset(0f, 0f),
                 size = Size(size.width, 1.dp.toPx())
             )
             drawRect(
-                color = Color.Black.copy(alpha = 0.14f),
+                color = Color.Black.copy(alpha = 0.16f),
                 topLeft = Offset(0f, 1.dp.toPx()),
                 size = Size(size.width, 0.5.dp.toPx())
             )
             drawRect(
-                color = Color.Black.copy(alpha = 0.28f),
+                color = Color.Black.copy(alpha = 0.30f),
                 topLeft = Offset(0f, size.height - 1.dp.toPx()),
                 size = Size(size.width, 1.dp.toPx())
+            )
+            drawRect(
+                color = Color.White.copy(alpha = 0.45f),
+                topLeft = Offset(0f, 0f),
+                size = Size(0.8.dp.toPx(), size.height)
+            )
+            drawRect(
+                color = Color.Black.copy(alpha = 0.10f),
+                topLeft = Offset(size.width - 0.8.dp.toPx(), 0f),
+                size = Size(0.8.dp.toPx(), size.height)
             )
             // Erase where the finger has been.
             for (stroke in strokes) {
