@@ -587,7 +587,7 @@ private fun PrayerCardBack(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 18.dp, vertical = 4.dp),
+                .padding(horizontal = 18.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -595,8 +595,8 @@ private fun PrayerCardBack(
                 text = "أَثَر",
                 fontFamily = ThmanyahSerifDisplay,
                 fontWeight = FontWeight.Black,
-                fontSize = 30.sp,
-                lineHeight = 36.sp,
+                fontSize = 26.sp,
+                lineHeight = 30.sp,
                 color = AtharPrimaryLight,
                 textAlign = TextAlign.Center
             )
@@ -604,8 +604,8 @@ private fun PrayerCardBack(
                 text = "A T H A R",
                 fontFamily = ThmanyahSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 9.sp,
-                letterSpacing = 5.sp,
+                fontSize = 8.5.sp,
+                letterSpacing = 4.5.sp,
                 color = AtharTextSecondary,
                 textAlign = TextAlign.Center
             )
@@ -618,18 +618,8 @@ private fun PrayerCardBack(
                 onCardTap = onCardTap,
                 scratchSound = scratchSound,
                 modifier = Modifier
-                    .fillMaxWidth(0.88f)
-                    .height(64.dp)
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.scratch_label) + "!",
-                fontFamily = ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                letterSpacing = 0.4.sp,
-                color = AtharTextPrimary.copy(alpha = 0.88f),
-                textAlign = TextAlign.Center
+                    .fillMaxWidth(0.9f)
+                    .height(62.dp)
             )
         }
     }
