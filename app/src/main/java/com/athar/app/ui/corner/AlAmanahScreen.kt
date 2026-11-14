@@ -2422,7 +2422,6 @@ private fun AmanahLibraryScreen(
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     AmanahTawasheehRow(
                         index = index,
-                        track = track,
                         title = if (isArabic) track.titleAr else track.titleEn,
                         isArabic = isArabic,
                         isPlaying = isCurrent && AlAmanahAudioController.isPlaying,
@@ -2592,19 +2591,12 @@ private fun AmanahPlaylistTrackRow(
 @Composable
 private fun AmanahTawasheehRow(
     index: Int,
-    track: AmanahTawasheehTrack,
     title: String,
     isArabic: Boolean,
     isPlaying: Boolean,
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val revision = AlAmanahAudioController.downloadRevision
-    val downloaded = remember(revision, track.id) {
-        AlAmanahAudioController.isTawasheehDownloaded(context, track)
-    }
-    val downloadProgress = AlAmanahAudioController.tawasheehDownloadProgress[track.id]
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -2676,15 +2668,7 @@ private fun AmanahTawasheehRow(
                 )
             }
 
-            AmanahDownloadButton(
-                downloaded = downloaded,
-                progress = downloadProgress,
-                onDownload = { AlAmanahAudioController.downloadTawasheeh(context, track) },
-                onDelete = { AlAmanahAudioController.deleteDownloadedTawasheeh(context, track) },
-                modifier = Modifier.size(34.dp)
-            )
-
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(8.dp))
 
             Icon(
                 imageVector = if (isActive && isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
