@@ -75,7 +75,7 @@ import java.util.Locale
 /**
  * Announcement for the Tawasheeh collection in Al-Amanah.
  *
- * A quiet, poetic introduction to the Naqshabandy recordings, pointing at the
+ * A quiet, poetic introduction to the tawasheeh recordings, pointing at the
  * playlist that now shares the Quran player.
  */
 @Composable
@@ -117,15 +117,15 @@ fun TawasheehAnnouncementDialog(
 
         Spacer(Modifier.height(14.dp))
 
-        // A couplet written for the collection: remembrance as a river that
-        // the voice follows home.
+        // A couplet written for the collection: voices turning yearning into
+        // light, without naming any singer.
         Text(
             text = if (isArabic) {
-                "«إِذَا رَدَّدَ الحَادِي نَدَى الذِّكْرِ فِي الدُّجَى\n" +
-                    "تَهَادَى إِلَى الأَرْوَاحِ صَوْتُ النَّقْشَبَنْدِي»"
+                "«إِذَا حَنَّتِ الأَصْوَاتُ فِي اللَّيْلِ تَنَفَّسَتْ\n" +
+                    "بِأَنْغَامِهَا الأَرْوَاحُ وَانْجَلَّ حُزْنُهَا»"
             } else {
-                "\"When the voice carries remembrance through the dark,\n" +
-                    "the soul walks home on the Naqshabandy sound.\""
+                "\"When the voices yearn through the night,\n" +
+                    "souls draw breath from their melody, and sorrow lifts.\""
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
             fontWeight = FontWeight.Medium,
@@ -139,9 +139,9 @@ fun TawasheehAnnouncementDialog(
 
         Text(
             text = if (isArabic) {
-                "قائمةٌ كاملةٌ من تواشيح الشيخ سيد النقشبندي، في المشغّل نفسه الذي تعرفه: غلافٌ هادئ، وقائمةُ تشغيلٍ تُسحب، وتنزيلٌ للاستماع بلا اتصال."
+                "قائمةٌ كاملةٌ من التواشيح والإبتهالات، في المشغّل نفسه الذي تعرفه: غلافٌ هادئ، وقائمةُ تشغيلٍ تُسحب، وتنزيلٌ للاستماع بلا اتصال."
             } else {
-                "The complete collection of Sheikh Sayed Al-Naqshabandy, in the player you already know: a calm cover, a draggable queue and offline downloads."
+                "A complete collection of tawasheeh and supplications, in the player you already know: a calm cover, a draggable queue and offline downloads."
             },
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Normal,
