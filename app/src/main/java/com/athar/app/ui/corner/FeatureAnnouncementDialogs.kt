@@ -3,12 +3,9 @@ package com.athar.app.ui.corner
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.athar.app.ui.components.IslamicPatternBackground
+import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharCardSurface
 import com.athar.app.ui.theme.AtharPrimary
 import com.athar.app.ui.theme.AtharPrimaryLight
@@ -70,12 +69,14 @@ import com.athar.app.ui.theme.AtharTextSecondary
 import com.athar.app.ui.theme.AtharThemeId
 import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
+import com.athar.app.ui.theme.ink
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /**
  * Announcement for the Tawasheeh collection in Al-Amanah.
  *
- * A quiet, poetic introduction to the tawasheeh recordings, pointing at the
+ * A quiet, poetic introduction to the Naqshabandy recordings, pointing at the
  * playlist that now shares the Quran player.
  */
 @Composable
@@ -162,9 +163,9 @@ fun TawasheehAnnouncementDialog(
 }
 
 /**
- * Announcement for the new theming engine. The preview inside the dialog is
- * live: tapping a theme animates the mock screen's colours so the user can try
- * the palettes before opening the settings section.
+ * Announcement for the new theming system. The preview walks through every
+ * palette on its own until the user touches it, then it follows their taps:
+ * theme, accent tone, and a full miniature of the app recoloured live.
  */
 @Composable
 fun ThemeEngineAnnouncementDialog(
@@ -173,6 +174,20 @@ fun ThemeEngineAnnouncementDialog(
 ) {
     val isArabic = remember { Locale.getDefault().language == "ar" }
     var preview by remember { mutableStateOf(AtharThemeId.entries.first()) }
+    var accent by remember { mutableStateOf(AtharAccentTone.NATIVE) }
+    var touched by remember { mutableStateOf(false) }
+
+    // Until the user takes over, the preview tours the palettes so the dialog
+    // shows the whole range at a glance.
+    LaunchedEffect(touched) {
+        if (touched) return@LaunchedEffect
+        while (true) {
+            delay(2400L)
+            val next = (preview.ordinal + 1) % AtharThemeId.entries.size
+            preview = AtharThemeId.entries[next]
+            accent = AtharAccentTone.NATIVE
+        }
+    }
 
     AnnouncementFrame(
         pillLabel = if (isArabic) "جرّب الآن" else "Try it",
@@ -186,50 +201,65 @@ fun ThemeEngineAnnouncementDialog(
             background = AtharPrimarySubtle
         )
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
 
         Text(
-            text = if (isArabic) "جَدِيدٌ فِي أَثَر" else "New in Athar",
+            text = if (isArabic) "جَدِيدٌ فِي أَثَر" else "NEW IN ATHAR",
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Medium,
-            fontSize = 12.sp,
-            color = AtharTextSecondary
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = if (isArabic) "مُحَرِّكُ الأَثْوَاب" else "The Theming Engine",
-            fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-            fontWeight = FontWeight.Black,
-            fontSize = if (isArabic) 25.sp else 20.sp,
-            color = AtharTextPrimary,
-            textAlign = TextAlign.Center
+            fontSize = 11.sp,
+            color = AtharTextSecondary,
+            textAlign = TextAlign.Center,
+            letterSpacing = 1.6.sp
         )
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(4.dp))
+
+        Text(
+            text = if (isArabic) "أَثْوَابُ أَثَر" else "A New Look for Athar",
+            fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+            fontWeight = FontWeight.Black,
+            fontSize = if (isArabic) 26.sp else 20.sp,
+            color = AtharTextPrimary,
+            textAlign = TextAlign.Center,
+            lineHeight = if (isArabic) 34.sp else 26.sp
+        )
+
+        Spacer(Modifier.height(8.dp))
 
         Text(
             text = if (isArabic) {
-                "أربعةُ أثوابٍ تُغَيِّرُ لونَ أثرَ كلّه، مع نغماتِ لونٍ تُكملُ الطابع. جرّبها هنا قبل أن تحفظها."
+                "أربعةُ أثوابٍ تُعيدُ رسمَ أثرَ كلّه، ولكلِّ ثوبٍ نغماتُ لونٍ تُكملُ طابعه. جرّبها هنا قبل أن تحفظها."
             } else {
-                "Four palettes repaint all of Athar, each with accent tones that complete the mood. Try them right here before you keep one."
+                "Four palettes repaint all of Athar, each with accent tones that complete its mood. Try them here before you keep one."
             },
             fontFamily = ThmanyahSans,
             fontWeight = FontWeight.Normal,
             fontSize = 12.sp,
             color = AtharTextSecondary,
             textAlign = TextAlign.Center,
-            lineHeight = 18.sp
+            lineHeight = 18.sp,
+            modifier = Modifier.fillMaxWidth(0.94f)
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
 
         ThemePreview(
             selected = preview,
+            accent = accent,
             isArabic = isArabic,
-            onPick = { preview = it }
+            onPickTheme = {
+                touched = true
+                preview = it
+                accent = AtharAccentTone.NATIVE
+            },
+            onPickAccent = {
+                touched = true
+                accent = it
+            }
         )
 
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(18.dp))
 
         PrimaryAction(
             label = if (isArabic) "افتح إعدادات المظهر" else "Open Theme Settings",
@@ -243,28 +273,92 @@ fun ThemeEngineAnnouncementDialog(
 @Composable
 private fun ThemePreview(
     selected: AtharThemeId,
+    accent: AtharAccentTone,
     isArabic: Boolean,
-    onPick: (AtharThemeId) -> Unit
+    onPickTheme: (AtharThemeId) -> Unit,
+    onPickAccent: (AtharAccentTone) -> Unit
 ) {
-    val palette = selected.palette
+    val palette = selected.paletteFor(accent)
     val spec = tween<Color>(durationMillis = 520, easing = FastOutSlowInEasing)
     val background by animateColorAsState(palette.background, spec, label = "previewBackground")
     val surface by animateColorAsState(palette.cardSurface, spec, label = "previewSurface")
     val border by animateColorAsState(palette.cardBorder, spec, label = "previewBorder")
     val primary by animateColorAsState(palette.primary, spec, label = "previewPrimary")
+    val primaryDeep by animateColorAsState(palette.primaryDeep, spec, label = "previewPrimaryDeep")
     val onPrimary by animateColorAsState(palette.textOnPrimary, spec, label = "previewOnPrimary")
     val textPrimary by animateColorAsState(palette.textPrimary, spec, label = "previewTextPrimary")
     val textSecondary by animateColorAsState(palette.textSecondary, spec, label = "previewTextSecondary")
+    val ink by animateColorAsState(palette.ink, spec, label = "previewInk")
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // The chosen theme and tone, named outside the mock so the artwork
+        // itself stays clean and the labels line up with the swatches.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = selected.let { if (isArabic) it.nameAr else it.nameEn },
+                    fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = AtharTextPrimary
+                )
+                Text(
+                    text = accent.let { if (isArabic) it.labelAr else it.labelEn },
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 10.sp,
+                    color = AtharTextSecondary
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                selected.accentTones.forEach { tone ->
+                    val chosen = tone == accent
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .border(
+                                width = if (chosen) 1.5.dp else 1.dp,
+                                color = if (chosen) ink else Color.White.copy(alpha = 0.16f),
+                                shape = CircleShape
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onPickAccent(tone) }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(if (chosen) 15.dp else 13.dp)
+                                .clip(CircleShape)
+                                .background(tone.swatch)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        // The mock screen: a gradient wall, a hero ayah card, an action row and
+        // the floating dock, all painted with the chosen palette.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(148.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(background)
-                .border(1.dp, border, RoundedCornerShape(18.dp))
-                .padding(14.dp)
+                .height(178.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(background, primaryDeep.copy(alpha = 0.35f), background)
+                    )
+                )
+                .border(1.dp, border, RoundedCornerShape(20.dp))
+                .padding(12.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -273,145 +367,243 @@ private fun ThemePreview(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(22.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
-                            .background(primary)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isArabic) "أَثَر" else "ATHAR",
-                            fontFamily = ThmanyahSans,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 12.sp,
-                            color = textPrimary
-                        )
-                        Text(
-                            text = selected.let { if (isArabic) it.nameAr else it.nameEn },
-                            fontFamily = ThmanyahSans,
-                            fontSize = 9.sp,
-                            color = textSecondary
+                            .background(primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(onPrimary)
                         )
                     }
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        text = if (isArabic) "أَثَر" else "ATHAR",
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 11.sp,
+                        color = textPrimary
+                    )
+                    Spacer(Modifier.weight(1f))
                     Box(
                         modifier = Modifier
-                            .size(width = 26.dp, height = 14.dp)
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(primary.copy(alpha = 0.85f))
+                            .size(width = 30.dp, height = 16.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primary.copy(alpha = 0.16f))
+                            .border(1.dp, primary.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(9.dp))
 
-                // A prayer card, drawn with the theme's own surfaces.
+                // Hero card: today's ayah set in the theme's own serif.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(surface)
-                        .border(1.dp, border, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 9.dp)
+                        .height(62.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(primaryDeep.copy(alpha = 0.85f), surface)
+                            )
+                        )
+                        .border(1.dp, primary.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+                        .padding(horizontal = 11.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(width = 3.dp, height = 30.dp)
+                                .size(width = 2.5.dp, height = 34.dp)
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(primary)
                         )
                         Spacer(Modifier.width(9.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 74.dp, height = 6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(textPrimary.copy(alpha = 0.75f))
+                            Text(
+                                text = if (isArabic) "آيَةُ اليَوْم" else "TODAY'S AYAH",
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 7.sp,
+                                color = ink,
+                                letterSpacing = 0.6.sp
                             )
-                            Spacer(Modifier.height(5.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 48.dp, height = 4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(textSecondary.copy(alpha = 0.65f))
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(primary)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(onPrimary)
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                text = if (isArabic) {
+                                    "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ"
+                                } else {
+                                    "In remembrance, hearts find rest"
+                                },
+                                fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = if (isArabic) 11.sp else 9.sp,
+                                color = textPrimary,
+                                maxLines = 2
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // A bottom dock pill in the accent colour.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(primary.copy(alpha = 0.18f))
-                        .border(1.dp, primary.copy(alpha = 0.35f), RoundedCornerShape(10.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // A filled action tile.
                     Box(
                         modifier = Modifier
-                            .size(width = 42.dp, height = 8.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .weight(1f)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(11.dp))
                             .background(primary)
-                    )
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 34.dp, height = 5.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(onPrimary.copy(alpha = 0.85f))
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 22.dp, height = 4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(onPrimary.copy(alpha = 0.55f))
+                            )
+                        }
+                    }
+                    // A quiet card beside it.
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(surface)
+                            .border(1.dp, border, RoundedCornerShape(11.dp))
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(primary.copy(alpha = 0.22f))
+                                    .border(1.dp, primary.copy(alpha = 0.55f), CircleShape)
+                            )
+                            Spacer(Modifier.width(7.dp))
+                            Column {
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 28.dp, height = 5.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(textPrimary.copy(alpha = 0.72f))
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 18.dp, height = 4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(textSecondary.copy(alpha = 0.62f))
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // Floating dock.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(26.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(surface.copy(alpha = 0.92f))
+                        .border(1.dp, border, RoundedCornerShape(13.dp))
+                        .padding(horizontal = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    repeat(4) { index ->
+                        val active = index == 0
+                        Box(
+                            modifier = Modifier
+                                .size(width = if (active) 22.dp else 7.dp, height = 7.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (active) primary else textSecondary.copy(alpha = 0.55f)
+                                )
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Theme chips: named, aligned, and easy to hit.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             AtharThemeId.entries.forEach { theme ->
-                val isSelected = theme == selected
-                val ring by animateFloatAsState(
-                    targetValue = if (isSelected) 1f else 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.55f,
-                        stiffness = Spring.StiffnessMediumLow
-                    ),
-                    label = "themeRing"
-                )
-                Box(
+                val chosen = theme == selected
+                Row(
                     modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
+                        .weight(1f)
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(
+                            if (chosen) theme.palette.primarySubtle else Color.White.copy(alpha = 0.03f)
+                        )
                         .border(
-                            width = (1 + ring * 1.5f).dp,
-                            color = if (isSelected) theme.palette.primaryLight else Color.White.copy(alpha = 0.14f),
-                            shape = CircleShape
+                            width = if (chosen) 1.4.dp else 1.dp,
+                            color = if (chosen) theme.palette.primary else Color.White.copy(alpha = 0.10f),
+                            shape = RoundedCornerShape(11.dp)
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = { onPick(theme) }
-                        ),
-                    contentAlignment = Alignment.Center
+                            onClick = { onPickTheme(theme) }
+                        )
+                        .padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size((17 + ring * 3).dp)
+                            .size(8.dp)
                             .clip(CircleShape)
                             .background(theme.palette.primary)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = theme.let { if (isArabic) it.nameAr else it.nameEn },
+                        fontFamily = ThmanyahSans,
+                        fontWeight = if (chosen) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 9.sp,
+                        color = if (chosen) AtharTextPrimary else AtharTextSecondary,
+                        maxLines = 1
                     )
                 }
             }
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = if (isArabic) "اضغط على ثوبٍ أو نغمةٍ لمعاينتها" else "Tap a palette or a tone to preview it",
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Normal,
+            fontSize = 10.sp,
+            color = AtharTextSecondary.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
