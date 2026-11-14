@@ -462,24 +462,34 @@ private fun TopBar(
                     )
                 }
 
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .background(AtharCardSurface)
-                        .border(1.dp, AtharCardBorder, CircleShape)
+                        .border(1.dp, AtharCardBorder, RoundedCornerShape(18.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onOpenQibla
-                        ),
-                    contentAlignment = Alignment.Center
+                        )
+                        .padding(start = 11.dp, end = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Explore,
-                        contentDescription = stringResource(R.string.nav_qibla),
+                        contentDescription = null,
                         tint = AtharPrimaryLight,
-                        modifier = Modifier.size(19.dp)
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.nav_qibla),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        color = AtharPrimaryLight,
+                        maxLines = 1
                     )
                 }
 
