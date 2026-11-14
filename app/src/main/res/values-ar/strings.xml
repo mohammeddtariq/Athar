@@ -262,7 +262,7 @@
     <string name="update_notif_channel_desc">إشعارات بتوفر تحديثات جديدة وتحسينات لتطبيق أَثَر</string>
     <string name="update_notif_title">تحديث جديد لتطبيق أَثَر</string>
     <string name="update_notif_body">الإصدار %s متوفر الآن بتحديثات وتحسينات مباركة. اضغط للتحديث.</string>
-    <string name="update_dialog_title">إشراقة تحديث جديد</string>
+    <string name="update_dialog_title">تحديث جديد</string>
     <string name="update_dialog_subtitle">خطوة جديدة ترتقي بتجربتك وتزيد أثرك سكينة وبهاءً</string>
     <string name="update_version_badge">الإصدار \u2066%s\u2069</string>
     <string name="update_changelog_title">ما الجديد في هذا التحديث</string>
