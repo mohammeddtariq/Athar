@@ -118,13 +118,15 @@ fun TawasheehAnnouncementDialog(
 
         Spacer(Modifier.height(14.dp))
 
-        // A short line for the collection: voices of supplication bringing the
-        // soul back to the calm it already knows, without naming any singer.
+        // The opening couplet of "Mawlaya", one of the tawasheeh the collection
+        // carries: a line he actually sang, kept without a name in the text.
         Text(
             text = if (isArabic) {
-                "«أَصْوَاتٌ تُرَتِّلُ الدُّعَاءَ، فَتَعُودُ الرُّوحُ إِلَى سَكِينَتِهَا كَأَنَّهَا لَمْ تَبْعُدْ»"
+                "«مَوْلَايَ إِنِّي بِبَابِكَ قَدْ بَسَطْتُ يَدِي\n" +
+                    "مَنْ لِي أَلُوذُ بِهِ إِلَّاكَ يَا سَنَدِي»"
             } else {
-                "\"Voices recite the supplication, and the soul returns to its serenity as if it never left.\""
+                "\"My Lord, at Your door I have spread my hands;\n" +
+                    "who can I turn to but You, my support?\""
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
             fontWeight = FontWeight.Medium,
