@@ -140,8 +140,8 @@
     <string name="settings_app_icon_warning_body">تغيير أيقونة التطبيق يُغلق «أَثَر» لحظات حتى تُحدّث الشاشة الرئيسية الأيقونة. سيعود للعمل طبيعيًا ولن يضيع شيء.</string>
     <string name="settings_app_icon_warning_confirm">تغيير الأيقونة</string>
     <string name="settings_app_icon_warning_cancel">الإبقاء على الحالية</string>
-    <string name="settings_motion_blur">ضبابية الأعلى والأسفل</string>
-    <string name="settings_motion_blur_sub">تُلطّف المحتوى حين يمرّ تحت أعلى الشاشة وأسفلها. أوقفها على الأجهزة الأبطأ.</string>
+    <string name="settings_motion_blur">تلاشي الحواف</string>
+    <string name="settings_motion_blur_sub">تُلطّف المحتوى عند الحواف العلوية والسفلية أثناء التمرير. أوقفها على الأجهزة الأبطأ.</string>
     <string name="settings_language">اللغة</string>
     <string name="settings_number_format">نمط الأرقام</string>
     <string name="number_format_western">1 2 3 (غربية)</string>
