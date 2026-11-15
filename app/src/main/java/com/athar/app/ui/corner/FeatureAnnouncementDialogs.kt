@@ -118,15 +118,15 @@ fun TawasheehAnnouncementDialog(
 
         Spacer(Modifier.height(14.dp))
 
-        // The opening couplet of "Mawlaya", one of the tawasheeh the collection
-        // carries: a line he actually sang, kept without a name in the text.
+        // A later couplet from "Mawlaya", the one the collection's listeners
+        // remember: who else sees the heart, and all creation is a shadow.
         Text(
             text = if (isArabic) {
-                "«مَوْلَايَ إِنِّي بِبَابِكَ قَدْ بَسَطْتُ يَدِي\n" +
-                    "مَنْ لِي أَلُوذُ بِهِ إِلَّاكَ يَا سَنَدِي»"
+                "«مَنْ لِي سِوَاكَ؟ وَمَنْ سِوَاكَ يَرَى قَلْبِي وَيَسْمَعُهُ\n" +
+                    "كُلُّ الْخَلَائِقِ ظِلٌّ فِي يَدِ الصَّمَدِ»"
             } else {
-                "\"My Lord, at Your door I have spread my hands;\n" +
-                    "who can I turn to but You, my support?\""
+                "\"Who is there for me but You? Who but You sees my heart and hears it?\n" +
+                    "All creation is a shadow in the hand of the Eternal.\""
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
             fontWeight = FontWeight.Medium,
