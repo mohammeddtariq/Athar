@@ -1,8 +1,5 @@
 package com.athar.app.ui.home
 
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -43,7 +40,6 @@ import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -107,8 +103,6 @@ import com.athar.app.ui.theme.ThmanyahSans
 import com.athar.app.ui.theme.ThmanyahSerifDisplay
 import com.athar.app.ui.theme.ThmanyahSerifText
 import java.time.format.DateTimeFormatter
-import kotlin.math.exp
-import kotlin.random.Random
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -151,10 +145,6 @@ fun PrayerWalletDeck(
     // foil scratches instead of spinning the card it is printed on.
     val backFacing = remember { mutableStateMapOf<String, Boolean>() }
     val revealedAyat = remember { mutableStateMapOf<String, Boolean>() }
-    val scratchSound = remember { ScratchSound() }
-    DisposableEffect(Unit) {
-        onDispose { scratchSound.release() }
-    }
     val scope = rememberCoroutineScope()
     val fan by animateFloatAsState(
         targetValue = fanTarget,
@@ -256,7 +246,6 @@ fun PrayerWalletDeck(
                 ayahRevealed = revealedAyat[row.key] == true,
                 onAyahRevealed = { revealedAyat[row.key] = true },
                 onCardTap = { toggleFocus(row.key) },
-                scratchSound = scratchSound,
                 modifier = Modifier
                     .offset(y = peek * (rows.lastIndex - index) + lift)
                     .zIndex(if (isFocused) 100f else (rows.size - index).toFloat())
@@ -368,7 +357,6 @@ private fun PrayerWalletCard(
     ayahRevealed: Boolean,
     onAyahRevealed: () -> Unit,
     onCardTap: () -> Unit,
-    scratchSound: ScratchSound,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(22.dp)
@@ -413,8 +401,7 @@ private fun PrayerWalletCard(
                     isArabic = isArabic,
                     revealed = ayahRevealed,
                     onRevealed = onAyahRevealed,
-                    onCardTap = onCardTap,
-                    scratchSound = scratchSound
+                    onCardTap = onCardTap
                 )
             }
         } else {
@@ -551,8 +538,7 @@ private fun PrayerCardBack(
     isArabic: Boolean,
     revealed: Boolean,
     onRevealed: () -> Unit,
-    onCardTap: () -> Unit,
-    scratchSound: ScratchSound
+    onCardTap: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -616,7 +602,6 @@ private fun PrayerCardBack(
                 revealed = revealed,
                 onRevealed = onRevealed,
                 onCardTap = onCardTap,
-                scratchSound = scratchSound,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
                     .height(62.dp)
@@ -638,7 +623,6 @@ private fun ScratchAyah(
     revealed: Boolean,
     onRevealed: () -> Unit,
     onCardTap: () -> Unit,
-    scratchSound: ScratchSound,
     modifier: Modifier = Modifier
 ) {
     val ayah = remember(row.key) { ayahFor(row.key) }
@@ -777,7 +761,6 @@ private fun ScratchAyah(
                                 travelled += (to - last).getDistance()
                                 strokes += ScratchStroke(last, to)
                                 markCoverage(last, to)
-                                scratchSound.scratch()
                                 if (strokes.size % 4 == 0) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
@@ -978,80 +961,6 @@ private fun ayahFor(key: String): AyahReveal = when (key) {
         referenceEn = "At-Tur 49",
         meaning = "And glorify Him in the night and after the stars decline."
     )
-}
-
-/** A short friction burst that follows the finger while scratching foil. */
-private class ScratchSound {
-    private var lastPlayed = 0L
-
-    private val track: AudioTrack? = runCatching {
-        val samples = buildScratch()
-        val created = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(samples.size * 2)
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .build()
-        created.write(samples, 0, samples.size)
-        created
-    }.getOrNull()
-
-    fun scratch() {
-        val audio = track ?: return
-        val now = System.nanoTime()
-        if (now - lastPlayed < 85_000_000L) return
-        lastPlayed = now
-        runCatching {
-            if (audio.playState == AudioTrack.PLAYSTATE_PLAYING) audio.stop()
-            audio.reloadStaticData()
-            audio.play()
-        }
-    }
-
-    fun release() {
-        runCatching { track?.release() }
-    }
-
-    private companion object {
-        const val SAMPLE_RATE = 44100
-
-        fun buildScratch(): ShortArray {
-            val length = (SAMPLE_RATE * 0.075f).toInt()
-            val samples = ShortArray(length)
-            val random = Random(11)
-            var low = 0f
-            for (i in 0 until length) {
-                val t = i / SAMPLE_RATE.toFloat()
-                val raw = random.nextFloat() * 2f - 1f
-                low += (raw - low) * 0.25f
-                val grain = raw - low
-                val attack = (t / 0.012f).coerceAtMost(1f)
-                val env = attack * exp(-t * 42f)
-                val crackle = if (random.nextFloat() < 0.004f) {
-                    (random.nextFloat() * 2f - 1f) * 0.5f
-                } else {
-                    0f
-                }
-                val value = (grain * 0.5f + crackle) * env * 0.5f
-                samples[i] = (value * Short.MAX_VALUE)
-                    .toInt()
-                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                    .toShort()
-            }
-            return samples
-        }
-    }
 }
 
 /** Invites the sideways turn, with a slow swing rather than a static glyph. */
