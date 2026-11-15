@@ -122,10 +122,10 @@ fun TawasheehAnnouncementDialog(
         // remember: who else sees the heart, and all creation is a shadow.
         Text(
             text = if (isArabic) {
-                "«مَنْ لِي سِوَاكَ؟ وَمَنْ سِوَاكَ يَرَى قَلْبِي وَيَسْمَعُهُ\n" +
+                "«مَنْ لِي سِوَاكَ؟ وَمَنْ سِوَاكَ يَرَى قَلْبِي وَيَسْمَعُهُ؟ " +
                     "كُلُّ الْخَلَائِقِ ظِلٌّ فِي يَدِ الصَّمَدِ»"
             } else {
-                "\"Who is there for me but You? Who but You sees my heart and hears it?\n" +
+                "\"Who is there for me but You? Who but You sees my heart and hears it? " +
                     "All creation is a shadow in the hand of the Eternal.\""
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
