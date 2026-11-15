@@ -118,13 +118,13 @@ fun TawasheehAnnouncementDialog(
 
         Spacer(Modifier.height(14.dp))
 
-        // A single short line for the collection: a chanted supplication that
-        // lets grief rest, without naming any singer.
+        // A short line for the collection: voices of supplication bringing the
+        // soul back to the calm it already knows, without naming any singer.
         Text(
             text = if (isArabic) {
-                "«صَوْتٌ يُرَتِّلُ الدُّعَاءَ، فَتَنَامُ الأَحْزَانُ»"
+                "«أَصْوَاتٌ تُرَتِّلُ الدُّعَاءَ، فَتَعُودُ الرُّوحُ إِلَى سَكِينَتِهَا كَأَنَّهَا لَمْ تَبْعُدْ»"
             } else {
-                "\"A voice recites the supplication, and sorrows fall asleep.\""
+                "\"Voices recite the supplication, and the soul returns to its serenity as if it never left.\""
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
             fontWeight = FontWeight.Medium,
