@@ -118,15 +118,13 @@ fun TawasheehAnnouncementDialog(
 
         Spacer(Modifier.height(14.dp))
 
-        // A couplet written for the collection: voices turning yearning into
-        // light, without naming any singer.
+        // A single short line for the collection: a chanted supplication that
+        // lets grief rest, without naming any singer.
         Text(
             text = if (isArabic) {
-                "«إِذَا حَنَّتِ الأَصْوَاتُ فِي اللَّيْلِ تَنَفَّسَتْ\n" +
-                    "بِأَنْغَامِهَا الأَرْوَاحُ وَانْجَلَّ حُزْنُهَا»"
+                "«صَوْتٌ يُرَتِّلُ الدُّعَاءَ، فَتَنَامُ الأَحْزَانُ»"
             } else {
-                "\"When the voices yearn through the night,\n" +
-                    "souls draw breath from their melody, and sorrow lifts.\""
+                "\"A voice recites the supplication, and sorrows fall asleep.\""
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
             fontWeight = FontWeight.Medium,
