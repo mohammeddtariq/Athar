@@ -140,8 +140,8 @@
     <string name="settings_app_icon_warning_body">Changing the app icon closes Athar for a moment while your launcher refreshes the icon. It reopens normally and nothing is lost.</string>
     <string name="settings_app_icon_warning_confirm">Change icon</string>
     <string name="settings_app_icon_warning_cancel">Keep current</string>
-    <string name="settings_motion_blur">Motion blur</string>
-    <string name="settings_motion_blur_sub">Softens content as it slides beneath the edges. Turn it off on slower devices.</string>
+    <string name="settings_motion_blur">Status &amp; nav bar blur</string>
+    <string name="settings_motion_blur_sub">Softens content as it slides beneath the status and navigation bars. Turn it off on slower devices.</string>
     <string name="settings_language">Language</string>
     <string name="settings_number_format">Number format</string>
     <string name="number_format_western">1 2 3 (Western)</string>
