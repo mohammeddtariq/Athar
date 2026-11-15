@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -130,6 +131,7 @@ fun TawasheehAnnouncementDialog(
             },
             fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
             fontWeight = FontWeight.Medium,
+            fontStyle = FontStyle.Italic,
             fontSize = if (isArabic) 14.sp else 12.5.sp,
             color = AtharPrimaryLight,
             textAlign = TextAlign.Center,
