@@ -307,7 +307,7 @@ private fun ThemePreview(
                     color = AtharTextPrimary
                 )
                 Text(
-                    text = accent.let { if (isArabic) it.labelAr else it.labelEn },
+                    text = selected.moodFor(accent, isArabic),
                     fontFamily = ThmanyahSans,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,

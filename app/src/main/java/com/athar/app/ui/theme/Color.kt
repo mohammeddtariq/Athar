@@ -270,21 +270,21 @@ enum class AtharThemeId(
         )
     );
 
-    /** A short, localized mood line shown under the theme name. */
+    /** A short, localized line naming the primary and secondary colours. */
     val moodAr: String
         get() = when (this) {
-            OLIVE -> "فستقي وحبر"
-            BURGUNDY -> "ذهب عتيق وعُنّاب"
-            BROWN -> "قهوة وذهب محمّص"
-            AMOLED -> "سواد نقي وضوء"
+            OLIVE -> "فستقي وحبري"
+            BURGUNDY -> "ذهبي وعنّابي"
+            BROWN -> "ذهبي وبنّي"
+            AMOLED -> "أبيض وأسود"
         }
 
     val moodEn: String
         get() = when (this) {
             OLIVE -> "Pistachio & ink"
-            BURGUNDY -> "Antique gold & garnet"
-            BROWN -> "Roasted coffee & gold"
-            AMOLED -> "True black & light"
+            BURGUNDY -> "Gold & burgundy"
+            BROWN -> "Gold & brown"
+            AMOLED -> "White & black"
         }
 
     /** The accent tones a theme offers, in the order its card lists them. */
@@ -425,21 +425,21 @@ enum class AtharThemeId(
     fun moodFor(accent: AtharAccentTone, isArabic: Boolean): String = when {
         accent == AtharAccentTone.NATIVE -> if (isArabic) moodAr else moodEn
         this == OLIVE && accent == AtharAccentTone.GOLD ->
-            if (isArabic) "نحاسٌ مصنفر وزيتون" else "Frosted brass & olive"
+            if (isArabic) "ذهبي وزيتوني" else "Gold & olive"
         this == AMOLED && accent == AtharAccentTone.SAGE ->
-            if (isArabic) "زيتوني وسواد" else "Sage & black"
+            if (isArabic) "زيتوني وأسود" else "Sage & black"
         this == AMOLED && accent == AtharAccentTone.WINE ->
-            if (isArabic) "عُنّابي وسواد" else "Burgundy & black"
+            if (isArabic) "عُنّابي وأسود" else "Burgundy & black"
         this == AMOLED && accent == AtharAccentTone.GOLD ->
-            if (isArabic) "ذهب وسواد" else "Gold & black"
+            if (isArabic) "ذهبي وأسود" else "Gold & black"
         this == AMOLED && accent == AtharAccentTone.COFFEE ->
-            if (isArabic) "بُنّي وسواد" else "Coffee & black"
+            if (isArabic) "بُنّي وأسود" else "Coffee & black"
         this == BURGUNDY && accent == AtharAccentTone.IVORY ->
-            if (isArabic) "عاجي وعُنّاب" else "Ivory & garnet"
+            if (isArabic) "عاجي وعُنّابي" else "Ivory & burgundy"
         this == BURGUNDY && accent == AtharAccentTone.BLACK ->
-            if (isArabic) "أونكس وعُنّاب" else "Onyx & garnet"
+            if (isArabic) "أسود وعُنّابي" else "Onyx & burgundy"
         this == BROWN && accent == AtharAccentTone.BLACK ->
-            if (isArabic) "أونكس وقهوة" else "Onyx & coffee"
+            if (isArabic) "أسود وبنّي" else "Onyx & brown"
         else -> if (isArabic) moodAr else moodEn
     }
 
