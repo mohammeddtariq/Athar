@@ -1103,6 +1103,10 @@ private fun PathMeasure.nearestDistance(point: Offset, samples: Int = 220): Floa
  * The bead tick: a dry, mechanical click and nothing else. A tiny noise
  * transient with a very short high ping, the way a timer clicks — no warm
  * body, no beep. One static [AudioTrack] is written once and replayed.
+ *
+ * It rides the media stream on purpose: sonification is muted whenever the
+ * phone is on silent or vibrate, while media keeps playing in those modes, so
+ * the tick the user asked for is heard exactly as long as the toggle is on.
  */
 private class MasbahaTick {
     private val track: AudioTrack? = runCatching {
@@ -1110,7 +1114,7 @@ private class MasbahaTick {
         val created = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
             )
