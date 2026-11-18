@@ -55,6 +55,13 @@ class AppPreferences(private val context: Context) {
         private val NOTIF_PREFIX = "notif_prayer_"
         private val NOTIF_MODE_PREFIX = "notif_mode_"
 
+        /** A quiet "did you pray?" question after each prayer. */
+        private val PRAYER_POST_REMINDER_KEY = booleanPreferencesKey("prayer_post_reminder")
+
+        /** A calm nudge ahead of the next prayer, and how early it arrives. */
+        private val PRAYER_PRE_REMINDER_KEY = booleanPreferencesKey("prayer_pre_reminder")
+        private val PRAYER_PRE_REMINDER_MIN_KEY = intPreferencesKey("prayer_pre_reminder_minutes")
+
         // Number formatting preference
         private val NUMBER_STYLE_KEY = stringPreferencesKey("number_style")
 
@@ -409,6 +416,19 @@ class AppPreferences(private val context: Context) {
         stored + DEFAULT_NAV_TAB_ORDER.filterNot { it in stored }
     }
 
+    val prayerPostReminderEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[PRAYER_POST_REMINDER_KEY] ?: false
+    }
+
+    val prayerPreReminderEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[PRAYER_PRE_REMINDER_KEY] ?: false
+    }
+
+    /** Lead time for the pre-prayer nudge: 5 to 30 minutes, in fives. */
+    val prayerPreReminderMinutes: Flow<Int> = context.dataStore.data.map {
+        (it[PRAYER_PRE_REMINDER_MIN_KEY] ?: 10).coerceIn(5, 30)
+    }
+
     suspend fun setLanguageAndCompleteOnboarding(languageCode: String) {
         context.dataStore.edit {
             it[LANGUAGE_KEY] = languageCode
@@ -503,6 +523,18 @@ class AppPreferences(private val context: Context) {
         val normalized = (order.filter { it in DEFAULT_NAV_TAB_ORDER } +
             DEFAULT_NAV_TAB_ORDER.filterNot { it in order }).distinct()
         context.dataStore.edit { it[NAV_TAB_ORDER_KEY] = normalized.joinToString(",") }
+    }
+
+    suspend fun setPrayerPostReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[PRAYER_POST_REMINDER_KEY] = enabled }
+    }
+
+    suspend fun setPrayerPreReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[PRAYER_PRE_REMINDER_KEY] = enabled }
+    }
+
+    suspend fun setPrayerPreReminderMinutes(minutes: Int) {
+        context.dataStore.edit { it[PRAYER_PRE_REMINDER_MIN_KEY] = minutes.coerceIn(5, 30) }
     }
 
     suspend fun setAfterPrayerAutoAdvance(enabled: Boolean) {

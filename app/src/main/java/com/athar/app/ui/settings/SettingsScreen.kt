@@ -291,6 +291,9 @@ fun SettingsScreen(
     val navTabOrder by prefs.navTabOrder.collectAsState(
         initial = AppPreferences.DEFAULT_NAV_TAB_ORDER
     )
+    val prayerPostReminderEnabled by prefs.prayerPostReminderEnabled.collectAsState(initial = false)
+    val prayerPreReminderEnabled by prefs.prayerPreReminderEnabled.collectAsState(initial = false)
+    val prayerPreReminderMinutes by prefs.prayerPreReminderMinutes.collectAsState(initial = 10)
 
     var showMethods by remember { mutableStateOf(false) }
     var showCities by remember { mutableStateOf(false) }
@@ -912,6 +915,59 @@ fun SettingsScreen(
                                 numberStyle = numberStyle,
                                 isArabic = language == "ar"
                             )
+
+                            Spacer(Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(AtharCardBorder.copy(alpha = 0.55f))
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            Text(
+                                stringResource(R.string.settings_reminders_title),
+                                fontFamily = ThmanyahSans,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.5.sp,
+                                color = AtharTextPrimary
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                stringResource(R.string.settings_reminders_sub),
+                                fontFamily = ThmanyahSans,
+                                fontSize = 11.5.sp,
+                                color = AtharTextSecondary
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            ReminderToggleRow(
+                                title = stringResource(R.string.settings_reminder_after_title),
+                                subtitle = stringResource(R.string.settings_reminder_after_sub),
+                                checked = prayerPostReminderEnabled,
+                                onCheckedChange = { enabled ->
+                                    scope.launch { prefs.setPrayerPostReminderEnabled(enabled) }
+                                }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            ReminderToggleRow(
+                                title = stringResource(R.string.settings_reminder_before_title),
+                                subtitle = stringResource(R.string.settings_reminder_before_sub),
+                                checked = prayerPreReminderEnabled,
+                                onCheckedChange = { enabled ->
+                                    scope.launch { prefs.setPrayerPreReminderEnabled(enabled) }
+                                }
+                            )
+                            AnimatedVisibility(visible = prayerPreReminderEnabled) {
+                                Column {
+                                    Spacer(Modifier.height(14.dp))
+                                    ReminderLeadControl(
+                                        minutes = prayerPreReminderMinutes,
+                                        numberStyle = numberStyle,
+                                        onChange = { minutes ->
+                                            scope.launch { prefs.setPrayerPreReminderMinutes(minutes) }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -2364,6 +2420,138 @@ private fun NavOrderButton(
             contentDescription = null,
             tint = if (enabled) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.28f),
             modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun ReminderToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.5.sp,
+                color = AtharTextPrimary
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = subtitle,
+                fontFamily = ThmanyahSans,
+                fontSize = 11.5.sp,
+                color = AtharTextSecondary
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = AtharTextOnPrimary,
+                checkedTrackColor = AtharPrimary,
+                uncheckedThumbColor = AtharTextSecondary,
+                uncheckedTrackColor = AtharCardBorder
+            )
+        )
+    }
+}
+
+/** A digital countdown readout with −5 / +5 steps, capped at thirty minutes. */
+@Composable
+private fun ReminderLeadControl(
+    minutes: Int,
+    numberStyle: NumberStylePreference,
+    onChange: (Int) -> Unit
+) {
+    Column {
+        Text(
+            stringResource(R.string.settings_reminder_lead_title),
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            color = AtharTextPrimary
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            stringResource(R.string.settings_reminder_lead_sub),
+            fontFamily = ThmanyahSans,
+            fontSize = 11.5.sp,
+            color = AtharTextSecondary
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            LeadStepButton(
+                label = "−5",
+                enabled = minutes > 5,
+                onClick = { onChange((minutes - 5).coerceAtLeast(5)) }
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(58.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AtharBackground.copy(alpha = 0.55f))
+                    .border(1.dp, AtharCardBorder, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${formatDigits(minutes.toString().padStart(2, '0'), numberStyle)}:00",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
+                    letterSpacing = 2.sp,
+                    color = AtharPrimaryLight
+                )
+            }
+            LeadStepButton(
+                label = "+5",
+                enabled = minutes < 30,
+                onClick = { onChange((minutes + 5).coerceAtMost(30)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun LeadStepButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(44.dp)
+            .widthIn(min = 56.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (enabled) AtharPrimary.copy(alpha = 0.14f) else Color.Transparent)
+            .border(
+                1.dp,
+                if (enabled) AtharPrimary.copy(alpha = 0.45f) else AtharCardBorder.copy(alpha = 0.4f),
+                RoundedCornerShape(12.dp)
+            )
+            .clickable(
+                enabled = enabled,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = if (enabled) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.4f)
         )
     }
 }

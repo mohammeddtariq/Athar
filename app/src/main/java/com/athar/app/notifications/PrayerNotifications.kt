@@ -39,6 +39,10 @@ object PrayerNotifications {
         "athar_prayer_times_v3"
     )
     const val REQUEST_BASE = 4000
+    private const val PRE_REQUEST_BASE = 4100
+    private const val POST_REQUEST_BASE = 4200
+    private const val POST_REMINDER_DELAY_MS = 20 * 60_000L
+    private val REMINDER_PRAYERS = listOf("fajr", "dhuhr", "asr", "maghrib", "isha")
 
     fun getNotificationSoundUri(context: Context): Uri {
         // Addressed by name, not by the numeric R.raw id. A channel keeps the URI
@@ -107,6 +111,20 @@ object PrayerNotifications {
         "maghrib" -> 4005
         "isha" -> 4006
         else -> REQUEST_BASE
+    }
+
+    private fun beforeRequestCode(key: String): Int =
+        PRE_REQUEST_BASE + REMINDER_PRAYERS.indexOf(key).coerceAtLeast(0) + 1
+
+    private fun afterRequestCode(key: String): Int =
+        POST_REQUEST_BASE + REMINDER_PRAYERS.indexOf(key).coerceAtLeast(0) + 1
+
+    private fun scheduleExact(manager: AlarmManager, triggerAt: Long, pending: PendingIntent) {
+        try {
+            manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+        } catch (_: SecurityException) {
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+        }
     }
 
     /**
@@ -193,6 +211,82 @@ object PrayerNotifications {
             }
         }
 
+        // The two optional reminders ride alongside the prayer alarms: one a
+        // quiet question after the prayer, one a calm nudge before the next.
+        val preEnabled = prefs.prayerPreReminderEnabled.first()
+        val preMinutes = prefs.prayerPreReminderMinutes.first()
+        val postEnabled = prefs.prayerPostReminderEnabled.first()
+
+        fun timeFor(key: String, tomorrowDay: Boolean): LocalTime {
+            val day = if (tomorrowDay) tomorrow else today
+            return when (key) {
+                "fajr" -> day.fajr
+                "sunrise" -> day.sunrise
+                "dhuhr" -> day.dhuhr
+                "asr" -> day.asr
+                "maghrib" -> day.maghrib
+                "isha" -> day.isha
+                else -> day.fajr
+            }
+        }
+
+        for (key in REMINDER_PRAYERS) {
+            val mode = prefs.prayerNotificationMode(key).first()
+            val beforePending = PendingIntent.getBroadcast(
+                context.applicationContext,
+                beforeRequestCode(key),
+                Intent(context.applicationContext, PrayerAlarmReceiver::class.java).apply {
+                    putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, key)
+                    putExtra(PrayerAlarmReceiver.EXTRA_KIND, PrayerAlarmReceiver.KIND_BEFORE)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val afterPending = PendingIntent.getBroadcast(
+                context.applicationContext,
+                afterRequestCode(key),
+                Intent(context.applicationContext, PrayerAlarmReceiver::class.java).apply {
+                    putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, key)
+                    putExtra(PrayerAlarmReceiver.EXTRA_KIND, PrayerAlarmReceiver.KIND_AFTER)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // A prayer whose own notification is off gets no reminders either.
+            if (mode == PrayerNotifMode.OFF) {
+                alarmManager.cancel(beforePending)
+                alarmManager.cancel(afterPending)
+                continue
+            }
+
+            if (preEnabled) {
+                val todayAt = prayerDateToday(timeFor(key, tomorrowDay = false), tomorrow = false).time -
+                    preMinutes * 60_000L
+                val triggerAt = if (todayAt > nowMs + 1000L) {
+                    todayAt
+                } else {
+                    prayerDateToday(timeFor(key, tomorrowDay = true), tomorrow = true).time -
+                        preMinutes * 60_000L
+                }
+                scheduleExact(alarmManager, triggerAt, beforePending)
+            } else {
+                alarmManager.cancel(beforePending)
+            }
+
+            if (postEnabled) {
+                val todayAt = prayerDateToday(timeFor(key, tomorrowDay = false), tomorrow = false).time +
+                    POST_REMINDER_DELAY_MS
+                val triggerAt = if (todayAt > nowMs + 1000L) {
+                    todayAt
+                } else {
+                    prayerDateToday(timeFor(key, tomorrowDay = true), tomorrow = true).time +
+                        POST_REMINDER_DELAY_MS
+                }
+                scheduleExact(alarmManager, triggerAt, afterPending)
+            } else {
+                alarmManager.cancel(afterPending)
+            }
+        }
+
         // Keep Live Status (Now Bar & status bar) synchronized with prayer calculations
         LiveStatusNotificationManager.update(context)
     }
@@ -216,6 +310,23 @@ object PrayerNotifications {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             alarm.cancel(pending)
+        }
+        for (key in REMINDER_PRAYERS) {
+            for ((code, kind) in listOf(
+                beforeRequestCode(key) to PrayerAlarmReceiver.KIND_BEFORE,
+                afterRequestCode(key) to PrayerAlarmReceiver.KIND_AFTER
+            )) {
+                val pending = PendingIntent.getBroadcast(
+                    context.applicationContext,
+                    code,
+                    Intent(context.applicationContext, PrayerAlarmReceiver::class.java).apply {
+                        putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, key)
+                        putExtra(PrayerAlarmReceiver.EXTRA_KIND, kind)
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarm.cancel(pending)
+            }
         }
     }
 
@@ -283,15 +394,127 @@ object PrayerNotifications {
         val manager = context.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(prayerRequestCode(prayerKey), notificationBuilder.build())
     }
+
+    /**
+     * The two optional reminders. They speak in the same quiet, questioning
+     * tone as the prayer cards, and they follow the same sound mode as the
+     * prayer they belong to.
+     */
+    fun showReminderNotification(
+        context: Context,
+        prayerKey: String,
+        before: Boolean,
+        languageCode: String = "ar",
+        mode: PrayerNotifMode = PrayerNotifMode.SOUND
+    ) {
+        if (mode == PrayerNotifMode.OFF) return
+        val lines = REMINDER_LINES[prayerKey] ?: return
+        ensureChannel(context)
+        val isArabic = languageCode.startsWith("ar")
+        val localizedContext = getLocalizedContext(context, languageCode)
+        val prayerName = localizedContext.getString(prayerNameRes(prayerKey))
+        val title = localizedContext.getString(
+            if (before) R.string.reminder_title_before else R.string.reminder_title_after,
+            prayerName
+        )
+        val body = if (before) {
+            if (isArabic) lines.beforeAr else lines.beforeEn
+        } else {
+            if (isArabic) lines.afterAr else lines.afterEn
+        }
+
+        val openPending = PendingIntent.getActivity(
+            context.applicationContext,
+            if (before) 101 else 102,
+            Intent(context.applicationContext, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val targetChannel = if (mode == PrayerNotifMode.SILENT) CHANNEL_ID_SILENT else CHANNEL_ID
+        val builder = NotificationCompat.Builder(context.applicationContext, targetChannel)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(openPending)
+
+        if (mode == PrayerNotifMode.SILENT) {
+            builder.setSound(null)
+            builder.setSilent(true)
+        } else {
+            builder.setSound(getNotificationSoundUri(context))
+        }
+
+        val manager = context.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(
+            if (before) beforeRequestCode(prayerKey) else afterRequestCode(prayerKey),
+            builder.build()
+        )
+    }
+
+    private fun prayerNameRes(key: String): Int = when (key) {
+        "dhuhr" -> R.string.home_prayer_dhuhr
+        "asr" -> R.string.home_prayer_asr
+        "maghrib" -> R.string.home_prayer_maghrib
+        "isha" -> R.string.home_prayer_isha
+        else -> R.string.home_prayer_fajr
+    }
+
+    private data class ReminderLines(
+        val beforeAr: String,
+        val beforeEn: String,
+        val afterAr: String,
+        val afterEn: String
+    )
+
+    private val REMINDER_LINES = mapOf(
+        "fajr" to ReminderLines(
+            beforeAr = "يَقْتَرِبُ الْفَجْرُ… مَاذَا تُهْدِي قَلْبَكَ قَبْلَ أَنْ يُشْرِقَ؟",
+            beforeEn = "Dawn is near… what will you offer your heart before the light?",
+            afterAr = "أَشْرَقَ الْفَجْرُ… هَلْ وَجَدَ قَلْبُكَ سَكِينَتَهُ بَيْنَ يَدَيْ رَبِّهِ؟",
+            afterEn = "Dawn has broken… did your heart find its stillness before its Lord?"
+        ),
+        "dhuhr" to ReminderLines(
+            beforeAr = "يَقْتَرِبُ الظُّهْرُ… أَيْنَ تُرِيحُ قَلْبَكَ فِي ذُرْوَةِ النَّهَارِ؟",
+            beforeEn = "Dhuhr is near… where will you rest your heart at the height of the day?",
+            afterAr = "مَضَى الظُّهْرُ… هَلْ أَخَذَ قَلْبُكَ نَصِيبَهُ مِنْ رَاحَةِ الصَّلَاةِ؟",
+            afterEn = "Dhuhr has passed… did your heart take its share of the prayer's rest?"
+        ),
+        "asr" to ReminderLines(
+            beforeAr = "حِينَ يَذُوبُ الضَّوْءُ ذَهَبًا، مَاذَا تُرْسِلُ قَبْلَ الْعَصْرِ؟",
+            beforeEn = "When the light melts into gold, what will you send before Asr?",
+            afterAr = "مَالَ النَّهَارُ… هَلْ سَكَنْتَ فِي الْعَصْرِ إِلَى مَنْ لَا يَغِيبُ؟",
+            afterEn = "The day has leaned… did you settle into Asr with the One who never leaves?"
+        ),
+        "maghrib" to ReminderLines(
+            beforeAr = "تَهُمُّ الشَّمْسُ بِالرَّحِيلِ… مَاذَا تَحْمِلُ مَعَكَ إِلَى الْمَغْرِبِ؟",
+            beforeEn = "The sun is about to leave… what will you carry into Maghrib?",
+            afterAr = "غَابَ الضَّوْءُ… هَلْ أَوَيْتَ إِلَى سَجْدَةٍ تُطْفِئُ تَعَبَ النَّهَارِ؟",
+            afterEn = "The light has gone… did you take refuge in a prostration that quiets the day's fatigue?"
+        ),
+        "isha" to ReminderLines(
+            beforeAr = "يَقْتَرِبُ اللَّيْلُ… بِمَاذَا تَخْتِمُ يَوْمَكَ قَبْلَ الْعِشَاءِ؟",
+            beforeEn = "Night is near… how will you close your day before Isha?",
+            afterAr = "سَكَنَ اللَّيْلُ… هَلْ خَتَمْتَ يَوْمَكَ بِسَجْدَةٍ تُنِيرُ ظَلَامَهُ؟",
+            afterEn = "The night has settled… did you close your day with a prostration that lights its dark?"
+        )
+    )
 }
 
 class PrayerAlarmReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_PRAYER_KEY = "prayer_key"
+        const val EXTRA_KIND = "reminder_kind"
+        const val KIND_PRAYER = "prayer"
+        const val KIND_BEFORE = "before"
+        const val KIND_AFTER = "after"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val key = intent.getStringExtra(EXTRA_PRAYER_KEY) ?: return
+        val kind = intent.getStringExtra(EXTRA_KIND) ?: KIND_PRAYER
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -299,18 +522,32 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 val langCode = prefs.selectedLanguage.first()
                 val mode = prefs.prayerNotificationMode(key).first()
                 if (mode != PrayerNotifMode.OFF) {
-                    PrayerNotifications.showPrayerNotification(context, key, langCode, mode)
-                }
-                val shouldPauseAmanah = prefs.amanahPauseOnPrayer.first()
-                if (shouldPauseAmanah && com.athar.app.data.AlAmanahAudioController.isPlaying) {
-                    withContext(Dispatchers.Main) {
-                        com.athar.app.data.AlAmanahAudioController.togglePlayPause(context)
+                    if (kind == KIND_PRAYER) {
+                        PrayerNotifications.showPrayerNotification(context, key, langCode, mode)
+                    } else {
+                        PrayerNotifications.showReminderNotification(
+                            context = context,
+                            prayerKey = key,
+                            before = kind == KIND_BEFORE,
+                            languageCode = langCode,
+                            mode = mode
+                        )
                     }
                 }
+                // Only the prayer itself pauses Al-Amanah and refreshes the
+                // widgets; a reminder is just a quiet word.
+                if (kind == KIND_PRAYER) {
+                    val shouldPauseAmanah = prefs.amanahPauseOnPrayer.first()
+                    if (shouldPauseAmanah && com.athar.app.data.AlAmanahAudioController.isPlaying) {
+                        withContext(Dispatchers.Main) {
+                            com.athar.app.data.AlAmanahAudioController.togglePlayPause(context)
+                        }
+                    }
+                    com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
+                    LiveStatusNotificationManager.update(context)
+                    com.athar.app.updater.UpdateCheckWorker.checkIfDue(context.applicationContext, minIntervalMinutes = 120)
+                }
                 PrayerNotifications.scheduleNext(context)
-                com.athar.app.widget.AtharWidgetUpdater.updateAllWidgets(context)
-                LiveStatusNotificationManager.update(context)
-                com.athar.app.updater.UpdateCheckWorker.checkIfDue(context.applicationContext, minIntervalMinutes = 120)
             } finally {
                 pendingResult.finish()
             }

@@ -156,6 +156,16 @@
     <string name="settings_notif_offset_value">%1$s min</string>
     <string name="settings_notif_offset_decrease">Advance reminder</string>
     <string name="settings_notif_offset_increase">Delay reminder</string>
+    <string name="settings_reminders_title">Prayer Reminders</string>
+    <string name="settings_reminders_sub">Two quiet reminders, written in the tone of the prayer cards.</string>
+    <string name="settings_reminder_after_title">Did You Pray?</string>
+    <string name="settings_reminder_after_sub">A gentle question twenty minutes after each prayer.</string>
+    <string name="settings_reminder_before_title">Before the Prayer</string>
+    <string name="settings_reminder_before_sub">A calm word ahead of the next prayer.</string>
+    <string name="settings_reminder_lead_title">Lead Time</string>
+    <string name="settings_reminder_lead_sub">How early the reminder arrives, up to thirty minutes.</string>
+    <string name="reminder_title_before">Before %1$s</string>
+    <string name="reminder_title_after">After %1$s</string>
     <string name="settings_about">About Athar</string>
     <string name="settings_about_sub">Built with open libraries — see credits</string>
     <string name="settings_github">Athar on GitHub</string>
