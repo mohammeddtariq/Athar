@@ -275,6 +275,8 @@
     <string name="update_status_error">تعذر تحميل التحديث. اضغط لإعادة المحاولة.</string>
     <string name="settings_check_updates">التحقق من التحديثات</string>
     <string name="settings_check_updates_sub">التأكد من توفر أحدث إصدار من أَثَر</string>
+    <string name="settings_report_issue">أبلغ عن مشكلة</string>
+    <string name="settings_report_issue_sub">افتح بلاغًا على GitHub وقد مُلئت نسخة التطبيق وتفاصيل جهازك</string>
     <string name="update_checking">جاري التحقق من التحديثات…</string>
     <string name="update_already_latest">أنت تستخدم أحدث إصدار من أَثَر</string>
     <string name="update_permission_required">يرجى السماح بتثبيت التطبيقات من هذا المصدر لتحديث أَثَر</string>

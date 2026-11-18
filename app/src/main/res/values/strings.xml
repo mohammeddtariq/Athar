@@ -275,6 +275,8 @@
     <string name="update_status_error">Failed to download update. Tap to try again.</string>
     <string name="settings_check_updates">Check for Updates</string>
     <string name="settings_check_updates_sub">Check if a newer version of Athar is available</string>
+    <string name="settings_report_issue">Report an Issue</string>
+    <string name="settings_report_issue_sub">Open a GitHub issue with your app and device details already filled in</string>
     <string name="update_checking">Checking for updates…</string>
     <string name="update_already_latest">You are using the latest version of Athar</string>
     <string name="update_permission_required">Please allow installing apps from this source to update Athar</string>

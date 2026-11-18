@@ -7,6 +7,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import java.util.Locale
@@ -1882,6 +1883,65 @@ fun SettingsScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, AtharCardBorder, RoundedCornerShape(12.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    // GitHub fills the form for them, with the
+                                    // details that make a report actionable.
+                                    val body = buildString {
+                                        appendLine()
+                                        appendLine("---")
+                                        appendLine("**Athar:** ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                                        appendLine("**Device:** ${Build.MANUFACTURER} ${Build.MODEL}")
+                                        appendLine("**Android:** ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+                                        appendLine("**Language:** $language")
+                                    }
+                                    val url = Uri.parse("$ATHAR_GITHUB_URL/issues/new")
+                                        .buildUpon()
+                                        .appendQueryParameter("body", body)
+                                        .build()
+                                    runCatching {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, url))
+                                    }
+                                }
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.settings_report_issue),
+                                    fontFamily = ThmanyahSans,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.5.sp,
+                                    color = AtharPrimaryLight
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    stringResource(R.string.settings_report_issue_sub),
+                                    fontFamily = ThmanyahSans,
+                                    fontSize = 11.5.sp,
+                                    color = AtharTextSecondary
+                                )
+                            }
+                            Icon(
+                                Icons.AutoMirrored.Rounded.OpenInNew, null,
+                                tint = AtharTextSecondary,
+                                modifier = Modifier.size(17.dp)
+                            )
                         }
                     }
                     Spacer(Modifier.height(10.dp))
