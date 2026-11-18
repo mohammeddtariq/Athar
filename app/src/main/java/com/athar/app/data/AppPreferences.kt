@@ -129,6 +129,15 @@ class AppPreferences(private val context: Context) {
         private val AMANAH_PAUSE_ON_PRAYER_KEY = booleanPreferencesKey("amanah_pause_on_prayer")
         private val AMANAH_BACKGROUND_PLAYBACK_KEY = booleanPreferencesKey("amanah_background_playback")
         private val AMANAH_PLAYED_SURAHS_KEY = stringPreferencesKey("amanah_played_surahs")
+
+        /**
+         * The order the main dock shows its tabs in. Stored as route names so a
+         * future tab can slot in without renumbering anything.
+         */
+        private val NAV_TAB_ORDER_KEY = stringPreferencesKey("nav_tab_order")
+
+        /** The dock order Athar ships with, left to right. */
+        val DEFAULT_NAV_TAB_ORDER = listOf("home", "quran", "duas", "masbaha")
     }
 
     val hasSeenAppAnnouncement: Flow<Boolean> = context.dataStore.data.map {
@@ -386,6 +395,20 @@ class AppPreferences(private val context: Context) {
     fun prayerNotificationEnabled(prayerKey: String): Flow<Boolean> =
         prayerNotificationMode(prayerKey).map { it != PrayerNotifMode.OFF }
 
+    /**
+     * Dock order as route names. Unknown routes are dropped and any tab missing
+     * from a stored order is appended, so an update that adds a tab can never
+     * hide it from the dock.
+     */
+    val navTabOrder: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val stored = prefs[NAV_TAB_ORDER_KEY]
+            ?.split(',')
+            ?.filter { it in DEFAULT_NAV_TAB_ORDER }
+            ?.distinct()
+            .orEmpty()
+        stored + DEFAULT_NAV_TAB_ORDER.filterNot { it in stored }
+    }
+
     suspend fun setLanguageAndCompleteOnboarding(languageCode: String) {
         context.dataStore.edit {
             it[LANGUAGE_KEY] = languageCode
@@ -473,6 +496,13 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setPrayerNotificationOffsetMinutes(minutes: Int) {
         context.dataStore.edit { it[NOTIF_OFFSET_MIN_KEY] = minutes.coerceIn(-30, 30) }
+    }
+
+    /** Saves a dock order, keeping every known tab exactly once. */
+    suspend fun setNavTabOrder(order: List<String>) {
+        val normalized = (order.filter { it in DEFAULT_NAV_TAB_ORDER } +
+            DEFAULT_NAV_TAB_ORDER.filterNot { it in order }).distinct()
+        context.dataStore.edit { it[NAV_TAB_ORDER_KEY] = normalized.joinToString(",") }
     }
 
     suspend fun setAfterPrayerAutoAdvance(enabled: Boolean) {

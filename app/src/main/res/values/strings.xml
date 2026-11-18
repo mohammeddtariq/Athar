@@ -277,6 +277,9 @@
     <string name="settings_check_updates_sub">Check if a newer version of Athar is available</string>
     <string name="settings_report_issue">Report an Issue</string>
     <string name="settings_report_issue_sub">Open a GitHub issue with your app and device details already filled in</string>
+    <string name="settings_nav_order">Tab Order</string>
+    <string name="settings_nav_order_sub">Arrange the tabs of the main dock. Al-Amanah keeps its own floating button.</string>
+    <string name="settings_nav_order_reset">Reset to default order</string>
     <string name="update_checking">Checking for updates…</string>
     <string name="update_already_latest">You are using the latest version of Athar</string>
     <string name="update_permission_required">Please allow installing apps from this source to update Athar</string>

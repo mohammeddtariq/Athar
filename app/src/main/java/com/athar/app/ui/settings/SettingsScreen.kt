@@ -52,6 +52,8 @@ import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -117,6 +119,7 @@ import com.athar.app.data.presetCities
 import com.athar.app.ui.components.AtharBackgroundPicker
 import com.athar.app.ui.components.AtharIconPicker
 import com.athar.app.ui.components.AtharThemePicker
+import com.athar.app.ui.allNavScreens
 import com.athar.app.ui.components.AppIconChangeDialog
 import com.athar.app.ui.theme.AtharAccentTone
 import com.athar.app.ui.theme.AtharBackground
@@ -285,6 +288,9 @@ fun SettingsScreen(
     val liveStatusNumberStyle by prefs.liveStatusNumberStyle.collectAsState(initial = NumberStylePreference.WESTERN)
     val liveStatusLanguage by prefs.liveStatusLanguage.collectAsState(initial = "match_app")
     val masbahaNotificationEnabled by prefs.masbahaNotificationEnabled.collectAsState(initial = false)
+    val navTabOrder by prefs.navTabOrder.collectAsState(
+        initial = AppPreferences.DEFAULT_NAV_TAB_ORDER
+    )
 
     var showMethods by remember { mutableStateOf(false) }
     var showCities by remember { mutableStateOf(false) }
@@ -510,6 +516,83 @@ fun SettingsScreen(
                                 uncheckedThumbColor = AtharTextSecondary,
                                 uncheckedTrackColor = AtharCardBorder
                             )
+                        )
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        stringResource(R.string.settings_nav_order),
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                        color = AtharTextPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.settings_nav_order_sub),
+                        fontFamily = ThmanyahSans,
+                        fontSize = 11.5.sp,
+                        color = AtharTextSecondary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        navTabOrder.forEachIndexed { index, route ->
+                            val tab = allNavScreens.firstOrNull { it.route == route }
+                            if (tab != null) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .border(1.dp, AtharCardBorder, RoundedCornerShape(12.dp))
+                                        .padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(tab.labelResId),
+                                        fontFamily = ThmanyahSans,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = AtharTextPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    NavOrderButton(
+                                        icon = Icons.Rounded.KeyboardArrowUp,
+                                        enabled = index > 0,
+                                        onClick = {
+                                            val next = navTabOrder.toMutableList()
+                                            next.add(index - 1, next.removeAt(index))
+                                            scope.launch { prefs.setNavTabOrder(next) }
+                                        }
+                                    )
+                                    NavOrderButton(
+                                        icon = Icons.Rounded.KeyboardArrowDown,
+                                        enabled = index < navTabOrder.lastIndex,
+                                        onClick = {
+                                            val next = navTabOrder.toMutableList()
+                                            next.add(index + 1, next.removeAt(index))
+                                            scope.launch { prefs.setNavTabOrder(next) }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (navTabOrder != AppPreferences.DEFAULT_NAV_TAB_ORDER) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.settings_nav_order_reset),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            color = AtharPrimaryLight,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    scope.launch {
+                                        prefs.setNavTabOrder(AppPreferences.DEFAULT_NAV_TAB_ORDER)
+                                    }
+                                }
+                                .padding(horizontal = 6.dp, vertical = 4.dp)
                         )
                     }
                 }
@@ -2253,6 +2336,34 @@ private fun OffsetStepButton(
             contentDescription = contentDescription,
             tint = if (enabled) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.4f),
             modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+@Composable
+private fun NavOrderButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(if (enabled) AtharPrimary.copy(alpha = 0.14f) else Color.Transparent)
+            .clickable(
+                enabled = enabled,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) AtharPrimaryLight else AtharTextSecondary.copy(alpha = 0.28f),
+            modifier = Modifier.size(20.dp)
         )
     }
 }

@@ -192,6 +192,14 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val motionBlur = rememberMotionBlurState()
     val appPrefs = remember { AppPreferences(context.applicationContext) }
+    val navTabOrder by appPrefs.navTabOrder.collectAsState(
+        initial = AppPreferences.DEFAULT_NAV_TAB_ORDER
+    )
+    // Resolve the stored route order into the dock's screens. Missing tabs are
+    // already appended by the preference, so the dock always shows all four.
+    val dockScreens = remember(navTabOrder) {
+        navTabOrder.mapNotNull { route -> allNavScreens.firstOrNull { it.route == route } }
+    }
     val hasSeenDirayahAnnouncement by appPrefs.hasSeenDirayahAnnouncement.collectAsState(initial = null)
     val hasSeenAmanahAnnouncement by appPrefs.hasSeenAmanahAnnouncement.collectAsState(initial = null)
     val hasSeenTawasheehAnnouncement by appPrefs.hasSeenTawasheehAnnouncement.collectAsState(initial = null)
@@ -374,6 +382,7 @@ fun MainScreen(
         ) {
             AtharNavBar(
                 navController = navController,
+                screens = dockScreens,
                 onTopInsetChange = { navDockTopInset = it }
             )
         }
@@ -482,6 +491,7 @@ private fun NavHostController.navigateToTab(screen: Screen) {
 @Composable
 fun AtharNavBar(
     navController: NavHostController,
+    screens: List<Screen> = allNavScreens,
     modifier: Modifier = Modifier,
     onTopInsetChange: (Dp) -> Unit = {}
 ) {
@@ -548,7 +558,7 @@ fun AtharNavBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.CenterHorizontally)
                     ) {
-                        allNavScreens.forEach { screen ->
+                        screens.forEach { screen ->
                             NavDockItem(
                                 screen = screen,
                                 selected = isSelected(screen),
