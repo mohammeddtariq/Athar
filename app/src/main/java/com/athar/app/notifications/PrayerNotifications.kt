@@ -31,9 +31,13 @@ import java.time.LocalTime
 import java.util.Locale
 
 object PrayerNotifications {
-    const val CHANNEL_ID = "athar_prayer_times_v3"
+    const val CHANNEL_ID = "athar_prayer_times_v4"
     const val CHANNEL_ID_SILENT = "athar_prayer_silent"
-    private val LEGACY_CHANNEL_IDS = listOf("athar_prayer_times", "athar_prayer_times_v2")
+    private val LEGACY_CHANNEL_IDS = listOf(
+        "athar_prayer_times",
+        "athar_prayer_times_v2",
+        "athar_prayer_times_v3"
+    )
     const val REQUEST_BASE = 4000
 
     fun getNotificationSoundUri(context: Context): Uri {
@@ -42,6 +46,10 @@ object PrayerNotifications {
         // release (it has already moved 0x7f0a0000 -> 0x7f0b0000 -> 0x7f0c0000),
         // so channels made by older versions ended up pointing at an unrelated
         // resource and the system fell back to the default notification sound.
+        //
+        // The sound ships as OGG Vorbis rather than WAV: a channel whose sound
+        // the system cannot decode is silently dropped on some OEMs, and OGG is
+        // the format every Android build decodes for notifications.
         return Uri.parse("android.resource://${context.packageName}/raw/athar_notification")
     }
 
@@ -70,6 +78,9 @@ object PrayerNotifications {
                 description = context.getString(R.string.notif_channel_desc)
                 setSound(soundUri, audioAttributes)
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 220, 180, 220)
+                enableLights(true)
+                setShowBadge(true)
             }
             manager.createNotificationChannel(channel)
         }
