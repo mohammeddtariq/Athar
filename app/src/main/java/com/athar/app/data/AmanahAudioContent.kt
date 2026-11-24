@@ -1,5 +1,7 @@
 package com.athar.app.data
 
+import com.athar.app.R
+
 /**
  * The live Quran radio stations Al-Amanah can tune into.
  *
@@ -27,6 +29,87 @@ data class AmanahTawasheehTrack(
     val titleAr: String,
     val titleEn: String,
     val url: String
+)
+
+/**
+ * A nature sound that plays on its own loop behind whatever else the user is
+ * doing: rain on a window, a forest at dawn, the sea, a stream, night crickets
+ * and a cool breeze. The clips are generated textures shipped in `res/raw`, so
+ * nothing here depends on the network or on a third-party recording.
+ */
+data class AmanahNatureSound(
+    val id: String,
+    val nameAr: String,
+    val nameEn: String,
+    val subtitleAr: String,
+    val subtitleEn: String,
+    val resId: Int,
+    /** Two stops of the card's gradient, so each sound keeps its own weather. */
+    val tintStart: Long,
+    val tintEnd: Long
+)
+
+val AmanahNatureSounds: List<AmanahNatureSound> = listOf(
+    AmanahNatureSound(
+        id = "rain",
+        nameAr = "مَطَر",
+        nameEn = "Rain",
+        subtitleAr = "قطراتٌ على النافذة",
+        subtitleEn = "Drops on the window",
+        resId = R.raw.nature_rain,
+        tintStart = 0xFF2C4A63,
+        tintEnd = 0xFF111C26
+    ),
+    AmanahNatureSound(
+        id = "forest",
+        nameAr = "غابة",
+        nameEn = "Forest",
+        subtitleAr = "أوراقٌ وعصافير",
+        subtitleEn = "Leaves and distant birds",
+        resId = R.raw.nature_forest,
+        tintStart = 0xFF2F4A34,
+        tintEnd = 0xFF111A12
+    ),
+    AmanahNatureSound(
+        id = "ocean",
+        nameAr = "موج",
+        nameEn = "Ocean",
+        subtitleAr = "زفيرُ المدّ",
+        subtitleEn = "The breath of the tide",
+        resId = R.raw.nature_ocean,
+        tintStart = 0xFF24485C,
+        tintEnd = 0xFF0E1A20
+    ),
+    AmanahNatureSound(
+        id = "stream",
+        nameAr = "جدول",
+        nameEn = "Stream",
+        subtitleAr = "ماءٌ بين الحصى",
+        subtitleEn = "Water over stones",
+        resId = R.raw.nature_stream,
+        tintStart = 0xFF2B5150,
+        tintEnd = 0xFF101D1C
+    ),
+    AmanahNatureSound(
+        id = "night",
+        nameAr = "ليل",
+        nameEn = "Night",
+        subtitleAr = "سكونٌ يُغنّي",
+        subtitleEn = "A stillness that sings",
+        resId = R.raw.nature_night,
+        tintStart = 0xFF33305A,
+        tintEnd = 0xFF12111F
+    ),
+    AmanahNatureSound(
+        id = "breeze",
+        nameAr = "نسيم",
+        nameEn = "Breeze",
+        subtitleAr = "هواءٌ خفيف",
+        subtitleEn = "A light wind",
+        resId = R.raw.nature_breeze,
+        tintStart = 0xFF3E4A52,
+        tintEnd = 0xFF141A1E
+    )
 )
 
 val AmanahRadioStations: List<AmanahRadioStation> = listOf(

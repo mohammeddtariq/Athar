@@ -86,6 +86,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Check
@@ -101,6 +102,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material.icons.rounded.FormatQuote
+import androidx.compose.material.icons.rounded.Forest
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Home
@@ -128,6 +130,9 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Water
+import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -181,6 +186,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import com.athar.app.data.AlAmanahAudioController
+import com.athar.app.data.AmanahAmbienceController
+import com.athar.app.data.AmanahNatureSound
+import com.athar.app.data.AmanahNatureSounds
 import com.athar.app.data.AmanahRadioStation
 import com.athar.app.data.AmanahRadioStations
 import com.athar.app.data.AmanahTawasheehTrack
@@ -1154,6 +1162,54 @@ private fun AmanahHomeScreen(
             )
         }
 
+        // ─── NATURE SOUNDS ───
+        item {
+            val context = LocalContext.current
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = if (isArabic) "أصوات الطبيعة" else "Nature Sounds",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 19.sp,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                )
+                Text(
+                    text = if (isArabic) {
+                        "ابقَ مع صوتٍ هادئ في الخلفية"
+                    } else {
+                        "Keep a quiet sound running in the background"
+                    },
+                    fontFamily = ThmanyahSans,
+                    fontSize = 11.5.sp,
+                    color = AmoledMutedText,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    itemsIndexed(AmanahNatureSounds) { _, sound ->
+                        val active = AmanahAmbienceController.isActive(sound)
+                        AmanahNatureCard(
+                            sound = sound,
+                            isArabic = isArabic,
+                            isActive = active,
+                            isPlaying = active && AmanahAmbienceController.isPlaying,
+                            onClick = {
+                                if (active) AmanahAmbienceController.toggle(context)
+                                else AmanahAmbienceController.play(context, sound)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         // ─── RECENTLY PLAYED SECTION (Real History Only) ───
         if (playedSurahs.isNotEmpty()) {
             item {
@@ -1271,6 +1327,141 @@ private fun AmanahHomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AmanahNatureCard(
+    sound: AmanahNatureSound,
+    isArabic: Boolean,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    val icon = when (sound.id) {
+        "rain" -> Icons.Rounded.WaterDrop
+        "forest" -> Icons.Rounded.Forest
+        "ocean" -> Icons.Rounded.Waves
+        "stream" -> Icons.Rounded.Water
+        "night" -> Icons.Rounded.NightsStay
+        else -> Icons.Rounded.Air
+    }
+    val shape = RoundedCornerShape(20.dp)
+
+    Box(
+        modifier = Modifier
+            .width(134.dp)
+            .height(152.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(sound.tintStart), Color(sound.tintEnd))
+                )
+            )
+            .border(
+                width = if (isActive) 1.4.dp else 1.dp,
+                color = if (isActive) {
+                    Color.White.copy(alpha = 0.55f)
+                } else {
+                    Color.White.copy(alpha = 0.10f)
+                },
+                shape = shape
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+    ) {
+        // A soft pool of light where the sound seems to come from.
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 10.dp, top = 6.dp)
+                .size(104.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(Color.White.copy(alpha = if (isPlaying) 0.20f else 0.10f), Color.Transparent)
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 13.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.92f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            Text(
+                text = if (isArabic) sound.nameAr else sound.nameEn,
+                fontFamily = ThmanyahSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color.White,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = if (isArabic) sound.subtitleAr else sound.subtitleEn,
+                fontFamily = ThmanyahSans,
+                fontSize = 10.5.sp,
+                color = Color.White.copy(alpha = 0.66f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (isPlaying) {
+                Spacer(Modifier.height(8.dp))
+                NatureEqualizer()
+            }
+        }
+    }
+}
+
+/** Three bars breathing at different speeds while the loop is running. */
+@Composable
+private fun NatureEqualizer() {
+    val transition = rememberInfiniteTransition(label = "natureEq")
+    val heights = listOf(700, 1000, 820)
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = Modifier.height(12.dp)
+    ) {
+        heights.forEachIndexed { index, periodMs ->
+            val level by transition.animateFloat(
+                initialValue = 0.28f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(periodMs, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "natureEq$index"
+            )
+            Box(
+                modifier = Modifier
+                    .width(2.5.dp)
+                    .height((12 * level).dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.85f))
+            )
         }
     }
 }
