@@ -167,14 +167,27 @@ object AtharWidgetUpdater {
         }
 
         // Labels
-        val nextLabel = if (isAr) "الصلاة التالية" else "Next Prayer"
-        val remainingLabel = if (isAr) "الوقت المتبقي" else "Time Remaining"
+        val nextLabel = if (isAr) "التالية" else "Next"
+        val remainingLabel = if (isAr) "المتبقي" else "Remaining"
         views.setTextViewText(R.id.widget_label_next, nextLabel)
         views.setTextViewText(R.id.widget_remaining_label, remainingLabel)
 
+        // Narrow widgets cannot fit both date lines and the adhan caption:
+        // keep the Hijri date always, reveal the rest only when there is room.
+        val showGregorian = heightDp >= 160
+        val showAdhanSub = heightDp >= 135
+        views.setViewVisibility(
+            R.id.widget_gregorian_date,
+            if (showGregorian) View.VISIBLE else View.GONE
+        )
+        views.setViewVisibility(
+            R.id.widget_prayer_sub,
+            if (showAdhanSub) View.VISIBLE else View.GONE
+        )
+
         // Hijri date
         val targetDate = LocalDate.now().plusDays(if (next.isTomorrow) 1L else 0L)
-        val hijriDateText = HijriDateHelper.formatHijriDate(
+        val hijriDateText = HijriDateHelper.formatHijriDateCompact(
             date = targetDate,
             isArabic = isAr,
             numberStyle = snapshot.widgetNumberStyle
@@ -182,7 +195,7 @@ object AtharWidgetUpdater {
         views.setTextViewText(R.id.widget_hijri_date, hijriDateText)
 
         // Gregorian date
-        val gregorianDateText = HijriDateHelper.formatGregorianDate(
+        val gregorianDateText = HijriDateHelper.formatGregorianDateCompact(
             date = targetDate,
             isArabic = isAr,
             numberStyle = snapshot.widgetNumberStyle
@@ -207,14 +220,14 @@ object AtharWidgetUpdater {
                 context = context,
                 text = prayerName,
                 fontResId = R.font.thmanyah_serif_display_bold,
-                textSizeSp = 24f,
+                textSizeSp = 23f,
                 textColor = palette.textPrimary.toArgb()
             )
             val timeBmp = renderTextToBitmap(
                 context = context,
                 text = formattedTime,
                 fontResId = R.font.thmanyah_sans_bold,
-                textSizeSp = 26f,
+                textSizeSp = 25f,
                 textColor = palette.primaryLight.toArgb()
             )
 
@@ -351,7 +364,7 @@ object AtharWidgetUpdater {
 
         // Hijri date
         val targetDate = LocalDate.now().plusDays(if (next.isTomorrow) 1L else 0L)
-        val hijriDateText = HijriDateHelper.formatHijriDate(
+        val hijriDateText = HijriDateHelper.formatHijriDateCompact(
             date = targetDate,
             isArabic = isAr,
             numberStyle = snapshot.widgetNumberStyle
@@ -359,12 +372,25 @@ object AtharWidgetUpdater {
         views.setTextViewText(R.id.widget_hijri_date, hijriDateText)
 
         // Gregorian date
-        val gregorianDateText = HijriDateHelper.formatGregorianDate(
+        val gregorianDateText = HijriDateHelper.formatGregorianDateCompact(
             date = targetDate,
             isArabic = isAr,
             numberStyle = snapshot.widgetNumberStyle
         )
         views.setTextViewText(R.id.widget_gregorian_date, gregorianDateText)
+
+        // A single-row strip cannot fit the full hero column: keep the next
+        // prayer, its Hijri date and the countdown, and reveal the rest when
+        // the widget is resized taller.
+        val showWideDetails = heightDp >= 90
+        views.setViewVisibility(
+            R.id.widget_next_location,
+            if (showWideDetails) View.VISIBLE else View.GONE
+        )
+        views.setViewVisibility(
+            R.id.widget_gregorian_date,
+            if (showWideDetails) View.VISIBLE else View.GONE
+        )
 
         // Live Countdown via Chronometer (or localized TextView for Arabic numerals)
         setupCountdown(
@@ -552,13 +578,13 @@ object AtharWidgetUpdater {
             views.setTextColor(R.id.widget_next_time, accent)
         } else {
             listOf(
-                R.id.widget_label_next,
-                R.id.widget_remaining_label,
                 R.id.widget_hijri_date,
                 R.id.widget_gregorian_date,
                 R.id.widget_location_text,
                 R.id.widget_prayer_sub
             ).forEach { views.setTextColor(it, muted) }
+            views.setTextColor(R.id.widget_label_next, accent)
+            views.setTextColor(R.id.widget_remaining_label, accent)
             views.setTextColor(R.id.widget_prayer_name, strong)
             views.setTextColor(R.id.widget_prayer_time, accent)
         }

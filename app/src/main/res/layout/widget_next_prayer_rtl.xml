@@ -17,107 +17,91 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="10dp"
         android:layoutDirection="rtl">
 
-        <!-- Top row: Next Prayer label on Start (directly above prayer name), Location & Date on End -->
+        <!-- Top row: short "next" label on Start (right), location + settings on End (left) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="top"
+            android:gravity="center_vertical"
             android:layoutDirection="rtl">
 
-            <!-- Next Prayer label on Start (Right in RTL) directly above prayer name -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/widget_label_next"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="start|top"
-                android:layoutDirection="rtl">
+                android:text="التالية"
+                android:textColor="#C8D6C6"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textAlignment="viewStart"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
-                <TextView
-                    android:id="@+id/widget_label_next"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="الصلاة التالية"
-                    android:textColor="#C8D6C6"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textAlignment="viewStart"
-                    android:maxLines="1" />
-            </LinearLayout>
-
-            <!-- Location, Settings & Dates on End (Left in RTL) -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="end|top"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layoutDirection="rtl">
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layoutDirection="rtl">
-
-                    <ImageView
-                        android:layout_width="10dp"
-                        android:layout_height="10dp"
-                        android:src="@drawable/ic_location_pin"
-                        android:contentDescription="@null" />
-
-                    <TextView
-                        android:id="@+id/widget_location_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="3dp"
-                        android:layout_marginEnd="6dp"
-                        android:text="موقعي"
-                        android:textColor="#8CA389"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:maxWidth="80dp" />
-
-                    <ImageView
-                        android:id="@+id/widget_btn_settings"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:padding="2dp"
-                        android:src="@drawable/ic_widget_settings"
-                        android:contentDescription="@null" />
-                </LinearLayout>
+                <ImageView
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:src="@drawable/ic_location_pin"
+                    android:contentDescription="@null" />
 
                 <TextView
-                    android:id="@+id/widget_hijri_date"
+                    android:id="@+id/widget_location_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="١٥ ربيع الآخر ١٤٤٨ هـ"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="4dp"
+                    android:text="موقعي"
                     android:textColor="#8CA389"
                     android:textSize="9sp"
-                    android:textAlignment="viewEnd"
+                    android:textStyle="bold"
                     android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:ellipsize="end"
+                    android:maxWidth="42dp" />
 
-                <TextView
-                    android:id="@+id/widget_gregorian_date"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="٢٦ سبتمبر ٢٠٢٦ م"
-                    android:textColor="#8CA389"
-                    android:textSize="9sp"
-                    android:textAlignment="viewEnd"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
+                <ImageView
+                    android:id="@+id/widget_btn_settings"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:padding="1dp"
+                    android:src="@drawable/ic_widget_settings"
+                    android:contentDescription="@null" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- Dates get their own full-width lines so they never squeeze the label -->
+        <TextView
+            android:id="@+id/widget_hijri_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="١٥ جمادى الآخرة ١٤٤٨ هـ"
+            android:textColor="#8CA389"
+            android:textSize="9.5sp"
+            android:textAlignment="viewStart"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/widget_gregorian_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:text="٢٥ نوفمبر ٢٠٢٦ م"
+            android:textColor="#8CA389"
+            android:textSize="9.5sp"
+            android:textAlignment="viewStart"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <!-- Main section: Prayer Name and Time -->
         <LinearLayout
@@ -133,9 +117,9 @@
                 android:id="@+id/widget_prayer_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="الفجر"
+                android:text="المغرب"
                 android:textColor="#F4F8F3"
-                android:textSize="24sp"
+                android:textSize="23sp"
                 android:textStyle="bold"
                 android:textAlignment="viewStart"
                 android:maxLines="1" />
@@ -143,7 +127,7 @@
             <ImageView
                 android:id="@+id/widget_prayer_name_image"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
+                android:layout_height="30dp"
                 android:adjustViewBounds="true"
                 android:scaleType="fitStart"
                 android:visibility="gone"
@@ -153,9 +137,9 @@
                 android:id="@+id/widget_prayer_sub"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="أذان الفجر"
+                android:text="أذان المغرب"
                 android:textColor="#8CA389"
-                android:textSize="11sp"
+                android:textSize="10.5sp"
                 android:textAlignment="viewStart"
                 android:maxLines="1" />
 
@@ -163,10 +147,10 @@
                 android:id="@+id/widget_prayer_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="٠٥:١٧"
+                android:layout_marginTop="1dp"
+                android:text="١٦:٥٤"
                 android:textColor="#FFFFFF"
-                android:textSize="26sp"
+                android:textSize="25sp"
                 android:textStyle="bold"
                 android:textAlignment="viewStart"
                 android:maxLines="1" />
@@ -174,38 +158,35 @@
             <ImageView
                 android:id="@+id/widget_prayer_time_image"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
-                android:layout_marginTop="2dp"
+                android:layout_height="32dp"
+                android:layout_marginTop="1dp"
                 android:adjustViewBounds="true"
                 android:scaleType="fitStart"
                 android:visibility="gone"
                 android:contentDescription="@null" />
         </LinearLayout>
 
-        <!-- Bottom row: Countdown pill -->
+        <!-- Bottom row: Time Remaining label + countdown pill -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="3dp"
             android:layoutDirection="rtl">
 
             <TextView
                 android:id="@+id/widget_remaining_label"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="الوقت المتبقي"
+                android:layout_weight="1"
+                android:text="المتبقي"
                 android:textColor="#A5C89E"
-                android:textSize="11.5sp"
+                android:textSize="10sp"
                 android:textStyle="bold"
                 android:textAlignment="viewStart"
-                android:maxLines="1" />
-
-            <FrameLayout
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <FrameLayout
                 android:layout_width="wrap_content"
@@ -223,12 +204,12 @@
                     android:id="@+id/widget_countdown_chrono"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
                     android:textColor="#A5C89E"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
 
@@ -236,13 +217,13 @@
                     android:id="@+id/widget_countdown_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
                     android:text="٠٠:٠٠"
                     android:textColor="#A5C89E"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
                     android:visibility="visible" />
             </FrameLayout>
