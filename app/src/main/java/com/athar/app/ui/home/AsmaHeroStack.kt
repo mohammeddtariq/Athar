@@ -290,7 +290,8 @@ private fun AsmaCard(
         index = (index + 1) % AsmaNames.size
     }
 
-    // Leaving the top of the pile squares the card back up, face out.
+    // Leaving the top of the pile squares the card back up, face out; arriving
+    // at the top always brings a name the reader has not just seen.
     LaunchedEffect(inFront) {
         settleJob?.cancel()
         if (!inFront) {
@@ -305,6 +306,8 @@ private fun AsmaCard(
                     )
                 ) { value, _ -> spin = value }
             }
+        } else {
+            index = (index + 1) % AsmaNames.size
         }
     }
 
