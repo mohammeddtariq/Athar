@@ -270,6 +270,10 @@ private fun AsmaCard(
     val scope = rememberCoroutineScope()
     var index by rememberSaveable { mutableIntStateOf(0) }
     var spin by rememberSaveable { mutableFloatStateOf(0f) }
+    // The face the card settled on. Kept apart from the live rotation angle so
+    // the drag gesture is never torn out from under the finger when the card
+    // passes the quarter turn.
+    var backFacing by rememberSaveable { mutableStateOf(false) }
     var revealed by rememberSaveable { mutableStateOf(false) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
 
@@ -280,8 +284,8 @@ private fun AsmaCard(
     LaunchedEffect(index) { revealed = false }
 
     // The names only turn over while the card is face up and on top.
-    LaunchedEffect(autoCycle, inFront, showingBack, index) {
-        if (!autoCycle || !inFront || showingBack) return@LaunchedEffect
+    LaunchedEffect(autoCycle, inFront, backFacing, index) {
+        if (!autoCycle || !inFront || backFacing) return@LaunchedEffect
         delay(NAME_CYCLE_MS)
         index = (index + 1) % AsmaNames.size
     }
@@ -289,20 +293,24 @@ private fun AsmaCard(
     // Leaving the top of the pile squares the card back up, face out.
     LaunchedEffect(inFront) {
         settleJob?.cancel()
-        if (!inFront && spin != 0f) {
-            animate(
-                initialValue = spin,
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            ) { value, _ -> spin = value }
+        if (!inFront) {
+            backFacing = false
+            if (spin != 0f) {
+                animate(
+                    initialValue = spin,
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) { value, _ -> spin = value }
+            }
         }
     }
 
     val turnOver: () -> Unit = {
         val target = if (showingBack) 0f else 180f
+        backFacing = !showingBack
         settleJob?.cancel()
         settleJob = scope.launch {
             animate(
@@ -346,7 +354,7 @@ private fun AsmaCard(
                 shape = shape
             )
             .then(
-                if (inFront && !showingBack) {
+                if (inFront) {
                     Modifier.draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
@@ -356,6 +364,8 @@ private fun AsmaCard(
                         onDragStopped = {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             val target = (spin / 180f).roundToInt() * 180f
+                            val targetNormalised = ((target % 360f) + 360f) % 360f
+                            backFacing = targetNormalised > 90f && targetNormalised < 270f
                             settleJob = scope.launch {
                                 animate(
                                     initialValue = spin,
