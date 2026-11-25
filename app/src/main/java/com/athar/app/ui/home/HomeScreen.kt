@@ -291,7 +291,7 @@ fun HomeScreen(
                         spring(dampingRatio = Spring.DampingRatioMediumBouncy)
                     ) { 50 }
                 ) {
-                    NextPrayerCard(
+                    AsmaHeroStack(
                         nextKey = next.key,
                         nextTime = next.time,
                         isTomorrow = next.isTomorrow,
@@ -532,7 +532,8 @@ fun NextPrayerCard(
     numberStyle: NumberStylePreference = NumberStylePreference.WESTERN,
     language: String = "ar",
     cityLabel: String? = null,
-    onLocationClick: () -> Unit = {}
+    onLocationClick: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     // Second ticker scoped to this card only.
     var now by remember { mutableStateOf(LocalTime.now()) }
@@ -603,7 +604,7 @@ fun NextPrayerCard(
     val remainingText = formatDigits(rawRemainingText, numberStyle)
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = 14.dp)
             .fillMaxWidth()
             .scale(scale.value)

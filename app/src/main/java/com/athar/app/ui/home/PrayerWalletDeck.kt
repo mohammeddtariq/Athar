@@ -91,6 +91,7 @@ import com.athar.app.data.formatDigits
 import com.athar.app.ui.components.IslamicPatternBackground
 import com.athar.app.ui.components.MihrabWatermark
 import com.athar.app.ui.components.OrnamentDivider
+import com.athar.app.ui.components.ScratchPanel
 import com.athar.app.ui.theme.AtharBackground
 import com.athar.app.ui.theme.AtharCardBorder
 import com.athar.app.ui.theme.AtharCardSurface
@@ -611,10 +612,7 @@ private fun PrayerCardBack(
 }
 
 /**
- * A scratch-off strip. The ayah sits underneath a barcode-like foil that is
- * erased in real time wherever the finger passes. The strip only counts as done
- * once nearly every part of it has been scratched, then the remainder wipes
- * away in a soft expanding circle.
+ * The prayer card's scratch-off ayah, printed on the shared foil panel.
  */
 @Composable
 private fun ScratchAyah(
@@ -626,290 +624,18 @@ private fun ScratchAyah(
     modifier: Modifier = Modifier
 ) {
     val ayah = remember(row.key) { ayahFor(row.key) }
-    val haptics = LocalHapticFeedback.current
-    val density = LocalDensity.current
-    val textMeasurer = rememberTextMeasurer()
-    val shape = RoundedCornerShape(9.dp)
-
-    val strokes = remember { mutableStateListOf<ScratchStroke>() }
-    val cells = remember { BooleanArray(SCRATCH_COLS * SCRATCH_ROWS) }
-    var scratchedCells by remember { mutableIntStateOf(0) }
-    val reveal = remember { Animatable(if (revealed) 1f else 0f) }
-    val onRevealedRef = rememberUpdatedState(onRevealed)
-    val onCardTapRef = rememberUpdatedState(onCardTap)
-
-    LaunchedEffect(revealed) {
-        if (revealed) {
-            if (reveal.value < 1f) {
-                reveal.animateTo(1f, tween(durationMillis = 560, easing = FastOutSlowInEasing))
-            }
-        } else {
-            reveal.snapTo(0f)
-            strokes.clear()
-            cells.fill(false)
-            scratchedCells = 0
-        }
-    }
-
-    val clearWidth = with(density) { 15.dp.toPx() }
-    val coverageRadius = with(density) { 6.5.dp.toPx() }
-    val totalCells = SCRATCH_COLS * SCRATCH_ROWS
-    // The card only relaxes once the strip has been scratched through.
-    val revealAt = (totalCells * 0.97f).roundToInt()
-    val foilStyle = TextStyle(
-        color = Color(0xFF7E8089),
-        fontFamily = ThmanyahSans,
-        fontWeight = FontWeight.Bold,
-        fontSize = 8.5.sp,
-        letterSpacing = 2.4.sp
+    ScratchPanel(
+        arabic = ayah.arabic,
+        reference = if (isArabic) ayah.referenceAr else ayah.referenceEn,
+        subtitle = if (isArabic) null else ayah.meaning,
+        revealed = revealed,
+        onRevealed = onRevealed,
+        onTap = onCardTap,
+        modifier = modifier,
+        referenceFontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
+        foilLabel = if (isArabic) "اخدش · " else "SCRATCH · "
     )
-
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(AtharBackground.copy(alpha = 0.55f))
-            .border(1.dp, AtharPrimary.copy(alpha = 0.22f), shape)
-    ) {
-        // The ayah, waiting underneath the foil.
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 1.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = ayah.arabic,
-                fontFamily = ThmanyahSerifDisplay,
-                fontWeight = FontWeight.Bold,
-                fontSize = 10.5.sp,
-                lineHeight = 14.sp,
-                color = AtharTextPrimary,
-                textAlign = TextAlign.Center,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = if (isArabic) ayah.referenceAr else ayah.referenceEn,
-                fontFamily = if (isArabic) ThmanyahSerifDisplay else ThmanyahSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 8.5.sp,
-                lineHeight = 11.5.sp,
-                color = AtharPrimaryLight.copy(alpha = 0.92f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                softWrap = false
-            )
-            if (!isArabic) {
-                Text(
-                    text = ayah.meaning,
-                    fontFamily = ThmanyahSans,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 7.5.sp,
-                    lineHeight = 9.5.sp,
-                    color = AtharTextSecondary,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Canvas(
-            modifier = Modifier
-                .matchParentSize()
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .pointerInput(revealed) {
-                    if (revealed) return@pointerInput
-                    val cellW = size.width.toFloat() / SCRATCH_COLS
-                    val cellH = size.height.toFloat() / SCRATCH_ROWS
-
-                    fun markCoverage(from: Offset, to: Offset) {
-                        var added = 0
-                        for (rowIndex in 0 until SCRATCH_ROWS) {
-                            val cellY = (rowIndex + 0.5f) * cellH
-                            for (colIndex in 0 until SCRATCH_COLS) {
-                                val index = rowIndex * SCRATCH_COLS + colIndex
-                                if (cells[index]) continue
-                                val cellX = (colIndex + 0.5f) * cellW
-                                if (distanceToSegment(Offset(cellX, cellY), from, to) <= coverageRadius) {
-                                    cells[index] = true
-                                    added++
-                                }
-                            }
-                        }
-                        if (added > 0) {
-                            scratchedCells += added
-                            if (scratchedCells >= revealAt) onRevealedRef.value()
-                        }
-                    }
-
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        // The whole gesture belongs to the foil, so neither the
-                        // card's turn nor the deck's fan ever sees it.
-                        down.consume()
-                        var last = down.position
-                        var travelled = 0f
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            change.consume()
-                            if (!change.pressed) break
-                            val to = change.position
-                            if (to != last) {
-                                travelled += (to - last).getDistance()
-                                strokes += ScratchStroke(last, to)
-                                markCoverage(last, to)
-                                if (strokes.size % 4 == 0) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                                last = to
-                            }
-                        }
-                        // A tap that never moved is a hand on the card, not a
-                        // scratch: it puts the card away.
-                        if (travelled < 4.dp.toPx()) onCardTapRef.value()
-                    }
-                }
-        ) {
-            if (reveal.value >= 1f) return@Canvas
-
-            // A cooler, darker silver plate: greyer metal brushed with a fine
-            // diagonal grain, so it reads as a fresh panel waiting to be
-            // scratched without glowing out of the card.
-            drawRect(
-                brush = Brush.verticalGradient(
-                    0f to Color(0xFFE2E3E6),
-                    0.10f to Color(0xFFC7CAD0),
-                    0.24f to Color(0xFFD9DBE0),
-                    0.38f to Color(0xFFAFB3BC),
-                    0.52f to Color(0xFFCBCED5),
-                    0.66f to Color(0xFFA6AAB4),
-                    0.80f to Color(0xFFC2C5CC),
-                    0.93f to Color(0xFFACB0B9),
-                    1f to Color(0xFF979CA6)
-                )
-            )
-            // Fine diagonal brushing across the metal.
-            val grain = 1.4.dp.toPx()
-            var grainX = -size.height
-            var grainAlt = false
-            while (grainX < size.width) {
-                drawLine(
-                    color = if (grainAlt) {
-                        Color.White.copy(alpha = 0.13f)
-                    } else {
-                        Color.Black.copy(alpha = 0.045f)
-                    },
-                    start = Offset(grainX, 0f),
-                    end = Offset(grainX + size.height, size.height),
-                    strokeWidth = grain * 0.45f
-                )
-                grainX += grain
-                grainAlt = !grainAlt
-            }
-            // A repeating "SCRATCH" wordmark, embossed into the plate.
-            val tileText = if (isArabic) "اخدش · " else "SCRATCH · "
-            val tile = textMeasurer.measure(AnnotatedString(tileText), style = foilStyle)
-            val tileWidth = tile.size.width
-            val tileHeight = tile.size.height
-            if (tileWidth > 0f) {
-                val rows = 3
-                val rowGap = size.height / rows
-                for (rowIndex in 0 until rows) {
-                    val y = rowGap * rowIndex + (rowGap - tileHeight) / 2f
-                    var x = if (rowIndex % 2 == 0) -tileWidth * 0.35f else -tileWidth * 0.85f
-                    while (x < size.width) {
-                        drawText(
-                            textLayoutResult = tile,
-                            color = Color.White.copy(alpha = 0.52f),
-                            topLeft = Offset(x + 0.7f, y + 0.8f)
-                        )
-                        drawText(textLayoutResult = tile, topLeft = Offset(x, y))
-                        x += tileWidth
-                    }
-                }
-            }
-            // A slow sheen travelling across the metal.
-            drawRect(
-                brush = Brush.linearGradient(
-                    0f to Color.White.copy(alpha = 0.13f),
-                    0.24f to Color.White.copy(alpha = 0.02f),
-                    0.44f to Color(0xFFE8D9B8).copy(alpha = 0.05f),
-                    0.62f to Color.White.copy(alpha = 0.11f),
-                    0.82f to Color.White.copy(alpha = 0.00f),
-                    1f to Color.Black.copy(alpha = 0.16f),
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width, 0f)
-                )
-            )
-            // The strip is set into the card: a lit top lip, a shadow under it,
-            // side hairlines, and a dark line where the metal leaves the card.
-            drawRect(
-                color = Color.White.copy(alpha = 0.50f),
-                topLeft = Offset(0f, 0f),
-                size = Size(size.width, 1.dp.toPx())
-            )
-            drawRect(
-                color = Color.Black.copy(alpha = 0.18f),
-                topLeft = Offset(0f, 1.dp.toPx()),
-                size = Size(size.width, 0.5.dp.toPx())
-            )
-            drawRect(
-                color = Color.Black.copy(alpha = 0.32f),
-                topLeft = Offset(0f, size.height - 1.dp.toPx()),
-                size = Size(size.width, 1.dp.toPx())
-            )
-            drawRect(
-                color = Color.White.copy(alpha = 0.30f),
-                topLeft = Offset(0f, 0f),
-                size = Size(0.8.dp.toPx(), size.height)
-            )
-            drawRect(
-                color = Color.Black.copy(alpha = 0.10f),
-                topLeft = Offset(size.width - 0.8.dp.toPx(), 0f),
-                size = Size(0.8.dp.toPx(), size.height)
-            )
-            // Erase where the finger has been.
-            for (stroke in strokes) {
-                drawLine(
-                    color = Color.Transparent,
-                    start = stroke.from,
-                    end = stroke.to,
-                    strokeWidth = clearWidth,
-                    cap = StrokeCap.Round,
-                    blendMode = BlendMode.Clear
-                )
-            }
-            // The final wipe: a circle of light spreading from the middle.
-            if (reveal.value > 0f) {
-                drawCircle(
-                    color = Color.Transparent,
-                    radius = reveal.value * size.maxDimension,
-                    center = Offset(size.width / 2f, size.height / 2f),
-                    blendMode = BlendMode.Clear
-                )
-            }
-        }
-    }
 }
-
-private const val SCRATCH_COLS = 24
-private const val SCRATCH_ROWS = 3
-
-private fun distanceToSegment(point: Offset, a: Offset, b: Offset): Float {
-    val abX = b.x - a.x
-    val abY = b.y - a.y
-    val lengthSq = abX * abX + abY * abY
-    if (lengthSq <= 0.0001f) return (point - a).getDistance()
-    val t = (((point.x - a.x) * abX + (point.y - a.y) * abY) / lengthSq).coerceIn(0f, 1f)
-    val projX = a.x + abX * t
-    val projY = a.y + abY * t
-    return kotlin.math.hypot(point.x - projX, point.y - projY)
-}
-
-private data class ScratchStroke(val from: Offset, val to: Offset)
 
 private data class AyahReveal(
     val arabic: String,

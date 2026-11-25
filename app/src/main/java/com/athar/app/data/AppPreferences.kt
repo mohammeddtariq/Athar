@@ -123,6 +123,10 @@ class AppPreferences(private val context: Context) {
         // After Prayer Adhkar
         private val AFTER_PRAYER_AUTO_ADVANCE_KEY = booleanPreferencesKey("after_prayer_auto_advance")
 
+        // Asma' Allah Al-Husna card
+        private val ASMA_AUTO_CYCLE_KEY = booleanPreferencesKey("asma_auto_cycle")
+        private val ASMA_AUTO_ALTERNATE_KEY = booleanPreferencesKey("asma_auto_alternate")
+
         // Al-Amanah Sanctuary Preferences
         private val AMANAH_120HZ_KEY = booleanPreferencesKey("amanah_120hz_enabled")
         private val AMANAH_DAILY_GOAL_MIN_KEY = intPreferencesKey("amanah_daily_goal_minutes")
@@ -168,6 +172,16 @@ class AppPreferences(private val context: Context) {
     /** Whether the after-prayer counter automatically moves to the next dhikr on completion. */
     val afterPrayerAutoAdvance: Flow<Boolean> = context.dataStore.data.map {
         it[AFTER_PRAYER_AUTO_ADVANCE_KEY] ?: true
+    }
+
+    /** Whether the Asma' card steps through the names of Allah on its own. */
+    val asmaAutoCycle: Flow<Boolean> = context.dataStore.data.map {
+        it[ASMA_AUTO_CYCLE_KEY] ?: true
+    }
+
+    /** Whether the Asma' card and the next-prayer card trade places on their own. */
+    val asmaAutoAlternate: Flow<Boolean> = context.dataStore.data.map {
+        it[ASMA_AUTO_ALTERNATE_KEY] ?: false
     }
 
     val amanahHighRefreshRate: Flow<Boolean> = context.dataStore.data.map {
@@ -539,6 +553,14 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setAfterPrayerAutoAdvance(enabled: Boolean) {
         context.dataStore.edit { it[AFTER_PRAYER_AUTO_ADVANCE_KEY] = enabled }
+    }
+
+    suspend fun setAsmaAutoCycle(enabled: Boolean) {
+        context.dataStore.edit { it[ASMA_AUTO_CYCLE_KEY] = enabled }
+    }
+
+    suspend fun setAsmaAutoAlternate(enabled: Boolean) {
+        context.dataStore.edit { it[ASMA_AUTO_ALTERNATE_KEY] = enabled }
     }
 
     suspend fun setNowBarLiveActivityEnabled(enabled: Boolean) {
