@@ -534,7 +534,8 @@ private fun AsmaCardFront(
                 ) {
                     Text(
                         text = shown.arabic,
-                        fontFamily = QuranUthmanicHafs,
+                        fontFamily = ThmanyahSerifText,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = nameFontSize(shown.arabic),
                         lineHeight = nameFontSize(shown.arabic) * 1.45f,
                         color = AtharTextPrimary,
