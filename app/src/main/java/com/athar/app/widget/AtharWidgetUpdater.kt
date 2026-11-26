@@ -115,7 +115,35 @@ object AtharWidgetUpdater {
                 }
                 val views = RemoteViews(appContext.packageName, layoutRes)
                 tintWidgetText(views, palette, wide = isWide)
-                tintCountdownPill(appContext, views, palette)
+                val options = appWidgetManager.getAppWidgetOptions(widgetId)
+                if (isWide) {
+                    val heightDp = options
+                        .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 70)
+                        .coerceAtLeast(45)
+                    val scale = (heightDp / 70f).coerceIn(0.75f, 2f)
+                    tintCountdownPill(appContext, views, palette, 62f * scale, 20f * scale)
+                } else {
+                    val heightDp = options
+                        .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 150)
+                        .coerceAtLeast(100)
+                    val metrics = nextWidgetMetrics(appContext, heightDp)
+                    tintCountdownPill(
+                        appContext,
+                        views,
+                        palette,
+                        metrics.pillWidthDp.toFloat(),
+                        metrics.pillHeightDp.toFloat()
+                    )
+                    applyNextWidgetTextSizes(views, metrics)
+                    views.setViewVisibility(
+                        R.id.widget_gregorian_date,
+                        if (metrics.showGregorian) View.VISIBLE else View.GONE
+                    )
+                    views.setViewVisibility(
+                        R.id.widget_prayer_sub,
+                        if (metrics.showAdhanSub) View.VISIBLE else View.GONE
+                    )
+                }
                 if (snapshot.widgetNumberStyle == NumberStylePreference.ARABIC_INDIC) {
                     views.setViewVisibility(R.id.widget_countdown_chrono, View.GONE)
                     views.setViewVisibility(R.id.widget_countdown_text, View.VISIBLE)
@@ -130,6 +158,75 @@ object AtharWidgetUpdater {
                 }
             }
         }
+    }
+
+    /** Everything the small capsule needs, derived from the size the launcher reports. */
+    private data class NextWidgetMetrics(
+        val nameSp: Float,
+        val timeSp: Float,
+        val subSp: Float,
+        val dateSp: Float,
+        val labelSp: Float,
+        val locationSp: Float,
+        val pillSp: Float,
+        val pillWidthDp: Int,
+        val pillHeightDp: Int,
+        val showGregorian: Boolean,
+        val showAdhanSub: Boolean
+    )
+
+    /**
+     * Launchers report the cell they gave us, and that cell is a different size
+     * on every OEM (One UI, ColorOS, Pixel…). Every type size is therefore a
+     * multiple of one scale, so the capsule grows and shrinks with the widget
+     * instead of being tuned for a single grid.
+     */
+    private fun nextWidgetMetrics(context: Context, heightDp: Int): NextWidgetMetrics {
+        val scale = (heightDp / 155f).coerceIn(0.78f, 2.4f)
+        val pillSp = 9.5f * scale
+        val density = context.resources.displayMetrics.density
+        val widestCountdownDp = runCatching {
+            // The chronometer is drawn by the system face, so measure with it
+            // and leave a little slack for wide digit variants.
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                textSize = TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    pillSp,
+                    context.resources.displayMetrics
+                )
+            }
+            paint.measureText("0:00:00") / density
+        }.getOrDefault(38f)
+        return NextWidgetMetrics(
+            nameSp = 20.5f * scale,
+            timeSp = 21.5f * scale,
+            subSp = 9.25f * scale,
+            dateSp = (8.75f * scale).coerceAtMost(14f),
+            labelSp = 9.25f * scale,
+            locationSp = 8.25f * scale,
+            pillSp = pillSp,
+            pillWidthDp = (widestCountdownDp + 22f).toInt().coerceIn(48, 160),
+            pillHeightDp = (pillSp * 1.45f + 5f).toInt().coerceIn(16, 48),
+            showGregorian = heightDp >= 185,
+            showAdhanSub = heightDp >= 142
+        )
+    }
+
+    private fun applyNextWidgetTextSizes(views: RemoteViews, metrics: NextWidgetMetrics) {
+        fun size(id: Int, sp: Float) =
+            views.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp)
+
+        size(R.id.widget_label_next, metrics.labelSp)
+        size(R.id.widget_remaining_label, metrics.labelSp)
+        size(R.id.widget_hijri_date, metrics.dateSp)
+        size(R.id.widget_gregorian_date, metrics.dateSp)
+        size(R.id.widget_location_text, metrics.locationSp)
+        size(R.id.widget_prayer_name, metrics.nameSp)
+        size(R.id.widget_prayer_sub, metrics.subSp)
+        size(R.id.widget_prayer_time, metrics.timeSp)
+        size(R.id.widget_countdown_chrono, metrics.pillSp)
+        size(R.id.widget_countdown_text, metrics.pillSp)
     }
 
     private fun renderNextPrayerWidget(
@@ -147,8 +244,9 @@ object AtharWidgetUpdater {
 
         // Dynamic background
         val options = appWidgetManager.getAppWidgetOptions(widgetId)
-        val widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 160).coerceAtLeast(120)
-        val heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140).coerceAtLeast(120)
+        val widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 160).coerceAtLeast(110)
+        val heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 150).coerceAtLeast(100)
+        val metrics = nextWidgetMetrics(context, heightDp)
         val bgBitmap = generateWidgetBackground(
             context,
             widthDp,
@@ -159,7 +257,14 @@ object AtharWidgetUpdater {
             palette.cardBorder.toArgb()
         )
         tintWidgetText(views, palette, wide = false)
-        tintCountdownPill(context, views, palette)
+        tintCountdownPill(
+            context,
+            views,
+            palette,
+            metrics.pillWidthDp.toFloat(),
+            metrics.pillHeightDp.toFloat()
+        )
+        applyNextWidgetTextSizes(views, metrics)
         if (bgBitmap != null) {
             views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
         } else {
@@ -174,8 +279,8 @@ object AtharWidgetUpdater {
 
         // Narrow widgets cannot fit both date lines and the adhan caption:
         // keep the Hijri date always, reveal the rest only when there is room.
-        val showGregorian = heightDp >= 160
-        val showAdhanSub = heightDp >= 135
+        val showGregorian = metrics.showGregorian
+        val showAdhanSub = metrics.showAdhanSub
         views.setViewVisibility(
             R.id.widget_gregorian_date,
             if (showGregorian) View.VISIBLE else View.GONE
@@ -220,15 +325,17 @@ object AtharWidgetUpdater {
                 context = context,
                 text = prayerName,
                 fontResId = R.font.thmanyah_serif_display_bold,
-                textSizeSp = 23f,
-                textColor = palette.textPrimary.toArgb()
+                textSizeSp = metrics.nameSp,
+                textColor = palette.textPrimary.toArgb(),
+                maxWidthDp = widthDp - 20f
             )
             val timeBmp = renderTextToBitmap(
                 context = context,
                 text = formattedTime,
                 fontResId = R.font.thmanyah_sans_bold,
-                textSizeSp = 25f,
-                textColor = palette.primaryLight.toArgb()
+                textSizeSp = metrics.timeSp,
+                textColor = palette.primaryLight.toArgb(),
+                maxWidthDp = widthDp - 20f
             )
 
             if (nameBmp != null) {
@@ -303,7 +410,8 @@ object AtharWidgetUpdater {
             palette.cardBorder.toArgb()
         )
         tintWidgetText(views, palette, wide = true)
-        tintCountdownPill(context, views, palette)
+        val wideScale = (heightDp / 70f).coerceIn(0.75f, 2f)
+        tintCountdownPill(context, views, palette, 62f * wideScale, 20f * wideScale)
         if (bgBitmap != null) {
             views.setImageViewBitmap(R.id.widget_bg, bgBitmap)
         } else {
@@ -593,12 +701,25 @@ object AtharWidgetUpdater {
         views.setInt(R.id.widget_btn_settings, "setColorFilter", palette.primaryMuted.toArgb())
     }
 
-    /** Paints the countdown capsule from the palette instead of the XML default. */
-    private fun tintCountdownPill(context: Context, views: RemoteViews, palette: AtharPalette) {
+    /**
+     * Paints the countdown capsule from the palette instead of the XML default.
+     *
+     * The bitmap is generated at the exact size the capsule should occupy: an
+     * ImageView sizes itself to its drawable, so a fixed 120×44 bitmap would
+     * claim that much room in every launcher grid and squeeze the caption
+     * beside it down to an ellipsis.
+     */
+    private fun tintCountdownPill(
+        context: Context,
+        views: RemoteViews,
+        palette: AtharPalette,
+        widthDp: Float,
+        heightDp: Float
+    ) {
         val bitmap = runCatching {
             val density = context.resources.displayMetrics.density
-            val width = (120f * density).toInt().coerceAtLeast(1)
-            val height = (44f * density).toInt().coerceAtLeast(1)
+            val width = (widthDp * density).toInt().coerceAtLeast(1)
+            val height = (heightDp * density).toInt().coerceAtLeast(1)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -687,20 +808,43 @@ object AtharWidgetUpdater {
         text: String,
         fontResId: Int,
         textSizeSp: Float,
-        textColor: Int
+        textColor: Int,
+        maxWidthDp: Float? = null
     ): Bitmap? {
         return runCatching {
             val displayMetrics = context.resources.displayMetrics
-            val pxSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSizeSp, displayMetrics)
             val typeface = ResourcesCompat.getFont(context, fontResId) ?: return null
+            var pxSize = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                textSizeSp,
+                displayMetrics
+            )
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 this.typeface = typeface
                 this.textSize = pxSize
                 this.color = textColor
             }
+            val pad = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                2f,
+                displayMetrics
+            ).toInt()
+            // A long name or a wide time must never spill past the capsule, so
+            // the glyphs shrink to the width the launcher actually gave us.
+            if (maxWidthDp != null) {
+                val limit = TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP,
+                    maxWidthDp,
+                    displayMetrics
+                ) - pad * 2
+                val measured = paint.measureText(text)
+                if (measured > limit && measured > 0f) {
+                    pxSize *= (limit / measured).coerceAtLeast(0.5f)
+                    paint.textSize = pxSize
+                }
+            }
             val fontMetrics = paint.fontMetrics
             val textWidth = paint.measureText(text)
-            val pad = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, displayMetrics).toInt()
             val width = (textWidth + pad * 2).toInt().coerceAtLeast(1)
             val height = ((fontMetrics.descent - fontMetrics.ascent) + pad * 2).toInt().coerceAtLeast(1)
 
