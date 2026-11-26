@@ -288,7 +288,7 @@
     <string name="settings_report_issue">أبلغ عن مشكلة</string>
     <string name="settings_report_issue_sub">افتح بلاغًا على GitHub وقد مُلئت نسخة التطبيق وتفاصيل جهازك</string>
     <string name="settings_nav_order">ترتيب شريط التنقّل</string>
-    <string name="settings_nav_order_sub">رتّب تبويبات الشريط كما تحب.</string>
+    <string name="settings_nav_order_sub">رتّب عناصر الشريط كما تحب.</string>
     <string name="settings_nav_order_reset">إعادة الترتيب الافتراضي</string>
     <string name="update_checking">جاري التحقق من التحديثات…</string>
     <string name="update_already_latest">أنت تستخدم أحدث إصدار من أَثَر</string>
