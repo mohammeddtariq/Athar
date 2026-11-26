@@ -157,7 +157,7 @@
     <string name="settings_notif_offset_decrease">تقديم التنبيه</string>
     <string name="settings_notif_offset_increase">تأخير التنبيه</string>
     <string name="settings_reminders_title">تذكيرات الصلاة</string>
-    <string name="settings_reminders_sub">تذكيران هادئان، بنبرة بطاقات الصلاة.</string>
+    <string name="settings_reminders_sub">سؤال لطيف بعد كل صلاة، وتذكير قبل التالية.</string>
     <string name="settings_reminder_after_title">هل صلّيت؟</string>
     <string name="settings_reminder_after_sub">سؤال لطيف بعد كل صلاة بعشرين دقيقة.</string>
     <string name="settings_reminder_before_title">قبل الصلاة</string>

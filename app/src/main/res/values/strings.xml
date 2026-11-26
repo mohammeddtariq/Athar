@@ -157,7 +157,7 @@
     <string name="settings_notif_offset_decrease">Advance reminder</string>
     <string name="settings_notif_offset_increase">Delay reminder</string>
     <string name="settings_reminders_title">Prayer Reminders</string>
-    <string name="settings_reminders_sub">Two quiet reminders, written in the tone of the prayer cards.</string>
+    <string name="settings_reminders_sub">A gentle question after each prayer, and a reminder before the next.</string>
     <string name="settings_reminder_after_title">Did You Pray?</string>
     <string name="settings_reminder_after_sub">A gentle question twenty minutes after each prayer.</string>
     <string name="settings_reminder_before_title">Before the Prayer</string>
