@@ -168,7 +168,7 @@ object AtharWidgetUpdater {
 
         // Labels
         val nextLabel = if (isAr) "التالية" else "Next"
-        val remainingLabel = if (isAr) "المتبقي" else "Remaining"
+        val remainingLabel = if (isAr) "المتبقي" else "Left"
         views.setTextViewText(R.id.widget_label_next, nextLabel)
         views.setTextViewText(R.id.widget_remaining_label, remainingLabel)
 
