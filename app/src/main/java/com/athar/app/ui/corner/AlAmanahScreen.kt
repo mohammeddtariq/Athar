@@ -72,6 +72,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -174,6 +176,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -645,6 +648,7 @@ fun AlAmanahScreen(
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showAudioOutputSheet by remember { mutableStateOf(false) }
     var showTawasheehSheet by remember { mutableStateOf(false) }
+    var showNatureSheet by remember { mutableStateOf(false) }
 
     // Force highest possible refresh rate (120Hz) automatically for maximum performance and buttery smoothness
     DisposableEffect(Unit) {
@@ -896,7 +900,8 @@ fun AlAmanahScreen(
                     onOpenReciter = { showReciterSheet = true },
                     onOpenTawasheeh = { showTawasheehSheet = true },
                     onOpenSleepTimer = { showSleepTimerSheet = true },
-                    onOpenAudioOutput = { showAudioOutputSheet = true }
+                    onOpenAudioOutput = { showAudioOutputSheet = true },
+                    onOpenNatureSounds = { showNatureSheet = true }
                 )
             }
 
@@ -914,7 +919,8 @@ fun AlAmanahScreen(
                     onNext = { AlAmanahAudioController.skipNext(context) },
                     onOpenPlaylist = { showTawasheehSheet = true },
                     onOpenSleepTimer = { showSleepTimerSheet = true },
-                    onOpenAudioOutput = { showAudioOutputSheet = true }
+                    onOpenAudioOutput = { showAudioOutputSheet = true },
+                    onOpenNatureSounds = { showNatureSheet = true }
                 )
             }
 
@@ -987,6 +993,20 @@ fun AlAmanahScreen(
                     AmanahAudioOutputSheetContent(
                         isArabic = isArabic,
                         onClose = { showAudioOutputSheet = false }
+                    )
+                }
+            }
+            // ─── NATURE SOUNDS BOTTOM SHEET ───
+            if (showNatureSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showNatureSheet = false },
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                    containerColor = AmoledSurface,
+                    contentColor = Color.White
+                ) {
+                    AmanahNatureSheetContent(
+                        isArabic = isArabic,
+                        onClose = { showNatureSheet = false }
                     )
                 }
             }
@@ -1331,6 +1351,15 @@ private fun AmanahHomeScreen(
     }
 }
 
+private fun amanahNatureIcon(sound: AmanahNatureSound): ImageVector = when (sound.id) {
+    "rain" -> Icons.Rounded.WaterDrop
+    "forest" -> Icons.Rounded.Forest
+    "ocean" -> Icons.Rounded.Waves
+    "stream" -> Icons.Rounded.Water
+    "night" -> Icons.Rounded.NightsStay
+    else -> Icons.Rounded.Air
+}
+
 @Composable
 private fun AmanahNatureCard(
     sound: AmanahNatureSound,
@@ -1339,14 +1368,7 @@ private fun AmanahNatureCard(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
-    val icon = when (sound.id) {
-        "rain" -> Icons.Rounded.WaterDrop
-        "forest" -> Icons.Rounded.Forest
-        "ocean" -> Icons.Rounded.Waves
-        "stream" -> Icons.Rounded.Water
-        "night" -> Icons.Rounded.NightsStay
-        else -> Icons.Rounded.Air
-    }
+    val icon = amanahNatureIcon(sound)
     val shape = RoundedCornerShape(20.dp)
 
     Box(
@@ -4378,7 +4400,8 @@ private fun AmanahFullscreenPlayer(
     onOpenReciter: () -> Unit,
     onOpenTawasheeh: () -> Unit,
     onOpenSleepTimer: () -> Unit,
-    onOpenAudioOutput: () -> Unit
+    onOpenAudioOutput: () -> Unit,
+    onOpenNatureSounds: () -> Unit
 ) {
     val context = LocalContext.current
     val isTawasheeh = AlAmanahAudioController.audioSource == AlAmanahAudioController.AudioSource.TAWASHEEH
@@ -4894,7 +4917,34 @@ private fun AmanahFullscreenPlayer(
                         )
                     }
 
-                    // 2. Combined Audio Output & Reciter Capsule (Center)
+                    // 2. Nature Sounds Button (opens the ambience sheet)
+                    val isNatureOn = AmanahAmbienceController.isPlaying
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(if (isNatureOn) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.08f))
+                            .border(
+                                1.dp,
+                                if (isNatureOn) AmoledAccent.copy(alpha = 0.5f) else Color.Transparent,
+                                CircleShape
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onOpenNatureSounds
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Forest,
+                            contentDescription = if (isArabic) "أصوات الطبيعة" else "Nature Sounds",
+                            tint = if (isNatureOn) AmoledAccent else Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // 3. Combined Audio Output & Reciter Capsule (Center)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(24.dp))
@@ -4942,7 +4992,7 @@ private fun AmanahFullscreenPlayer(
                         }
                     }
 
-                    // 3. Playback Mode Dropdown Menu (Bottom-Right)
+                    // 4. Playback Mode Dropdown Menu (Bottom-Right)
                     var showModeDropdown by remember { mutableStateOf(false) }
                     val mode = AlAmanahAudioController.playbackMode
                     val modeIcon = when (mode) {
@@ -5195,7 +5245,8 @@ private fun AmanahStreamPlayer(
     onNext: () -> Unit,
     onOpenPlaylist: () -> Unit,
     onOpenSleepTimer: () -> Unit,
-    onOpenAudioOutput: () -> Unit
+    onOpenAudioOutput: () -> Unit,
+    onOpenNatureSounds: () -> Unit
 ) {
     val context = LocalContext.current
     val source = AlAmanahAudioController.audioSource
@@ -5505,11 +5556,13 @@ private fun AmanahStreamPlayer(
 
                 Spacer(Modifier.height(10.dp))
 
-                // ─── SLEEP TIMER (sits above the transport) ───
+                // ─── SLEEP TIMER & NATURE SOUNDS (sit above the transport) ───
                 val isTimerActive = AlAmanahAudioController.sleepTimerMinutes != null
+                val isNatureOn = AmanahAmbienceController.isPlaying
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         modifier = Modifier
@@ -5543,6 +5596,44 @@ private fun AmanahStreamPlayer(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 12.sp,
                             color = if (isTimerActive) AmoledAccent else Color.White.copy(alpha = 0.85f)
+                        )
+                    }
+
+                    // A quiet layer can run underneath the stream.
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (isNatureOn) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.08f))
+                            .border(
+                                1.dp,
+                                if (isNatureOn) AmoledAccent.copy(alpha = 0.5f) else Color.Transparent,
+                                RoundedCornerShape(50)
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onOpenNatureSounds
+                            )
+                            .padding(horizontal = 16.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Forest,
+                            contentDescription = if (isArabic) "أصوات الطبيعة" else "Nature Sounds",
+                            tint = if (isNatureOn) AmoledAccent else Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = AmanahAmbienceController.currentSound?.let {
+                                if (isArabic) it.nameAr else it.nameEn
+                            } ?: (if (isArabic) "أصوات الطبيعة" else "Nature"),
+                            fontFamily = ThmanyahSans,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            color = if (isNatureOn) AmoledAccent else Color.White.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -6527,6 +6618,182 @@ private fun AmanahSleepTimerSheetContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * The nature sounds, reachable from inside the player itself: a quiet layer can
+ * run under a recitation or a live stream without leaving the screen.
+ */
+@Composable
+private fun AmanahNatureSheetContent(
+    isArabic: Boolean,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    val current = AmanahAmbienceController.currentSound
+    val playing = AmanahAmbienceController.isPlaying
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Text(
+            text = if (isArabic) "أصوات الطبيعة" else "Nature Sounds",
+            fontFamily = ThmanyahSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            color = Color.White
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = if (isArabic) {
+                "طبقة هادئة تسري تحت التلاوة"
+            } else {
+                "A quiet layer beneath the recitation"
+            },
+            fontFamily = ThmanyahSans,
+            fontSize = 11.5.sp,
+            color = AmoledMutedText
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        AmanahNatureSounds.forEach { sound ->
+            val active = AmanahAmbienceController.isActive(sound)
+            val running = active && playing
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 3.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (active) AmoledAccent.copy(alpha = 0.14f) else AmoledCard)
+                    .border(
+                        1.dp,
+                        if (active) AmoledAccent.copy(alpha = 0.40f) else AmoledCardBorder,
+                        RoundedCornerShape(14.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            if (active) AmanahAmbienceController.toggle(context)
+                            else AmanahAmbienceController.play(context, sound)
+                        }
+                    )
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = amanahNatureIcon(sound),
+                        contentDescription = null,
+                        tint = if (active) AmoledAccent else Color.White.copy(alpha = 0.92f),
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isArabic) sound.nameAr else sound.nameEn,
+                        fontFamily = ThmanyahSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = if (active) AmoledAccent else Color.White
+                    )
+                    Text(
+                        text = if (isArabic) sound.subtitleAr else sound.subtitleEn,
+                        fontFamily = ThmanyahSans,
+                        fontSize = 11.sp,
+                        color = AmoledMutedText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (running) {
+                    NatureEqualizer()
+                    Spacer(Modifier.width(6.dp))
+                }
+                Icon(
+                    imageVector = if (running) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = null,
+                    tint = if (active) AmoledAccent else Color.White.copy(alpha = 0.55f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        if (current != null) {
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.VolumeDown,
+                    contentDescription = null,
+                    tint = AmoledMutedText,
+                    modifier = Modifier.size(18.dp)
+                )
+                Slider(
+                    value = AmanahAmbienceController.volume,
+                    onValueChange = { AmanahAmbienceController.updateVolume(it) },
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = AmoledAccent.copy(alpha = 0.70f),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.15f)
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 10.dp)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
+                    contentDescription = null,
+                    tint = AmoledMutedText,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF331515))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            AmanahAmbienceController.stop()
+                            onClose()
+                        }
+                    )
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isArabic) "إيقاف الصوت" else "Stop the sound",
+                    fontFamily = ThmanyahSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = Color(0xFFFF6B6B)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
     }
 }
 
